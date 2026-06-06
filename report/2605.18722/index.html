@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dexora | WAM 论文精读</title>
+  <script>
+    window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }, svg: { fontCache: 'global' } };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Dexora: Open-source VLA for High-DoF Bimanual Dexterity</h1>
+    <p class="subtitle">面向 junior PhD 组会准备的中文精读报告：围绕 WAM / 灵巧手 VLA 复现路线，拆解动机、方法、实验、图表证据和复现风险。</p>
+    <div class="meta">
+      <p><strong>项目：</strong>Dexora | <strong>arXiv：</strong><a href="https://arxiv.org/abs/2605.18722">2605.18722</a></p>
+      <p><strong>类型：</strong>双臂双灵巧手 VLA | <strong>开源：</strong>仓库和真实数据开放，仿真数据仍在释放中 | <strong>适合程度：</strong>很前沿，但目前生态还新</p>
+      <p><strong>项目页：</strong>https://dexoravla.github.io/</p>
+    </div>
+  </header>
+  <nav class="toc"><strong>目录</strong><ul>
+    <li><a href="#overview">1. 论文速览</a></li>
+    <li><a href="#motivation">2. 研究问题与动机</a></li>
+    <li><a href="#related">3. 相关工作脉络</a></li>
+    <li><a href="#method">4. 方法详解</a></li>
+    <li><a href="#experiments">5. 实验与结果</a></li>
+    <li><a href="#repro">6. 复现要点</a></li>
+    <li><a href="#discussion">7. 分析、局限与边界</a></li>
+    <li><a href="#qa">8. 组会问答准备</a></li>
+  </ul></nav>
+  <section id="overview">
+    <h2>1. 论文速览</h2>
+    <p class="tldr"><strong>一句话总结：</strong>开源双臂双灵巧手 VLA 系统，结合混合遥操作、大规模数据和质量感知训练处理高自由度双手操作。</p>
+    <div class="grid three">
+      <div class="card"><div class="kpi">7</div><div class="kpi-label">你的复现优先级</div></div>
+      <div class="card"><div class="kpi">11</div><div class="kpi-label">本地抽取图像数量</div></div>
+      <div class="card"><div class="kpi">WAM</div><div class="kpi-label">按 world-action-model / VLA 视角阅读</div></div>
+    </div>
+    <p>Dexora 面向双臂双灵巧手高自由度操作，贡献重点是开放系统、混合遥操作数据与适配高维双手动作的 VLA 训练。相比单手抓取，它必须同时解决双臂空间协调、双手接触分工和长程任务阶段切换，因此更接近复杂真实操作系统。</p>
+    <p>双臂双灵巧手 VLA，系统前沿性强：高 DoF、bimanual、真实数据和开放仓库是主要看点。</p>
+    <table><tbody>
+<tr><td>阅读项</td><td>内容</td></tr>
+<tr><td>关键词</td><td>Dexora; bimanual dexterity; high-DoF VLA; teleoperation; diffusion transformer; open-source</td></tr>
+<tr><td>论文类型</td><td>双臂双灵巧手 VLA</td></tr>
+<tr><td>复现价值</td><td>很前沿，但目前生态还新</td></tr>
+<tr><td>开源情况</td><td>仓库和真实数据开放，仿真数据仍在释放中</td></tr>
+</tbody></table>
+    
+<figure>
+  <img src="figures/source/fig01_teaser.png" alt="paper figure 1">
+  <figcaption><strong>fig:teaser.</strong> \textbfDexora overview. (a) Motivation: Three illustrative contrasts highlight the need for dual-arm, dual-hand dexterous VLA: piston insertion (requires two arms), book retrieval from a packed shelf (hands with fingers succeed where grippers fail), and bottle opening (12-DoF fingers with lateral swing outperform 6-DoF). (b) Dataset (§sec: method-dataset): We pretrain on 100K simulated bimanual-hand trajectories and post-train on 10K real demonstrations, all collected with our dual-arm, dual-hand platform. (c) Architecture (§sec: method-framework): A trained discriminator scores dataset demonstration quality and guides training, driving the diffusion-transformer policy to prioritize high-quality trajectories while down-weighting low-quality ones. (d) Performance (§sec: real world results): Dexora achieves consistently higher average success rates on both basic (Pick-and-Place, Assemble/Disassemble, Articulated Object) and dexterous benchmarks compared to state-of-the-art VLA models. (e) Embodiment generalization (§sec: generalization): The same policy transfers across single-arm gripper, dual-arm grippers, and single-arm low-DoF hand without re-architecting the model. \vspace-10pt<br><strong>读图要点：</strong>这张图主要说明系统模块与信息流，读的时候要把输入、动作表示、模型主体和输出接口分开标注，避免只记住一个模型名字。</figcaption>
+</figure>
+
+<figure>
+  <img src="figures/source/fig05_method.png" alt="paper figure 2">
+  <figcaption><strong>fig:method.</strong> \textbfDexora framework. (a) Data filtering: From the real-world dataset we pre-screen demonstrations by kinematic smoothness (low acceleration and jerk), then replay them for post-validation and keep the clips that complete the task without collisions, forming a high-quality subset. (b) Discriminator training: With the pretrained diffusion–transformer policy frozen, we compute a log-\pi proxy for each clip and train a discriminator that, conditioned on observations and language, outputs a quality score d(C_t)\in(0,1]. (c) Data-quality-aware post-training: During post-training, the score d(C_t) is converted to weights w_i and used in the diffusion loss L_\pi. At inference time, only the policy is used. \vspace-10pt<br><strong>读图要点：</strong>这张图主要说明系统模块与信息流，读的时候要把输入、动作表示、模型主体和输出接口分开标注，避免只记住一个模型名字。</figcaption>
+</figure>
+  </section>
+  <section id="motivation">
+    <h2>2. 研究问题与动机</h2>
+    <p>双臂双灵巧手可完成单手无法处理的装配、协作搬运和精细操作，但动作维度巨大，示范难采集、质量参差，策略也容易在任一只手失败后整体崩溃。Dexora 的目标是提供开放硬件/数据/模型生态，并探索如何让 VLA 从多来源示范中学习稳定的双手协作。</p>
+    <p>灵巧手与普通夹爪最大的区别在于动作空间、接触模式和任务反馈都更复杂。VLA 或 world model 如果只解决语言理解，而没有解决高维动作表示和接触动态，就很难真正迁移到灵巧操作。</p>
+    <table><tbody>
+<tr><td>痛点</td><td>为什么重要</td></tr>
+<tr><td>高自由度动作</td><td>手指、腕部、物体接触共同决定成败，不能只预测末端位姿。</td></tr>
+<tr><td>数据稀缺</td><td>真实灵巧手示范昂贵，且跨手型难复用。</td></tr>
+<tr><td>跨场景泛化</td><td>光照、背景、物体形状和材质变化会破坏视觉策略。</td></tr>
+<tr><td>复现成本</td><td>硬件、数据格式、控制频率和仿真环境都会成为实际门槛。</td></tr>
+</tbody></table>
+  </section>
+  <section id="related">
+    <h2>3. 相关工作脉络</h2>
+    <p>它连接双臂 manipulation、dexterous teleoperation、bimanual imitation learning 和 VLA。过去双臂工作常使用夹爪或低维末端动作；灵巧手工作又多聚焦单手。Dexora 将高自由度双手、真实任务数据和语言视觉任务条件结合，强调系统规模与开放资源。</p>
+    <table><tbody>
+<tr><td>脉络</td><td>本论文的位置</td></tr>
+<tr><td>VLA / robot foundation model</td><td>提供语言和视觉条件到动作或动作表示的接口。</td></tr>
+<tr><td>Dexterous imitation / teleoperation</td><td>提供高自由度手部数据和真实执行监督。</td></tr>
+<tr><td>World model / WAM</td><td>预测动作导致的未来状态，用于规划、筛选或策略学习。</td></tr>
+<tr><td>Action representation</td><td>决定模型能否跨机器人、跨手型和跨任务迁移。</td></tr>
+</tbody></table>
+  </section>
+  <section id="method">
+    <h2>4. 方法详解</h2>
+    <p>系统首先通过适配双臂双手的混合遥操作采集示范，并记录多视角视觉、机器人状态与高维动作。训练端使用适合 action chunk 的生成式动作模型，并利用数据质量评估/过滤减少失败或低质量轨迹的影响。策略需要联合建模两只手的动作，而非把两个单手策略简单并列，否则无法表达时序与接触协作。</p>
+    <h3>4.1 模块化阅读图</h3>
+    <ul><li>混合遥操作采集双臂双手数据。</li><li>用质量感知训练或过滤处理高维示范噪声。</li><li>VLA 需要同时处理双臂协调、双手接触和长程任务条件。</li><li>方法价值在系统规模和数据，而不一定是单个网络模块。</li></ul>
+    <h3>4.2 关键表示与接口</h3>
+    <table><tbody>
+<tr><td>接口</td><td>应检查的问题</td></tr>
+<tr><td>视觉输入</td><td>使用原始图像、mask、DINO/ViT 特征，还是视频 latent？</td></tr>
+<tr><td>语言输入</td><td>是高层 planner、任务条件，还是直接进入 action head？</td></tr>
+<tr><td>动作表示</td><td>关节角、末端位姿、手部 keypoint、latent action，还是 action chunk？</td></tr>
+<tr><td>训练目标</td><td>behavior cloning、diffusion denoising、world-model prediction、contrastive objective 还是混合损失？</td></tr>
+<tr><td>部署方式</td><td>端到端策略、分层控制、MPC/CEM 规划，还是离线评估？</td></tr>
+</tbody></table>
+    
+<figure>
+  <img src="figures/source/fig04_dataset_demonstration.png" alt="paper figure 1">
+  <figcaption><strong>fig:dataset demonstration.</strong> Dataset demonstration. (a) Simulation objects subset: our simulator includes 297 objects across 30 categories. (b) Real-world objects (347 objects, 17 categories), covering both basic and dexterous use cases. (c) Per-family task distribution in simulation vs. real. The simulation data only includes basic tasks, while the real-world set shifts weight toward dexterity (20\ \vspace-20pt<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
+</figure>
+
+<figure>
+  <img src="figures/source/fig02_intro-6areas.png" alt="paper figure 2">
+  <figcaption><strong>fig:intro-6areas.</strong> Comparison of embodiment coverage. Prior works cover either single-arm or low-DoF dual-arm settings. Dexora is the first system positioned in the dual-arm, high-DoF dexterous region, while also generalizing across simpler embodiments without re-architecture.<br><strong>读图要点：</strong>这张图主要说明系统模块与信息流，读的时候要把输入、动作表示、模型主体和输出接口分开标注，避免只记住一个模型名字。</figcaption>
+</figure>
+
+<figure>
+  <img src="figures/source/fig09_cross_embodiment_gen.png" alt="paper figure 3">
+  <figcaption><strong>fig:cross-embodiment-gen.</strong> Cross-embodiment generalization. The Dexora policy transfers to (a) single-arm gripper, (b) dual-arm grippers, and (c) single-arm single-hand, completing representative tasks like a three-step pepper handover. 2em<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
+</figure>
+  </section>
+  <section id="experiments">
+    <h2>5. 实验与结果</h2>
+    <p>实验覆盖基础双臂任务、真正需要灵巧手的复杂任务、OOD 泛化、跨 embodiment 以及 scaling/data-quality 研究。应重点看双手任务相对单手或夹爪 baseline 的增益，以及 discriminator/质量过滤是否真正提升成功率。仿真数据仍在释放中会影响外部复现。</p>
+    <h3>5.1 读实验时先看什么</h3>
+    <ul><li>看真实数据开放范围。</li><li>重点比较单手/双手任务差异。</li><li>生态较新，复现要看仿真数据是否完整释放。</li></ul>
+    <h3>5.2 图表证据链</h3>
+    <table><tbody>
+<tr><td>证据</td><td>支持的 claim</td><td>仍需警惕</td></tr>
+<tr><td>系统/架构图</td><td>说明模块职责和信息流。</td><td>架构清楚不等于每个模块都有效。</td></tr>
+<tr><td>主结果表</td><td>证明任务成功率或预测质量。</td><td>需要看任务规模和测试分布。</td></tr>
+<tr><td>消融实验</td><td>定位收益来自表示、数据还是模型。</td><td>消融是否公平、是否覆盖关键替代方案。</td></tr>
+<tr><td>定性图</td><td>展示真实/仿真交互细节。</td><td>好看的图不能替代大规模统计。</td></tr>
+<tr><td>附录细节</td><td>给出训练、数据、超参和失败案例。</td><td>很多复现风险藏在附录。</td></tr>
+</tbody></table>
+    
+<figure>
+  <img src="figures/source/fig03_hardware_and_teleoperation.png" alt="paper figure 1">
+  <figcaption><strong>fig:hard-tele.</strong> Hardware and teleoperation system. (a) Hybrid teleoperation interface and 12-DoF XHAND. (b)-(c) The operator teleoperates the physical robot and its MujoCo digital twin, so apple\rightarrowplate demonstrations are collected in real and simulation under the same interface, thereby reducing the sim-to-real gap. \vspace-10pt<br><strong>读图要点：</strong>这张图说明真实系统或硬件部署，读的时候要关注传感器、控制频率、手型和安全约束。</figcaption>
+</figure>
+
+<figure>
+  <img src="figures/source/fig06_basic_tasks.png" alt="paper figure 2">
+  <figcaption><strong>fig:basic tasks.</strong> Basic tasks suite. (a) Pick and Place (5 tasks). (b) Assemble/Disassemble (5 tasks). (c) Articulated Objects (2 tasks).<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
+</figure>
+
+<figure>
+  <img src="figures/source/fig07_dex_tasks.png" alt="paper figure 3">
+  <figcaption><strong>fig:dex_manipulation.</strong> Dexterous manipulation sequences. (a) Use Pen: The left hand picks up the pen (\#1), hands it to the right hand (\#2); the right thumb depresses the tip (\#3) and writes on paper (\#4). (b) Cut Leek: The right hand grasps the knife (\#1), the left hand stabilizes the leek (\#2); the right hand slices (\#3) and returns the knife to the table (\#4). (c) Rough Dough: Both hands press the rolling pin simultaneously (\#1) and push forward to flatten the dough (\#2). (d) Twist Cap: The left hand holds the bottle while the right thumb–index grip twists the cap (\#1) and removes it (\#2). \vspace-10pt<br><strong>读图要点：</strong>这张图应被放入证据链中理解：它说明论文某个 claim 的可视化依据，同时也要追问它没有覆盖哪些边界情况。</figcaption>
+</figure>
+
+<figure>
+  <img src="figures/source/fig10_scaling.png" alt="paper figure 4">
+  <figcaption><strong>fig:scaling.</strong> Effect of training data composition. Success rate for four tasks under three training regimes: Sim Only, Sim + 50\ \vspace-20pt<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
+</figure>
+  </section>
+  <section id="repro">
+    <h2>6. 复现要点</h2>
+    <p>这是硬件门槛最高的一篇。需要双机械臂、两只灵巧手、多视角相机、同步遥操作系统和安全控制。建议先使用公开真实数据离线复现训练与评估，再决定是否搭硬件。必须确认左右手动作坐标、时间同步、失败轨迹标签和数据质量模块，否则策略容易学到不协调动作。</p>
+    <h3>6.1 复现风险清单</h3>
+    <ul><li>硬件门槛最高。</li><li>仿真数据仍在释放中会影响复现。</li><li>双手协调错误比单手更难调试。</li></ul>
+    <table><tbody>
+<tr><td>维度</td><td>检查项</td></tr>
+<tr><td>代码</td><td>仓库是否包含训练、评估、数据预处理和模型权重加载。</td></tr>
+<tr><td>数据</td><td>是否公开原始数据、标注、过滤脚本和 split。</td></tr>
+<tr><td>模型</td><td>是否给出 backbone、tokenizer、action head、world model 的尺寸与权重。</td></tr>
+<tr><td>训练</td><td>batch size、学习率、epoch、GPU、随机种子和日志是否足够。</td></tr>
+<tr><td>硬件</td><td>手型、相机、控制频率和安全策略是否能匹配。</td></tr>
+<tr><td>评估</td><td>成功率定义、重试次数、任务分布和失败统计是否清楚。</td></tr>
+</tbody></table>
+  </section>
+  <section id="discussion">
+    <h2>7. 分析、局限与边界</h2>
+    <p>双手系统展示了前沿能力，但也使失败来源更难定位：视觉、任一机械臂、任一手、同步或任务阶段都可能出错。公开仓库和真实数据是优势，但仿真资产和生态仍新。论文结果不能自动说明模型适用于其他双臂布局或手型，硬件迁移成本很高。</p>
+    <p>对你的课题而言，最重要的不是把所有论文都当成可直接复现的系统，而是判断它们在链路中的位置：有的是数据/动作表示，有的是世界模型，有的是 VLA 控制器，有的是高自由度真实系统。只有把位置分清，才知道该复现哪一段、创新该放在哪里。</p>
+    <div class="danger"><strong>边界提醒：</strong>如果论文的实验只覆盖仿真、少量物体或固定手型，不应把结果外推到任意灵巧手和任意真实物体。WAM/VLA 的 claim 必须和任务分布绑定。</div>
+  </section>
+  <section id="qa">
+    <h2>8. 组会问答准备</h2>
+    <h3>Q1: 这篇论文的核心 novelty 是什么？</h3><p>开源双臂双灵巧手 VLA 系统，结合混合遥操作、大规模数据和质量感知训练处理高自由度双手操作。</p>
+    <h3>Q2: 它最适合放在你的哪条研究线上？</h3><p>双臂双灵巧手 VLA，系统前沿性强：高 DoF、bimanual、真实数据和开放仓库是主要看点。</p>
+    <h3>Q3: 哪个实验最有说服力？</h3><p>优先看主结果表与关键消融：主结果回答“能不能做”，消融回答“为什么能做”。如果二者缺一，论文 claim 的可信度都要打折。</p>
+    <h3>Q4: 最大复现风险是什么？</h3><p>优先检查数据、动作接口和硬件环境。对灵巧手论文来说，代码开源不等于可复现，真正的难点常常在遥操作数据格式、相机标定、控制频率和安全策略。</p>
+    <h3>Q5: 下一步可以怎么用？</h3><p>很前沿，但不适合作为第一篇硬件复现。可先把它当作双手系统设计和数据质量研究参考；如果有现成双臂平台，再考虑复现其 action chunk 与质量过滤模块。</p>
+  </section>
+</main>
+</body>
+</html>

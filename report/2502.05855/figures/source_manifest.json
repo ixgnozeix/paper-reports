@@ -1,0 +1,127 @@
+[
+  {
+    "index": 1,
+    "label": "fig:frame_work",
+    "graphics": [
+      "images/framework2.pdf"
+    ],
+    "caption": "DexVLA architecture and embodied curriculum learning. Our model employs a three-stage training process. Stage 1 (left) trains the Diffusion Expert independently, without the VLM. Stages 2 and 3 (middle) integrate the Diffusion Expert with a VLM, discarding the visual and language components within the expert. The Diffusion Expert (right) uses multiple heads for cross-embodiment learning.",
+    "files": [
+      "figures/source/fig01_framework2.pdf"
+    ]
+  },
+  {
+    "index": 2,
+    "label": "fig:hard_task_suite",
+    "graphics": [
+      "images/stage_3_task_description.pdf"
+    ],
+    "caption": "Example of direct prompting for long-horizon tasks. The figure shows three tasks, laundry folding (top), dryer unloading (middle), sorting (bottom). Our DexVLA breaks down raw instructions into sub-steps automatically. Success in these tasks necessitates not only dexterity but also the capacity to decompose direct prompts into implicit multi-step reasoning and to comprehend the visual context.",
+    "files": [
+      "figures/source/fig02_stage_3_task_description.pdf"
+    ]
+  },
+  {
+    "index": 3,
+    "label": "fig:example_robots",
+    "graphics": [
+      "images/robot_examples.pdf"
+    ],
+    "caption": "Our experiment includes various robot types: bimanual UR5e, Franka, bimanual AgileX, and Franka with dexterous hands.",
+    "files": [
+      "figures/source/fig03_robot_examples.pdf"
+    ]
+  },
+  {
+    "index": 4,
+    "label": "fig:easy_task_suite",
+    "graphics": [
+      "images/wo-post-training-task.pdf",
+      "images/zero_shot_tasks.pdf"
+    ],
+    "caption": "Examples of tasks without task-specific adaptation. We assessed our model's performance after stage 2 training using three tasks: bin-picking easy (top), shirt folding (middle), and table bussing easy (bottom).",
+    "files": [
+      "figures/source/fig04_wo-post-training-task.pdf",
+      "figures/source/fig04_zero_shot_tasks.pdf"
+    ]
+  },
+  {
+    "index": 5,
+    "label": "fig:new_task_suite",
+    "graphics": [
+      "images/learning_new_tasks.pdf",
+      "images/new_task_results.pdf"
+    ],
+    "caption": "Example of tasks for learning dexterous skills on new embodiment. We evaluate our model on two new embodiments with packing (top) and drink pouring (bottom) tasks, which are not included in stage 1 \\& 2 train data.",
+    "files": [
+      "figures/source/fig05_learning_new_tasks.pdf",
+      "figures/source/fig05_new_task_results.pdf"
+    ]
+  },
+  {
+    "index": 6,
+    "label": "fig:post_training_results",
+    "graphics": [
+      "images/post_training_tasks_results3.pdf"
+    ],
+    "caption": "Average scores on tasks requiring stage 3 training. We compared our model against Octo, OpenVLA and \\pi_0 on laundry folding and bussing table (hard).",
+    "files": [
+      "figures/source/fig06_post_training_tasks_results3.pdf"
+    ]
+  },
+  {
+    "index": 7,
+    "label": "fig:post_training_results",
+    "graphics": [
+      "images/post_training_tasks_results_x.pdf"
+    ],
+    "caption": "Average scores on tasks requiring stage 3 training. We compared our model against two baselines: Octo and OpenVLA. Averaging scores over 10 trials, our method significantly outperformed both baselines across all tasks. Note that sorting was not included in the pre-training data.",
+    "files": [
+      "figures/source/fig07_post_training_tasks_results_x.pdf"
+    ]
+  },
+  {
+    "index": 8,
+    "label": "fig:zero_shot_transfer",
+    "graphics": [
+      "images/franka_inspire_experiments.pdf"
+    ],
+    "caption": "Robot setup on zero-shot cross-embodiment transfer from gripper to dexterous hand. We replace the original gripper with an Inspire dexterous hand and evaluate DexVLA in the same bin-picking environment using unseen objects.",
+    "files": [
+      "figures/source/fig08_franka_inspire_experiments.pdf"
+    ]
+  },
+  {
+    "index": 9,
+    "label": "fig:visual_generalization",
+    "graphics": [
+      "images/visual_generalization.pdf"
+    ],
+    "caption": "Example of visual generalization. Here lists some visual generalization settings including unseen objects and unseen scenes.",
+    "files": [
+      "figures/source/fig09_visual_generalization.pdf"
+    ]
+  },
+  {
+    "index": 10,
+    "label": "fig:data_allocation",
+    "graphics": [
+      "images/data_distribution.pdf"
+    ],
+    "caption": "Overview of our dataset for stage 1 training.",
+    "files": [
+      "figures/source/fig10_data_distribution.pdf"
+    ]
+  },
+  {
+    "index": 11,
+    "label": "fig:91_tasks",
+    "graphics": [
+      "images/task_length.pdf"
+    ],
+    "caption": "Average task length(seconds) of 91 tasks. fig:91_tasks",
+    "files": [
+      "figures/source/fig11_task_length.pdf"
+    ]
+  }
+]

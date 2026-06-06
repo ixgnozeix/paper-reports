@@ -1,0 +1,90 @@
+[
+  {
+    "index": 1,
+    "label": "fig:alpha",
+    "graphics": [
+      "fig/alpha_k.png"
+    ],
+    "caption": "black The function plots under varying values of \\alpha and k are displayed. Note that \\alpha and k control the curve behavior for x > 0 and x < 0, respectively. For comparison, the curve of y = |x| is plotted using a dashed line.",
+    "files": [
+      "figures/source/fig01_alpha_k.png"
+    ]
+  },
+  {
+    "index": 2,
+    "label": "fig:pc_noise",
+    "graphics": [
+      "fig/point_cloud.pdf"
+    ],
+    "caption": "black Optimization results when the point cloud includes noise. Here, the black points represent the object point cloud, and the red/green points denote the positions of the dexterous hand's fingertips. (A) Optimization using the f(d) kernel, visualized on the noisy input. (B) Optimization using the Euclidean distance, visualized on the noisy input. (C) The f(d) kernel optimization result projected onto the clean noise-free point cloud. (D) The Euclidean distance optimization result projected onto the noise-free point cloud.",
+    "files": [
+      "figures/source/fig02_point_cloud.pdf"
+    ]
+  },
+  {
+    "index": 3,
+    "label": "real_vis",
+    "graphics": [
+      "fig/viz1.jpg"
+    ],
+    "caption": "The visualization results of our grasping sequence in Sapien. More real world examples could be found in the video.",
+    "files": [
+      "figures/source/fig03_viz1.jpg"
+    ]
+  },
+  {
+    "index": 4,
+    "label": "real_vis",
+    "graphics": [
+      "fig/viz2.jpg"
+    ],
+    "caption": "The visualization results of our grasping sequence in Sapien. More real world examples could be found in the video.",
+    "files": [
+      "figures/source/fig04_viz2.jpg"
+    ]
+  },
+  {
+    "index": 5,
+    "label": "real_cross",
+    "graphics": [
+      "fig/cross_embodiment.pdf"
+    ],
+    "caption": "black Real-World Cross-embodiment Set up",
+    "files": [
+      "figures/source/fig05_cross_embodiment.pdf"
+    ]
+  },
+  {
+    "index": 6,
+    "label": "real_vis",
+    "graphics": [
+      "fig/overview.pdf"
+    ],
+    "caption": "Overview. We introduce UniHM, the first unified hand-manipulation framework conditioned on free-form language. UniHM is trained solely on closed-set HOI datasets to follow target trajectories and execute physically feasible interactions, and generalizes to open-world tasks in real-world interactions.",
+    "files": [
+      "figures/source/fig06_overview.pdf"
+    ]
+  },
+  {
+    "index": 7,
+    "label": "pipeline",
+    "graphics": [
+      "fig/pipeline.pdf"
+    ],
+    "caption": "Pipeline. UniHM converts open-vocabulary instructions and RGB-D inputs into executable dexterous-hand trajectories via three stages: (1) morphology-agnostic motion tokenization; (2) language-guided generation that fuses text, perception, and token history to produce manipulation token sequences; and (3) physics-aware decoding with smoothness/contact priors for feasible, stable execution.",
+    "files": [
+      "figures/source/fig07_pipeline.pdf"
+    ]
+  },
+  {
+    "index": 8,
+    "label": "real_vis",
+    "graphics": [
+      "fig/real_vis.pdf"
+    ],
+    "caption": "Real-World Results. UniHM achieves higher success rates than prior methods on both seen and unseen objects, producing physically consistent and executable real-world manipulations.",
+    "files": [
+      "figures/source/fig08_real_vis.pdf"
+    ]
+  }
+]

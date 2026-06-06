@@ -1,0 +1,204 @@
+[
+  {
+    "index": 1,
+    "label": "fig:method",
+    "graphics": [
+      "imgs/method.png"
+    ],
+    "caption": "Model Pipeline. builds on \\pi_0~pi0 with vision and language encoders paired with an action expert that operates in a shared latent action space for cross-embodiment control. During VLA training, the action expert is finetuned while the pretrained latent encoders and decoders remain frozen. \\vspace-10pt",
+    "files": [
+      "figures/source/fig01_method.png"
+    ]
+  },
+  {
+    "index": 2,
+    "label": "fig:latent_ill",
+    "graphics": [
+      "imgs/dexlatent.pdf"
+    ],
+    "caption": "Latent space pretraining pipeline. For each hand type, joint positions q_h are mapped through an encoder MLP into a shared latent space and reconstructed by a decoder MLP. The diagram also indicates the placement of the reconstruction loss L_1, retargeting loss L_2 via differentiable forward kinematics, and latent regularization loss L_3. \\vspace-15pt",
+    "files": [
+      "figures/source/fig02_dexlatent.pdf"
+    ]
+  },
+  {
+    "index": 3,
+    "label": "fig:unseen_task",
+    "graphics": [
+      "imgs/unseen_tasks_1x4.pdf"
+    ],
+    "caption": "Zero-shot Unseen Tasks Generalization. For each hand, we randomly select some tasks as unseen tasks, whose data are held out from the training dataset. Then we test the unseen tasks with model trained on other data. Results show that by training with an aligned latent action space, gets the ability to generalize to novel hand-task combination in a zero-shot manner. PSR stands for ``Partial Success Rate\", where policy is rewarded with half success if only one arm finishes its task. \\vspace-12pt",
+    "files": [
+      "figures/source/fig03_unseen_tasks_1x4.pdf"
+    ]
+  },
+  {
+    "index": 4,
+    "label": "fig:g1-bar",
+    "graphics": [
+      "imgs/g1_results.pdf"
+    ],
+    "caption": "G1 Cross-Robot Performance. Co-training with latent xArm and humanoid data outperforms using raw actions.",
+    "files": [
+      "figures/source/fig04_g1_results.pdf"
+    ]
+  },
+  {
+    "index": 5,
+    "label": "fig:demo_xhand",
+    "graphics": [
+      "imgs/demo_transparent_1.png",
+      "imgs/demo_transparent_2.png"
+    ],
+    "caption": "X-Hand",
+    "files": [
+      "figures/source/fig05_demo_transparent_1.png",
+      "figures/source/fig05_demo_transparent_2.png"
+    ]
+  },
+  {
+    "index": 6,
+    "label": "fig:demo_xhand",
+    "graphics": [
+      "imgs/demo_transparent_1.png",
+      "imgs/demo_transparent_2.png",
+      "imgs/demo_transparent_3.png",
+      "imgs/demo_transparent_4.png"
+    ],
+    "caption": "X-Hand",
+    "files": [
+      "figures/source/fig06_demo_transparent_1.png",
+      "figures/source/fig06_demo_transparent_2.png",
+      "figures/source/fig06_demo_transparent_3.png",
+      "figures/source/fig06_demo_transparent_4.png"
+    ]
+  },
+  {
+    "index": 7,
+    "label": "fig:cam_setup",
+    "graphics": [
+      "imgs/camera_setup.jpeg"
+    ],
+    "caption": "xArm Camera Setup. We use a single RealSense L515 camera with the front view. Note that the D435 camera here is not used for .",
+    "files": [
+      "figures/source/fig07_camera_setup.jpeg"
+    ]
+  },
+  {
+    "index": 8,
+    "label": "fig:dex_hands",
+    "graphics": [
+      "imgs/DexHands.jpg"
+    ],
+    "caption": "Dexterous Hands. We use 4 kinds of hands, with various shapes, scales, degrees of freedom, and actuated joints.",
+    "files": [
+      "figures/source/fig08_DexHands.jpg"
+    ]
+  },
+  {
+    "index": 9,
+    "label": "fig:cam_view",
+    "graphics": [
+      "imgs/rs_view.png"
+    ],
+    "caption": "xArm Camera View. This is what our camera sees and also the input for and all the baseline methods.",
+    "files": [
+      "figures/source/fig09_rs_view.png"
+    ]
+  },
+  {
+    "index": 10,
+    "label": "fig:g1-scene",
+    "graphics": [
+      "imgs/g1_scene.jpeg"
+    ],
+    "caption": "G1 Scene. We mount an L515 camera near the neck of G1 to have an egocentric view.",
+    "files": [
+      "figures/source/fig10_g1_scene.jpeg"
+    ]
+  },
+  {
+    "index": 11,
+    "label": "fig:g1-cam-view",
+    "graphics": [
+      "imgs/g1_camera_view.png"
+    ],
+    "caption": "G1 Egocentric Camera View.",
+    "files": [
+      "figures/source/fig11_g1_camera_view.png"
+    ]
+  },
+  {
+    "index": 12,
+    "label": "fig:obj",
+    "graphics": [
+      "imgs/objects.jpg"
+    ],
+    "caption": "Objects. We use various everyday objects from existing datasets. They vary in scale, shape, texture, weight, etc., thus requiring the manipulation policy to be robust.",
+    "files": [
+      "figures/source/fig12_objects.jpg"
+    ]
+  },
+  {
+    "index": 13,
+    "label": "fig:avp",
+    "graphics": [
+      "imgs/avp.jpeg"
+    ],
+    "caption": "Apple Vision Por for Data Collection. Apple Vision Pro is used to track the human teleoperator's hands and wrists. Then the tracked data is processed with retargeting and Inverse Kinematics to control the real-world robots.",
+    "files": [
+      "figures/source/fig13_avp.jpeg"
+    ]
+  },
+  {
+    "index": 14,
+    "label": "fig:g1-teleop",
+    "graphics": [
+      "imgs/g1_teleop.jpeg"
+    ],
+    "caption": "G1 Teleoperation System. We build the G1 upper-body teleoperation system from HOMIE~ben2025homie. We use a pair of MANUS Mocap glove to track the human hand pose.",
+    "files": [
+      "figures/source/fig14_g1_teleop.jpeg"
+    ]
+  },
+  {
+    "index": 15,
+    "label": "fig:task_vis",
+    "graphics": [
+      "imgs/task_vis/001.png",
+      "imgs/task_vis/002.png",
+      "imgs/task_vis/003.png",
+      "imgs/task_vis/004.png",
+      "imgs/task_vis/005.png",
+      "imgs/task_vis/006.png",
+      "imgs/task_vis/007.png",
+      "imgs/task_vis/008.png",
+      "imgs/task_vis/009.png",
+      "imgs/task_vis/010.png"
+    ],
+    "caption": "Task Visualizations. We design 10 various tasks to test all the models. The tasks require varied manipulation skills and have different difficulties.",
+    "files": [
+      "figures/source/fig15_001.png",
+      "figures/source/fig15_002.png",
+      "figures/source/fig15_003.png",
+      "figures/source/fig15_004.png",
+      "figures/source/fig15_005.png",
+      "figures/source/fig15_006.png",
+      "figures/source/fig15_007.png",
+      "figures/source/fig15_008.png",
+      "figures/source/fig15_009.png",
+      "figures/source/fig15_010.png"
+    ]
+  },
+  {
+    "index": 16,
+    "label": "fig:latent_traj",
+    "graphics": [
+      "imgs/latent_traj.png"
+    ],
+    "caption": "Latent Visualization of a Grasping Trajectory. A trajectory is shown here with all the robot hands.",
+    "files": [
+      "figures/source/fig16_latent_traj.png"
+    ]
+  }
+]

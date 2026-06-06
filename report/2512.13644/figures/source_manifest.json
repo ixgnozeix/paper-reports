@@ -1,0 +1,180 @@
+[
+  {
+    "index": 1,
+    "label": "fig:flow",
+    "graphics": [
+      "Figs/flow.png"
+    ],
+    "caption": "\\ours Architecture. Images are encoded into latent states using a frozen DINOv2~DINOv2 encoder. The \\ours predictor takes these states, hand actions, and camera motions to predict the next state, which can then be decoded into reconstructed images and hand keypoints.",
+    "files": [
+      "figures/source/fig01_flow.png"
+    ]
+  },
+  {
+    "index": 2,
+    "label": "fig:keypoints",
+    "graphics": [
+      "Figs/keypoints.png",
+      "Figs_supp/droid_hands.png"
+    ],
+    "caption": "\\vspace*-0.3cm",
+    "files": [
+      "figures/source/fig02_keypoints.png",
+      "figures/source/fig02_droid_hands.png"
+    ]
+  },
+  {
+    "index": 3,
+    "label": "fig:planning",
+    "graphics": [
+      "Figs/planning.png"
+    ],
+    "caption": "Goal-Conditioned Planning with \\ours. The joint angles \\Theta_0, \\dots, \\Theta_T-1 are optimized using CEM to get the optimal actions a_0, \\dots, a_T-1 to drive the system to the goal.",
+    "files": [
+      "figures/source/fig03_planning.png"
+    ]
+  },
+  {
+    "index": 4,
+    "label": "fig:model_size",
+    "graphics": [
+      "Figs/model_size_swapped.png"
+    ],
+    "caption": "Scaling With Predictor Size. PCK@20 and Embedding L2 error improve with larger \\ours models. Blue circles denote EgoDex+DROID training; red circles denote EgoDex-only training.",
+    "files": [
+      "figures/source/fig04_model_size_swapped.png"
+    ]
+  },
+  {
+    "index": 5,
+    "label": "fig:backbone_ablation",
+    "graphics": [
+      "Figs/encoder_ablation.png"
+    ],
+    "caption": "Encoder Ablation. Comparing downstream robotic task success rates on RoboCasa simulation tasks.",
+    "files": [
+      "figures/source/fig05_encoder_ablation.png"
+    ]
+  },
+  {
+    "index": 6,
+    "label": "fig:transfer_plot",
+    "graphics": [
+      "Figs/action_transfer.pdf"
+    ],
+    "caption": "Action Transfer. Transferring actions from a reference sequence to a new environment using \\ours and PEVA^*. \\ours better captures fine-grained hands states that match those in the reference sequence.",
+    "files": [
+      "figures/source/fig06_action_transfer.pdf"
+    ]
+  },
+  {
+    "index": 7,
+    "label": "fig:cosmos",
+    "graphics": [
+      "Figs/cosmosv4.pdf"
+    ],
+    "caption": "Conditioning on Hand Motion Enables Precise Control. \\ours utilizes dense dexterous actions, enabling finer-grained control compared to text conditioned World Models like Cosmos-Predict 2~agarwal2025cosmos.",
+    "files": [
+      "figures/source/fig07_cosmosv4.pdf"
+    ]
+  },
+  {
+    "index": 8,
+    "label": "fig:atomic_actions",
+    "graphics": [
+      "Figs/atomic_actions.png"
+    ],
+    "caption": "Simulating Counterfactual Actions. Starting from the same initial state, \\ours predicts future states given different atomic actions. The model reliably follows each action sequence, while capturing environment dynamics (e.g, see third row final frame where the cup moves forward when the hand collides with the cup).",
+    "files": [
+      "figures/source/fig08_atomic_actions.png"
+    ]
+  },
+  {
+    "index": 9,
+    "label": "fig:real_robot_planning",
+    "graphics": [
+      "Figs/real_world_rollout.png"
+    ],
+    "caption": "Real Robot Planning Example. Given goal and start images, \\ours successfully plans and executes the trajectory by finding the optimal actions using the Cross-Entropy Method. Notably, \\ours works zero-shot without any real-world training. (sec:robot_task_exec)",
+    "files": [
+      "figures/source/fig09_real_world_rollout.png"
+    ]
+  },
+  {
+    "index": 10,
+    "label": "fig:planning_time",
+    "graphics": [
+      "Figs_supp/planning_time.png"
+    ],
+    "caption": "Planning time and success rate as optimizer iterations (with samples=512) and sample count (with optimizer iterations=10) vary.",
+    "files": [
+      "figures/source/fig10_planning_time.png"
+    ]
+  },
+  {
+    "index": 11,
+    "label": "fig:exploratory_data",
+    "graphics": [
+      "Figs_supp/exploratory_data.png "
+    ],
+    "caption": "Exploratory Data Examples. Sequences of the robot performing random movements in the environment were collected to fine-tune \\ours for application to robotic simulation and real-world tasks. This exploratory data provides broad, unbiased coverage of the environment, aiming to bridge the embodiment gap between human and robot.",
+    "files": [
+      "figures/source/fig11_exploratory_data.png"
+    ]
+  },
+  {
+    "index": 12,
+    "label": "fig:supp_rollouts",
+    "graphics": [
+      "Figs_supp/rollouts.png"
+    ],
+    "caption": "Open-Loop Trajectory Rollouts. Given the initial state and an action sequence, \\ours predicts future latent states over a 4-second horizon, rolling out 20 frames at 5~Hz. For visualization, predicted frames are subsampled in the figure due to space constraints. Latent states are decoded into images for visualization. The predicted rollout closely follows the ground truth trajectory even in long-horizon complex dexterous tasks.",
+    "files": [
+      "figures/source/fig12_rollouts.png"
+    ]
+  },
+  {
+    "index": 13,
+    "label": "fig:supp_atomic_actions",
+    "graphics": [
+      "Figs_supp/atomic_actions.png "
+    ],
+    "caption": "Simulating Counterfactual Actions. Starting from the same initial state, \\ours predicts future states given different atomic actions for controlling the right hand. The model reliably follows each action sequence while accurately capturing environment dynamics (e.g., pulling the string upward in Move Up in Example~2, and pushing the cup forward in Move Forward in Example~3.)",
+    "files": [
+      "figures/source/fig13_atomic_actions.png"
+    ]
+  },
+  {
+    "index": 14,
+    "label": "fig:action_transfer",
+    "graphics": [
+      "Figs_supp/action_transfer.png "
+    ],
+    "caption": "Action Transfer. Transferring actions from a reference sequence to a new environment using \\ours and PEVA^*. \\ours better captures fine-grained hands states that match those in the reference sequence.",
+    "files": [
+      "figures/source/fig14_action_transfer.png"
+    ]
+  },
+  {
+    "index": 15,
+    "label": "fig:real_world_experiments",
+    "graphics": [
+      "Figs_supp/real_world_experiments.png "
+    ],
+    "caption": "Real Robot Task Examples. The robot successfully grasps objects, which are highlighted by black circles in the first image of each sequence for visual clarity, given the goal (red) and start (green) images. Notably, \\ours operates in a zero-shot manner, without any real-world training. In some cases, such as examples 2 and 3, the object moves slightly from its original location after being actually grasped by the gripper. We also present a failure trajectory, where a collision between the grippers and an upside-down bowl causes the bowl to move away, resulting in a missed grasp.",
+    "files": [
+      "figures/source/fig15_real_world_experiments.png"
+    ]
+  },
+  {
+    "index": 16,
+    "label": "fig:sim_experiments",
+    "graphics": [
+      "Figs_supp/sim_experiments.png "
+    ],
+    "caption": "Robot Task Example in Simulation. Given goal (red) and start (green) images, \\ours successfully plans the trajectory by finding optimal actions using the Cross-Entropy Method inside an MPC framework. The final reached state (blue) in each task closely resembles the goal frame, demonstrating successful execution. Notably, \\ours was not trained on any task-specific robot data.",
+    "files": [
+      "figures/source/fig16_sim_experiments.png"
+    ]
+  }
+]

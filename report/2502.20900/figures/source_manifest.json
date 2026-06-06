@@ -1,0 +1,133 @@
+[
+  {
+    "index": 1,
+    "label": "fig:teaser",
+    "graphics": [
+      "figures/aaaiteaser-v4.pdf"
+    ],
+    "caption": "We propose DexGraspVLA, a hierarchical VLA framework that reaches a 90+\\ fig:teaser \\vspace-10pt",
+    "files": [
+      "figures/source/fig01_aaaiteaser-v4.pdf"
+    ]
+  },
+  {
+    "index": 2,
+    "label": "fig:framework",
+    "graphics": [
+      "figures/framworkv12.jpg"
+    ],
+    "caption": "Overview of DexGraspVLA. A pre-trained VLM-based high-level planner (purple) decomposes prompts into object-level grasping instructions with bounding boxes. The diffusion-based low-level controller (pink) tracks the target mask, encodes multimodal observations (RGB images, mask, proprioception), and predicts an action chunk via a DiT model. The planner monitors execution and continually proposes new instructions based on the updated scene until the task is fully completed.",
+    "files": [
+      "figures/source/fig02_framworkv12.jpg"
+    ]
+  },
+  {
+    "index": 3,
+    "label": "fig:robot-platform",
+    "graphics": [
+      "figures/hardware-platform-v5.pdf"
+    ],
+    "caption": "Our hardware platform.",
+    "files": [
+      "figures/source/fig03_hardware-platform-v5.pdf"
+    ]
+  },
+  {
+    "index": 4,
+    "label": "fig:dino-attn",
+    "graphics": [
+      "figures/dino-attn-v2.pdf"
+    ],
+    "caption": "DexGraspVLA is robust to environmental variations. The same cluttered scene (1st row) is arranged in four visually different environments (four columns). DINOv2 features (2nd row), masks (3rd row), and attention maps (4th row) are consistent across variations. The 5th row confirms DexGraspVLA is attending to the correct object.",
+    "files": [
+      "figures/source/fig04_dino-attn-v2.pdf"
+    ]
+  },
+  {
+    "index": 5,
+    "label": "fig:data-collection-env",
+    "graphics": [
+      "figures/data-collect-env.jpg",
+      "figures/test-env.jpg"
+    ],
+    "caption": "Our data collection site.",
+    "files": [
+      "figures/source/fig05_data-collect-env.jpg",
+      "figures/source/fig05_test-env.jpg"
+    ]
+  },
+  {
+    "index": 6,
+    "label": "fig:generalization-eval-env",
+    "graphics": [
+      "figures/generalization-environment-conditions.pdf"
+    ],
+    "caption": "Environment conditions used in our generalization evaluations of dexterous grasping (subsec:generalization-eval) and nonprehensile grasping (subsec:nonprehensile-grasping).",
+    "files": [
+      "figures/source/fig06_generalization-environment-conditions.pdf"
+    ]
+  },
+  {
+    "index": 7,
+    "label": "fig:tSNE",
+    "graphics": [
+      "figures/objects-and-tsne-0516-small.pdf"
+    ],
+    "caption": "(Left) A representative part of all 360 unseen objects used to evaluate DexGraspVLA. (Right) A t-SNE projection illustrating the diversity and broad coverage of these objects in length, width, height, mass (denoted by marker size), roughness (marker type), and shape (marker color).",
+    "files": [
+      "figures/source/fig07_objects-and-tsne-0516-small.pdf"
+    ]
+  },
+  {
+    "index": 8,
+    "label": "fig:nonprehensile-demo-objects",
+    "graphics": [
+      "figures/nonprehensile-train-objects.png",
+      "figures/nonprehensile-test-objects.png"
+    ],
+    "caption": "The 32 objects used to collect nonprehensile grasping demonstrations.",
+    "files": [
+      "figures/source/fig08_nonprehensile-train-objects.png",
+      "figures/source/fig08_nonprehensile-test-objects.png"
+    ]
+  },
+  {
+    "index": 9,
+    "label": "fig:dino-attn-full",
+    "graphics": [
+      "figures/dino-attn-full.pdf"
+    ],
+    "caption": "The complete, uncropped version of fig:dino-attn.",
+    "files": [
+      "figures/source/fig09_dino-attn-full.pdf"
+    ]
+  },
+  {
+    "index": 10,
+    "label": "fig:long-horizon-initial",
+    "graphics": [
+      "figures/long-horizon.pdf"
+    ],
+    "caption": "The head camera images observed by DexGraspVLA planner and generated masks for a long-horizon task: \"Grasp all edible objects, including food and drinks.\"",
+    "files": [
+      "figures/source/fig10_long-horizon.pdf"
+    ]
+  },
+  {
+    "index": 11,
+    "label": "fig:bbox",
+    "graphics": [
+      "figures/bbox-1.png",
+      "figures/bbox-2.png",
+      "figures/bbox-3.png",
+      "figures/bbox-4.png"
+    ],
+    "caption": "Bounding-box predictions made by DexGraspVLA planner. Across diverse lighting and background conditions, it accurately grounds the language instruction to the target object in cluttered scenes and marks the correct bounding box.",
+    "files": [
+      "figures/source/fig11_bbox-1.png",
+      "figures/source/fig11_bbox-2.png",
+      "figures/source/fig11_bbox-3.png",
+      "figures/source/fig11_bbox-4.png"
+    ]
+  }
+]

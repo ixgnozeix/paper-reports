@@ -1,0 +1,167 @@
+[
+  {
+    "index": 1,
+    "label": "fig:retarget",
+    "graphics": [
+      "Pictures/retarget_new.pdf"
+    ],
+    "caption": "The figure illustrates the complete human–robot transformation pipeline. Starting from the raw scene pointcloud, we first mask out the human hands. We then perform human-in-the-loop retargeting through a user-friendly GUI in which the user only needs to adjust slider bars to modify the dummy base offset. 1 shows the retargeted result without adjustment, whereas 3 shows the final configuration with improved, more plausible hand–object contact. Finally, after kinematic retargeting, we attach the retargeted robot dexterous hands to the scene. \\vspace*-10pt",
+    "files": [
+      "figures/source/fig01_retarget_new.pdf"
+    ]
+  },
+  {
+    "index": 2,
+    "label": "fig:unidex-dataset",
+    "graphics": [
+      "Pictures/new-dataset-5.pdf"
+    ],
+    "caption": "UniDex-Dataset visualization. We show a verb–object word cloud and a subset of UniDex-Dataset. Colors denote different hands (arbitrarily assigned; black corresponds to pretraining data). UniDex-Dataset spans diverse everyday tasks across a wide range of dexterous hand embodiments, including using a mobile phone, opening a milk carton, stir-frying with a spatula, lifting a chair, solving a Rubik’s cube, and more.",
+    "files": [
+      "figures/source/fig02_new-dataset-5.pdf"
+    ]
+  },
+  {
+    "index": 3,
+    "label": "fig:faas",
+    "graphics": [
+      "Pictures/faas.pdf"
+    ],
+    "caption": "Function–Actuator–Aligned Space (FAAS). We show the thumb and ring fingers of Oymotion (11 actuators), Allegro (16), Inspire (12), and Wuji (20), with colors denoting individual joints, curves indicating rotation directions, and dotted lines indicating rotation axes. Indices \\0,1,3,5,6\\ are aligned across all four hands because the corresponding joints share similar functional roles.",
+    "files": [
+      "figures/source/fig03_faas.pdf"
+    ]
+  },
+  {
+    "index": 4,
+    "label": "fig:framework",
+    "graphics": [
+      "Pictures/model.pdf"
+    ],
+    "caption": "Overview of UniDex-VLA. At time t, the model consumes a single-view colored pointcloud P_t, a language instruction \\ell_t, and proprioception q_t, and predicts an H-step action chunk A_t = [a_t,\\ldots,a_t+H-1] expressed in the unified action space FAAS. Uni3D~zhou2023uni3d encodes the colored pointcloud; features are fused with text and proprioception in the backbone and decoded into FAAS actions. The policy is pretrained on UniDex-Dataset and optimized with a conditional flow-matching objective.",
+    "files": [
+      "figures/source/fig04_model.pdf"
+    ]
+  },
+  {
+    "index": 5,
+    "label": "fig:real-world setup",
+    "graphics": [
+      "Pictures/workstation.pdf"
+    ],
+    "caption": "Real-world experiments setup overview",
+    "files": [
+      "figures/source/fig05_workstation.pdf"
+    ]
+  },
+  {
+    "index": 6,
+    "label": "fig:task-description",
+    "graphics": [
+      "Pictures/task_1114.pdf"
+    ],
+    "caption": "Our real-robot benchmark comprises 5 challenging tool-use tasks. We visualize the key stages of each task, illustrating the precise dexterous control required to successfully complete them. \\vspace*-12pt",
+    "files": [
+      "figures/source/fig06_task_1114.pdf"
+    ]
+  },
+  {
+    "index": 7,
+    "label": "fig:spatial-generalization",
+    "graphics": [
+      "Pictures/spatial_generalization_new3.pdf"
+    ],
+    "caption": "Spatial generalization. Left: the kettle and dripper are placed at out-of-distribution (OOD) positions relative to training demonstrations. Red and green lines circling regions denote the training placement ranges for the kettle and dripper, respectively. Right: average task progress for different methods (10 trials each).",
+    "files": [
+      "figures/source/fig07_spatial_generalization_new3.pdf"
+    ]
+  },
+  {
+    "index": 8,
+    "label": "fig:obj-generalization",
+    "graphics": [
+      "Pictures/obj_generalization.pdf"
+    ],
+    "caption": "Object generalization. Left: we replace the original black kettle with a smaller purple kettle that differs in color, size, and functional parts (handle \\& spout). Right: average task progress for different methods (10 trials each). \\vspace*-12pt",
+    "files": [
+      "figures/source/fig08_obj_generalization.pdf"
+    ]
+  },
+  {
+    "index": 9,
+    "label": "fig:hand-generalization",
+    "graphics": [
+      "Pictures/transfer.pdf"
+    ],
+    "caption": "Hand generalization (zero-shot skill transfer). We transfer a policy trained on the Inspire Hand to Wuji and Oymotion. Table reports \\textbfaverage task progress (\\ \\vspace*-15pt",
+    "files": [
+      "figures/source/fig09_transfer.pdf"
+    ]
+  },
+  {
+    "index": 10,
+    "label": "fig:main-exp-results",
+    "graphics": [
+      "Pictures/average_task_progress_morandi_wide.pdf"
+    ],
+    "caption": "Average task progress across five real-world tasks (top), with aggregate averages of average task progress and final success rate (bottom) over 5 tasks. Each task/algorithm uses 20 trials. \\vspace*-15pt",
+    "files": [
+      "figures/source/fig10_average_task_progress_morandi_wide.pdf"
+    ]
+  },
+  {
+    "index": 11,
+    "label": "fig:human_data",
+    "graphics": [
+      "Pictures/unidexcap.pdf"
+    ],
+    "caption": "(a,b) show the components of UniDex-Cap. (c,d) shows the example captured data and converted robot-executable trajectories.",
+    "files": [
+      "figures/source/fig11_unidexcap.pdf"
+    ]
+  },
+  {
+    "index": 12,
+    "label": "fig:human-posttraining",
+    "graphics": [
+      "Pictures/unidex-human-vs-robot.pdf"
+    ],
+    "caption": "Human-Robot co-training. Average task progress versus the numbers of transformed human demos (h) and robot demos (r). Colors indicate different performance bands (green: comparable to the r=50 robot-only result). Each point averages over 20 trials.",
+    "files": [
+      "figures/source/fig12_unidex-human-vs-robot.pdf"
+    ]
+  },
+  {
+    "index": 13,
+    "label": "fig:web_gui",
+    "graphics": [
+      "Pictures/web_gui.png"
+    ],
+    "caption": "Human-friendly web-basedGUI for retargeting human demonstrations to robot executions. Users can adjust the IK parameters, dummy links, and other settings through the GUI to obtain satisfactory retargeted robot trajectories.",
+    "files": [
+      "figures/source/fig13_web_gui.png"
+    ]
+  },
+  {
+    "index": 14,
+    "label": "fig:detailed_faas",
+    "graphics": [
+      "Pictures/detailed_faas.png"
+    ],
+    "caption": "Joint mappings of different robotic hands used in FAAS. From left to right are Ability, Allegro, Inspire, Leap, Oymotion, Shadow, Wuji, and Xhand. The two rows show different views of the joint mappings on the right hand.",
+    "files": [
+      "figures/source/fig14_detailed_faas.png"
+    ]
+  },
+  {
+    "index": 15,
+    "label": "fig:calibration",
+    "graphics": [
+      "Pictures/calibration.pdf"
+    ],
+    "caption": "GUI for UniDex-Cap calibration. (a) shows the initial state before calibration; (b) shows the calibrated result where the hand poses captured by Vision Pro align with the 3D point cloud captured by the RealSense L515 camera.",
+    "files": [
+      "figures/source/fig15_calibration.pdf"
+    ]
+  }
+]
