@@ -1,17 +1,6 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DexVLA | WAM 论文精读</title>
-  <script>
-    window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }, svg: { fontCache: 'global' } };
-  </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DexVLA | 论文精读</title><link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>
     :root {
       --paper: #f6f7f3;
       --paper-deep: #e8ede7;
@@ -528,248 +517,122 @@
       background: var(--ink);
       color: var(--paper);
     }
-</style>
-</head>
-<body>
-<main>
-  <header>
-    <h1>DexVLA: Vision-Language Model with Plug-In Diffusion Expert for General Robot Control</h1>
-    <p class="subtitle">面向 junior PhD 组会准备的中文精读报告：围绕 WAM / 灵巧手 VLA 复现路线，拆解动机、方法、实验、图表证据和复现风险。</p>
-    <div class="meta">
-      <p><strong>项目：</strong>DexVLA | <strong>arXiv：</strong><a href="https://arxiv.org/abs/2502.05855">2502.05855</a></p>
-      <p><strong>类型：</strong>通用 VLA + Diffusion Expert | <strong>开源：</strong>代码开源 | <strong>适合程度：</strong>灵巧手是其中一个实验载体</p>
-      <p><strong>项目页：</strong>未解析</p>
-    </div>
-  </header>
-  <nav class="toc"><strong>目录</strong><ul>
-    <li><a href="#overview">1. 论文速览</a></li>
-    <li><a href="#motivation">2. 研究问题与动机</a></li>
-    <li><a href="#related">3. 相关工作脉络</a></li>
-    <li><a href="#method">4. 方法详解</a></li>
-    <li><a href="#experiments">5. 实验与结果</a></li>
-    <li><a href="#repro">6. 复现要点</a></li>
-    <li><a href="#discussion">7. 分析、局限与边界</a></li>
-    <li><a href="#qa">8. 组会问答准备</a></li>
-  </ul></nav>
-  <section id="overview">
-    <h2>1. 论文速览</h2>
-<h3>1.1 一句话贡献与论文定位</h3>
-<p>先明确论文解决的任务、核心机制与直接收益，再判断它属于数据、表示、世界模型、策略还是完整机器人系统。</p>
-<h3>1.2 阅读路线与核心结论</h3>
-<p>阅读顺序应从任务定义进入方法信息流，再用主结果、消融和真实部署证据检验核心结论，最后回到复现成本与适用边界。</p>
-
-    <p class="tldr"><strong>一句话总结：</strong>在通用 VLM 外接 1B 级 diffusion expert，把语言视觉理解与连续机器人动作生成解耦用于多任务控制。</p>
-    <div class="grid three">
-      <div class="card"><div class="kpi">5</div><div class="kpi-label">你的复现优先级</div></div>
-      <div class="card"><div class="kpi">13</div><div class="kpi-label">本地抽取图像数量</div></div>
-      <div class="card"><div class="kpi">WAM</div><div class="kpi-label">按 world-action-model / VLA 视角阅读</div></div>
-    </div>
-    <p>DexVLA 是通用机器人控制路线：使用视觉语言模型承担任务理解和跨场景表征，再插入大容量 diffusion expert 生成连续动作。它覆盖多种机器人与任务，灵巧手只是其中一个 embodiment。它适合当通用 VLA baseline，但不应被误读为专为灵巧手设计的方法。</p>
-    <p>通用 VLM + plug-in diffusion expert：把语义理解和连续动作生成分离，灵巧手只是其中一个实验载体。</p>
-    <table><tbody>
-<tr><td>阅读项</td><td>内容</td></tr>
-<tr><td>关键词</td><td>DexVLA; VLM; diffusion expert; general robot control; action generation; VLA</td></tr>
-<tr><td>论文类型</td><td>通用 VLA + Diffusion Expert</td></tr>
-<tr><td>复现价值</td><td>灵巧手是其中一个实验载体</td></tr>
-<tr><td>开源情况</td><td>代码开源</td></tr>
-</tbody></table>
-    
-<figure>
-  <img src="figures/source/fig01_framework2.png" alt="paper figure 1">
-  <figcaption><strong>fig:frame_work.</strong> DexVLA architecture and embodied curriculum learning. Our model employs a three-stage training process. Stage 1 (left) trains the Diffusion Expert independently, without the VLM. Stages 2 and 3 (middle) integrate the Diffusion Expert with a VLM, discarding the visual and language components within the expert. The Diffusion Expert (right) uses multiple heads for cross-embodiment learning.<br><strong>读图要点：</strong>这张图主要说明系统模块与信息流，读的时候要把输入、动作表示、模型主体和输出接口分开标注，避免只记住一个模型名字。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig07_post_training_tasks_results_x.png" alt="paper figure 2">
-  <figcaption><strong>fig:post_training_results.</strong> Average scores on tasks requiring stage 3 training. We compared our model against two baselines: Octo and OpenVLA. Averaging scores over 10 trials, our method significantly outperformed both baselines across all tasks. Note that sorting was not included in the pre-training data.<br><strong>读图要点：</strong>这张图主要说明系统模块与信息流，读的时候要把输入、动作表示、模型主体和输出接口分开标注，避免只记住一个模型名字。</figcaption>
-</figure>
-  </section>
-  <section id="motivation">
-    <h2>2. 研究问题与动机</h2>
-<h3>2.1 要解决什么问题</h3>
-<p>将论文问题拆成输入、输出、动作空间、任务分布与评估目标，避免只用一句宽泛的“提升泛化能力”概括。</p>
-<h3>2.2 已有方法的局限</h3>
-<p>区分数据不足、动作表示不统一、视觉泛化不足、长时序误差和真实控制接口等不同瓶颈。</p>
-<h3>2.3 本文的解决思路与关键假设</h3>
-<p>检查论文通过何种表示或模块缓解瓶颈，同时明确其成功依赖的训练数据、硬件与任务假设。</p>
-
-    <p>通用 VLA 需要同时拥有语言视觉理解和高精度连续控制能力。直接让大 VLM 输出动作可能受 action token 表达能力和机器人数据规模限制；为每个机器人独立训练策略又无法共享语义知识。DexVLA 希望用共享 VLM 提供通用理解，再让 plug-in diffusion expert 专注高频、连续和多峰动作分布。</p>
-    <p>灵巧手与普通夹爪最大的区别在于动作空间、接触模式和任务反馈都更复杂。VLA 或 world model 如果只解决语言理解，而没有解决高维动作表示和接触动态，就很难真正迁移到灵巧操作。</p>
-    <table><tbody>
-<tr><td>痛点</td><td>为什么重要</td></tr>
-<tr><td>高自由度动作</td><td>手指、腕部、物体接触共同决定成败，不能只预测末端位姿。</td></tr>
-<tr><td>数据稀缺</td><td>真实灵巧手示范昂贵，且跨手型难复用。</td></tr>
-<tr><td>跨场景泛化</td><td>光照、背景、物体形状和材质变化会破坏视觉策略。</td></tr>
-<tr><td>复现成本</td><td>硬件、数据格式、控制频率和仿真环境都会成为实际门槛。</td></tr>
-</tbody></table>
-  </section>
-  <section id="related">
-    <h2>3. 相关工作脉络</h2>
-<h3>3.1 论文自述的相关工作</h3>
-<p>按照论文自己的引用脉络定位其直接前作，重点辨认作者认为尚未解决的缺口。</p>
-<h3>3.2 直接前作与替代路线对比</h3>
-<p>比较相邻方法在数据来源、动作表示、模型结构、规划方式和真实部署上的差异，而不是只比较模型名称。</p>
-
-    <p>它延续 RT-2/OpenVLA/π0 等通用 VLA 路线，同时借鉴 Diffusion Policy 的连续动作建模。与 DexGraspVLA 的层级 planner-controller 不同，DexVLA 更强调统一大模型与可插拔动作专家；与 XL-VLA 的共享 latent 不同，它主要用 diffusion expert 解决动作生成容量。</p>
-    <table><tbody>
-<tr><td>脉络</td><td>本论文的位置</td></tr>
-<tr><td>VLA / robot foundation model</td><td>提供语言和视觉条件到动作或动作表示的接口。</td></tr>
-<tr><td>Dexterous imitation / teleoperation</td><td>提供高自由度手部数据和真实执行监督。</td></tr>
-<tr><td>World model / WAM</td><td>预测动作导致的未来状态，用于规划、筛选或策略学习。</td></tr>
-<tr><td>Action representation</td><td>决定模型能否跨机器人、跨手型和跨任务迁移。</td></tr>
-</tbody></table>
-  </section>
-  <section id="method">
-    <h2>4. 方法详解</h2>
-<h3>4.1 方法概览与信息流</h3>
-<p>从原始观测与指令开始，沿模型的数据流追踪到动作、未来状态或规划结果，明确训练和推理阶段的差异。</p>
-<h3>4.2 核心表示与模块职责</h3>
-<p>分别说明视觉、语言、动作、状态和接触信息如何编码，以及每个模块究竟承担理解、预测、生成还是控制。</p>
-<h3>4.3 训练目标、数学结构与关键假设</h3>
-<p>定位决定方法行为的损失函数、条件变量、潜变量或规划代价，并解释这些设计为何适合论文任务。</p>
-<h3>4.4 面向复现的实现细节</h3>
-<p>记录模型规模、输入输出维度、数据频率、动作分块、训练阶段和部署接口；论文未说明的部分必须标记为不确定。</p>
-
-    <p>视觉与语言输入经 VLM 编码形成任务条件，diffusion expert 接收这些条件与机器人状态，通过去噪预测 action chunk。训练通常包含大规模多机器人数据预训练、任务/平台后训练以及新任务适配。plug-in 设计允许动作专家拥有比传统小 action head 更强的容量，同时不需要彻底改造 VLM 主干。</p>
-    <h3>4.1 模块化阅读图</h3>
-    <ul><li>VLM 处理语言和视觉任务条件。</li><li>diffusion expert 负责连续动作生成。</li><li>plug-in 设计降低了直接把大 VLM 改造成控制器的成本。</li><li>适合作为通用 VLA baseline。</li></ul>
-    <h3>4.2 关键表示与接口</h3>
-    <table><tbody>
-<tr><td>接口</td><td>应检查的问题</td></tr>
-<tr><td>视觉输入</td><td>使用原始图像、mask、DINO/ViT 特征，还是视频 latent？</td></tr>
-<tr><td>语言输入</td><td>是高层 planner、任务条件，还是直接进入 action head？</td></tr>
-<tr><td>动作表示</td><td>关节角、末端位姿、手部 keypoint、latent action，还是 action chunk？</td></tr>
-<tr><td>训练目标</td><td>behavior cloning、diffusion denoising、world-model prediction、contrastive objective 还是混合损失？</td></tr>
-<tr><td>部署方式</td><td>端到端策略、分层控制、MPC/CEM 规划，还是离线评估？</td></tr>
-</tbody></table>
-    
-<figure>
-  <img src="figures/source/fig08_franka_inspire_experiments.png" alt="paper figure 1">
-  <figcaption><strong>fig:zero_shot_transfer.</strong> Robot setup on zero-shot cross-embodiment transfer from gripper to dexterous hand. We replace the original gripper with an Inspire dexterous hand and evaluate DexVLA in the same bin-picking environment using unseen objects.<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig05_new_task_results.png" alt="paper figure 2">
-  <figcaption><strong>fig:new_task_suite.</strong> Example of tasks for learning dexterous skills on new embodiment. We evaluate our model on two new embodiments with packing (top) and drink pouring (bottom) tasks, which are not included in stage 1 \&amp; 2 train data.<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig10_data_distribution.png" alt="paper figure 3">
-  <figcaption><strong>fig:data_allocation.</strong> Overview of our dataset for stage 1 training.<br><strong>读图要点：</strong>这张图主要说明系统模块与信息流，读的时候要把输入、动作表示、模型主体和输出接口分开标注，避免只记住一个模型名字。</figcaption>
-</figure>
-  </section>
-  <section id="experiments">
-    <h2>5. 实验与结果</h2>
-<h3>5.1 实验设置与评估协议</h3>
-<p>核对训练测试划分、任务数量、物体与场景覆盖、基线、指标、重试次数和成功判定。</p>
-<h3>5.2 主要结果</h3>
-<p>主结果回答方法是否有效；应同时关注绝对性能、相对提升、方差和不同任务类别上的一致性。</p>
-<h3>5.3 消融实验</h3>
-<p>消融应回答性能来自哪里；检查被移除组件、训练预算和评估条件是否公平。</p>
-<h3>5.4 定性结果、失败案例与附录证据</h3>
-<p>定性图用于理解模型行为与失败模式，附录则常包含复现所需的超参数、额外任务和边界案例。</p>
-
-    <p>应分别查看预训练覆盖的机器人/任务、zero-shot 或少样本能力、后训练新任务结果，以及不同 diffusion expert 规模和训练阶段的消融。论文展示通用控制和多 embodiment 能力，但评估时要区分灵巧手任务是否为核心实验，还是用于说明模型可扩展性的一个案例。</p>
-    <h3>5.1 读实验时先看什么</h3>
-    <ul><li>看多任务、多机器人、多 action space 下是否统一。</li><li>灵巧手实验要看是不是主结果，还是附带验证。</li><li>对比 OpenVLA/π0 类模型时关注动作生成模块差异。</li></ul>
-    <h3>5.2 图表证据链</h3>
-    <table><tbody>
-<tr><td>证据</td><td>支持的 claim</td><td>仍需警惕</td></tr>
-<tr><td>系统/架构图</td><td>说明模块职责和信息流。</td><td>架构清楚不等于每个模块都有效。</td></tr>
-<tr><td>主结果表</td><td>证明任务成功率或预测质量。</td><td>需要看任务规模和测试分布。</td></tr>
-<tr><td>消融实验</td><td>定位收益来自表示、数据还是模型。</td><td>消融是否公平、是否覆盖关键替代方案。</td></tr>
-<tr><td>定性图</td><td>展示真实/仿真交互细节。</td><td>好看的图不能替代大规模统计。</td></tr>
-<tr><td>附录细节</td><td>给出训练、数据、超参和失败案例。</td><td>很多复现风险藏在附录。</td></tr>
-</tbody></table>
-    
-<figure>
-  <img src="figures/source/fig05_learning_new_tasks.png" alt="paper figure 1">
-  <figcaption><strong>fig:new_task_suite.</strong> Example of tasks for learning dexterous skills on new embodiment. We evaluate our model on two new embodiments with packing (top) and drink pouring (bottom) tasks, which are not included in stage 1 \&amp; 2 train data.<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig06_post_training_tasks_results3.png" alt="paper figure 2">
-  <figcaption><strong>fig:post_training_results.</strong> Average scores on tasks requiring stage 3 training. We compared our model against Octo, OpenVLA and \pi_0 on laundry folding and bussing table (hard).<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig02_stage_3_task_description.png" alt="paper figure 3">
-  <figcaption><strong>fig:hard_task_suite.</strong> Example of direct prompting for long-horizon tasks. The figure shows three tasks, laundry folding (top), dryer unloading (middle), sorting (bottom). Our DexVLA breaks down raw instructions into sub-steps automatically. Success in these tasks necessitates not only dexterity but also the capacity to decompose direct prompts into implicit multi-step reasoning and to comprehend the visual context.<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig03_robot_examples.png" alt="paper figure 4">
-  <figcaption><strong>fig:example_robots.</strong> Our experiment includes various robot types: bimanual UR5e, Franka, bimanual AgileX, and Franka with dexterous hands.<br><strong>读图要点：</strong>这张图说明真实系统或硬件部署，读的时候要关注传感器、控制频率、手型和安全约束。</figcaption>
-</figure>
-  </section>
-  <section id="repro">
-    <h2>6. 复现要点</h2>
-<h3>6.1 最小可行复现路径</h3>
-<p>先复现单一任务或离线指标，确认数据与动作接口正确，再扩展到完整系统和真实机器人。</p>
-<h3>6.2 数据、模型、训练与硬件清单</h3>
-<p>逐项核对数据许可、预处理脚本、权重、依赖版本、训练预算、传感器、机器人与安全控制。</p>
-<h3>6.3 复现风险与验收标准</h3>
-<p>为每个阶段定义可观测的验收指标，优先排查数据时间对齐、坐标系、动作尺度和评估协议。</p>
-
-    <p>复现需要确认多机器人数据格式、动作归一化、VLM checkpoint、diffusion expert 配置和分阶段训练 recipe。最实际的路线是从官方 checkpoint 做单机器人后训练，而不是重做大规模预训练。灵巧手接入时需重新定义 action dimension、控制频率、proprioception 和安全限制。</p>
-    <h3>6.1 复现风险清单</h3>
-    <ul><li>灵巧手不是唯一中心，复现到高自由度手可能需要额外适配。</li><li>diffusion expert 的训练数据与推理速度是瓶颈。</li><li>通用性 claim 需要看任务覆盖。</li></ul>
-    <table><tbody>
-<tr><td>维度</td><td>检查项</td></tr>
-<tr><td>代码</td><td>仓库是否包含训练、评估、数据预处理和模型权重加载。</td></tr>
-<tr><td>数据</td><td>是否公开原始数据、标注、过滤脚本和 split。</td></tr>
-<tr><td>模型</td><td>是否给出 backbone、tokenizer、action head、world model 的尺寸与权重。</td></tr>
-<tr><td>训练</td><td>batch size、学习率、epoch、GPU、随机种子和日志是否足够。</td></tr>
-<tr><td>硬件</td><td>手型、相机、控制频率和安全策略是否能匹配。</td></tr>
-<tr><td>评估</td><td>成功率定义、重试次数、任务分布和失败统计是否清楚。</td></tr>
-</tbody></table>
-  </section>
-  <section id="discussion">
-    <h2>7. 分析、局限与边界</h2>
-<h3>7.1 最有价值的贡献</h3>
-<p>判断论文真正可迁移的资产是数据、动作表示、模型模块、训练范式，还是完整系统经验。</p>
-<h3>7.2 证据为什么站得住</h3>
-<p>把每个主要主张对应到主结果、消融、定性图和真实部署证据，并指出证据链中仍然薄弱的环节。</p>
-<h3>7.3 作者局限、额外边界与可能改进</h3>
-<p>区分论文明确承认的局限与基于证据推断的边界，提出可验证的改进方向而非空泛展望。</p>
-
-    <p>DexVLA 的通用性来自大规模多任务训练，但这也提高了数据和算力门槛。共享 VLM 不保证不同机器人动作知识真正互相促进，diffusion expert 仍可能学习 embodiment-specific 模式。对精细接触、触觉和长程规划的能力需要从具体实验判断，不能由模型规模直接推断。</p>
-    <p>对你的课题而言，最重要的不是把所有论文都当成可直接复现的系统，而是判断它们在链路中的位置：有的是数据/动作表示，有的是世界模型，有的是 VLA 控制器，有的是高自由度真实系统。只有把位置分清，才知道该复现哪一段、创新该放在哪里。</p>
-    <div class="danger"><strong>边界提醒：</strong>如果论文的实验只覆盖仿真、少量物体或固定手型，不应把结果外推到任意灵巧手和任意真实物体。WAM/VLA 的 claim 必须和任务分布绑定。</div>
-  </section>
-  <section id="qa">
-    <h2>8. 组会问答准备</h2>
-    <h3>Q1: 这篇论文的核心 novelty 是什么？</h3><p>在通用 VLM 外接 1B 级 diffusion expert，把语言视觉理解与连续机器人动作生成解耦用于多任务控制。</p>
-    <h3>Q2: 它最适合放在你的哪条研究线上？</h3><p>通用 VLM + plug-in diffusion expert：把语义理解和连续动作生成分离，灵巧手只是其中一个实验载体。</p>
-    <h3>Q3: 哪个实验最有说服力？</h3><p>优先看主结果表与关键消融：主结果回答“能不能做”，消融回答“为什么能做”。如果二者缺一，论文 claim 的可信度都要打折。</p>
-    <h3>Q4: 最大复现风险是什么？</h3><p>优先检查数据、动作接口和硬件环境。对灵巧手论文来说，代码开源不等于可复现，真正的难点常常在遥操作数据格式、相机标定、控制频率和安全策略。</p>
-    <h3>Q5: 下一步可以怎么用？</h3><p>适合作为通用 VLA 基线。若研究重点是灵巧手，不应投入资源重做全部预训练；更合理的是把它接入目标手型，与 DexGraspVLA 分层控制或 DexLatent 动作接口比较。</p>
-  </section>
-<section id="figure-appendix">
-<h2>9. 补充图解与附录证据</h2>
-<h3>9.1 尚未在正文展开的高价值原论文插图</h3>
-<p>本节继续利用论文原始插图补足方法、数据、实验与部署证据。每张图均保留原始图注，并给出阅读重点；它们用于扩展证据链，而不是装饰页面。</p>
-<figure>
-  <img src="figures/source/fig04_wo-post-training-task.png" alt="fig:easy_task_suite">
-  <figcaption><strong>fig:easy_task_suite.</strong> Examples of tasks without task-specific adaptation. We assessed our model&#x27;s performance after stage 2 training using three tasks: bin-picking easy (top), shirt folding (middle), and table bussing easy (bottom).
-  <br><strong>读图要点：</strong>将比较对象、指标和控制变量逐一对应；重点判断差异是否真正支持论文的核心设计。</figcaption>
+</style></head><body><main>
+<header>
+<h1>DexVLA: Vision-Language Model with Plug-In Diffusion Expert for General Robot Control</h1>
+<p class="subtitle">基于论文正文、实验、附录与原始图注整理的中文精读报告</p>
+<div class="meta"><p><strong>项目：</strong>DexVLA | <strong>arXiv：</strong><a href="https://arxiv.org/abs/2502.05855">2502.05855</a></p>
+<p><strong>类型：</strong>通用 VLA + Diffusion Expert | <strong>开源情况：</strong>代码开源 | <strong>复现判断：</strong>灵巧手是其中一个实验载体</p></div>
+</header>
+<nav class="toc"><strong>目录</strong><ul>
+<li><a href="#overview">1. 论文速览</a></li><li><a href="#motivation">2. 研究问题与动机</a></li>
+<li><a href="#related">3. 相关工作脉络</a></li><li><a href="#method">4. 方法详解</a></li>
+<li><a href="#experiments">5. 实验与结果</a></li><li><a href="#repro">6. 复现要点</a></li>
+<li><a href="#discussion">7. 分析、局限与边界</a></li><li><a href="#qa">8. 组会问答与阅读笔记</a></li>
+</ul></nav>
+<section id="overview"><h2>1. 论文速览</h2>
+<p class="tldr"><strong>一句话贡献：</strong>在通用 VLM 外接 1B 级 diffusion expert，把语言视觉理解与连续机器人动作生成解耦用于多任务控制。</p>
+<h3>1.1 核心内容</h3><p>DexVLA 是通用机器人控制路线：使用视觉语言模型承担任务理解和跨场景表征，再插入大容量 diffusion expert 生成连续动作。</p>
+<p>它覆盖多种机器人与任务，灵巧手只是其中一个 embodiment。</p>
+<p>它适合当通用 VLA baseline，但不应被误读为专为灵巧手设计的方法。</p>
+<h3>1.2 关键词</h3><p>DexVLA; VLM; diffusion expert; general robot control; action generation; VLA</p></section>
+<section id="motivation"><h2>2. 研究问题与动机</h2>
+<h3>2.1 论文试图解决的问题</h3><p>通用 VLA 需要同时拥有语言视觉理解和高精度连续控制能力。</p>
+<p>直接让大 VLM 输出动作可能受 action token 表达能力和机器人数据规模限制；</p>
+<p>为每个机器人独立训练策略又无法共享语义知识。</p>
+<p>DexVLA 希望用共享 VLM 提供通用理解，再让 plug-in diffusion expert 专注高频、连续和多峰动作分布。</p></section>
+<section id="related"><h2>3. 相关工作脉络</h2>
+<h3>3.1 论文在相关技术路线中的位置</h3><p>它延续 RT-2/OpenVLA/π0 等通用 VLA 路线，同时借鉴 Diffusion Policy 的连续动作建模。</p>
+<p>与 DexGraspVLA 的层级 planner-controller 不同，DexVLA 更强调统一大模型与可插拔动作专家；</p>
+<p>与 XL-VLA 的共享 latent 不同，它主要用 diffusion expert 解决动作生成容量。</p></section>
+<section id="method"><h2>4. 方法详解</h2>
+<h3>4.1 方法流程与核心设计</h3><p>视觉与语言输入经 VLM 编码形成任务条件，diffusion expert 接收这些条件与机器人状态，通过去噪预测 action chunk。</p>
+<p>训练通常包含大规模多机器人数据预训练、任务/平台后训练以及新任务适配。</p>
+<p>plug-in 设计允许动作专家拥有比传统小 action head 更强的容量，同时不需要彻底改造 VLM 主干。</p>
+<h3>4.2 方法相关原图逐图解读</h3><figure>
+<img src="figures/source/fig01_framework2.png" alt="fig:frame_work">
+<figcaption><strong>fig:frame_work.</strong> DexVLA architecture and embodied curriculum learning. Our model employs a three-stage training process. Stage 1 (left) trains the Diffusion Expert independently, without the VLM. Stages 2 and 3 (middle) integrate the Diffusion Expert with a VLM, discarding the visual and language components within the expert. The Diffusion Expert (right) uses multiple heads for cross-embodiment learning.
+<br><strong>结合本文的读图结论：</strong>这张图给出了论文方法的信息流与模块关系；关键是沿图中箭头追踪输入如何变成最终输出：DexVLA architecture and embodied curriculum learning. Our model employs a three-stage training process. Stage 1 (left) trains the Diffusion Expert independently, without the VLM. Stages 2 and 3 (middle) integrate the Diffusion Expert with a VLM, discarding the visual and language components within the expert. The Diffusion Expert (right) uses multiple heads for cross-embodiment learning.</figcaption>
 </figure>
 <figure>
-  <img src="figures/source/fig04_zero_shot_tasks.png" alt="fig:easy_task_suite">
-  <figcaption><strong>fig:easy_task_suite.</strong> Examples of tasks without task-specific adaptation. We assessed our model&#x27;s performance after stage 2 training using three tasks: bin-picking easy (top), shirt folding (middle), and table bussing easy (bottom).
-  <br><strong>读图要点：</strong>将比较对象、指标和控制变量逐一对应；重点判断差异是否真正支持论文的核心设计。</figcaption>
+<img src="figures/source/fig02_stage_3_task_description.png" alt="fig:hard_task_suite">
+<figcaption><strong>fig:hard_task_suite.</strong> Example of direct prompting for long-horizon tasks. The figure shows three tasks, laundry folding (top), dryer unloading (middle), sorting (bottom). Our DexVLA breaks down raw instructions into sub-steps automatically. Success in these tasks necessitates not only dexterity but also the capacity to decompose direct prompts into implicit multi-step reasoning and to comprehend the visual context.
+<br><strong>结合本文的读图结论：</strong>这张图属于论文的结果证据，应重点比较图注明确列出的任务、基线或指标：Example of direct prompting for long-horizon tasks. The figure shows three tasks, laundry folding (top), dryer unloading (middle), sorting (bottom). Our DexVLA breaks down raw instructions into sub-steps automatically. Success in these tasks necessitates not only dexterity but also the capacity to decompose direct prompts into implicit multi-step reasoning and to comprehend the visual context.</figcaption>
 </figure>
 <figure>
-  <img src="figures/source/fig09_visual_generalization.png" alt="fig:visual_generalization">
-  <figcaption><strong>fig:visual_generalization.</strong> Example of visual generalization. Here lists some visual generalization settings including unseen objects and unseen scenes.
-  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+<img src="figures/source/fig03_robot_examples.png" alt="fig:example_robots">
+<figcaption><strong>fig:example_robots.</strong> Our experiment includes various robot types: bimanual UR5e, Franka, bimanual AgileX, and Franka with dexterous hands.
+<br><strong>结合本文的读图结论：</strong>这张图展示真实系统或硬件部署，是判断论文是否跨越仿真到真实差距的重要证据：Our experiment includes various robot types: bimanual UR5e, Franka, bimanual AgileX, and Franka with dexterous hands.</figcaption>
 </figure>
 <figure>
-  <img src="figures/source/fig11_task_length.png" alt="fig:91_tasks">
-  <figcaption><strong>fig:91_tasks.</strong> Average task length(seconds) of 91 tasks. fig:91_tasks
-  <br><strong>读图要点：</strong>检查任务、物体、场景和具身形态覆盖范围，判断实验分布是否足以支撑论文的泛化主张。</figcaption>
+<img src="figures/source/fig04_wo-post-training-task.png" alt="fig:easy_task_suite">
+<figcaption><strong>fig:easy_task_suite.</strong> Examples of tasks without task-specific adaptation. We assessed our model&#x27;s performance after stage 2 training using three tasks: bin-picking easy (top), shirt folding (middle), and table bussing easy (bottom).
+<br><strong>结合本文的读图结论：</strong>这张图属于论文的结果证据，应重点比较图注明确列出的任务、基线或指标：Examples of tasks without task-specific adaptation. We assessed our model&#x27;s performance after stage 2 training using three tasks: bin-picking easy (top), shirt folding (middle), and table bussing easy (bottom).</figcaption>
 </figure>
+<figure>
+<img src="figures/source/fig04_zero_shot_tasks.png" alt="fig:easy_task_suite">
+<figcaption><strong>fig:easy_task_suite.</strong> Examples of tasks without task-specific adaptation. We assessed our model&#x27;s performance after stage 2 training using three tasks: bin-picking easy (top), shirt folding (middle), and table bussing easy (bottom).
+<br><strong>结合本文的读图结论：</strong>这张图属于论文的结果证据，应重点比较图注明确列出的任务、基线或指标：Examples of tasks without task-specific adaptation. We assessed our model&#x27;s performance after stage 2 training using three tasks: bin-picking easy (top), shirt folding (middle), and table bussing easy (bottom).</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig05_learning_new_tasks.png" alt="fig:new_task_suite">
+<figcaption><strong>fig:new_task_suite.</strong> Example of tasks for learning dexterous skills on new embodiment. We evaluate our model on two new embodiments with packing (top) and drink pouring (bottom) tasks, which are not included in stage 1 \&amp; 2 train data.
+<br><strong>结合本文的读图结论：</strong>这张图界定了论文的数据与评测覆盖范围，决定其泛化结论可以外推到哪里：Example of tasks for learning dexterous skills on new embodiment. We evaluate our model on two new embodiments with packing (top) and drink pouring (bottom) tasks, which are not included in stage 1 \&amp; 2 train data.</figcaption>
+</figure></section>
+<section id="experiments"><h2>5. 实验与结果</h2>
+<h3>5.1 实验设置、主要结果与消融结论</h3><p>应分别查看预训练覆盖的机器人/任务、zero-shot 或少样本能力、后训练新任务结果，以及不同 diffusion expert 规模和训练阶段的消融。</p>
+<p>论文展示通用控制和多 embodiment 能力，但评估时要区分灵巧手任务是否为核心实验，还是用于说明模型可扩展性的一个案例。</p>
+<h3>5.2 实验相关原图逐图解读</h3><figure>
+<img src="figures/source/fig05_new_task_results.png" alt="fig:new_task_suite">
+<figcaption><strong>fig:new_task_suite.</strong> Example of tasks for learning dexterous skills on new embodiment. We evaluate our model on two new embodiments with packing (top) and drink pouring (bottom) tasks, which are not included in stage 1 \&amp; 2 train data.
+<br><strong>结合本文的读图结论：</strong>这张图界定了论文的数据与评测覆盖范围，决定其泛化结论可以外推到哪里：Example of tasks for learning dexterous skills on new embodiment. We evaluate our model on two new embodiments with packing (top) and drink pouring (bottom) tasks, which are not included in stage 1 \&amp; 2 train data.</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig06_post_training_tasks_results3.png" alt="fig:post_training_results">
+<figcaption><strong>fig:post_training_results.</strong> Average scores on tasks requiring stage 3 training. We compared our model against Octo, OpenVLA and \pi_0 on laundry folding and bussing table (hard).
+<br><strong>结合本文的读图结论：</strong>这张图界定了论文的数据与评测覆盖范围，决定其泛化结论可以外推到哪里：Average scores on tasks requiring stage 3 training. We compared our model against Octo, OpenVLA and \pi_0 on laundry folding and bussing table (hard).</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig07_post_training_tasks_results_x.png" alt="fig:post_training_results">
+<figcaption><strong>fig:post_training_results.</strong> Average scores on tasks requiring stage 3 training. We compared our model against two baselines: Octo and OpenVLA. Averaging scores over 10 trials, our method significantly outperformed both baselines across all tasks. Note that sorting was not included in the pre-training data.
+<br><strong>结合本文的读图结论：</strong>这张图界定了论文的数据与评测覆盖范围，决定其泛化结论可以外推到哪里：Average scores on tasks requiring stage 3 training. We compared our model against two baselines: Octo and OpenVLA. Averaging scores over 10 trials, our method significantly outperformed both baselines across all tasks. Note that sorting was not included in the pre-training data.</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig08_franka_inspire_experiments.png" alt="fig:zero_shot_transfer">
+<figcaption><strong>fig:zero_shot_transfer.</strong> Robot setup on zero-shot cross-embodiment transfer from gripper to dexterous hand. We replace the original gripper with an Inspire dexterous hand and evaluate DexVLA in the same bin-picking environment using unseen objects.
+<br><strong>结合本文的读图结论：</strong>这张图展示真实系统或硬件部署，是判断论文是否跨越仿真到真实差距的重要证据：Robot setup on zero-shot cross-embodiment transfer from gripper to dexterous hand. We replace the original gripper with an Inspire dexterous hand and evaluate DexVLA in the same bin-picking environment using unseen objects.</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig09_visual_generalization.png" alt="fig:visual_generalization">
+<figcaption><strong>fig:visual_generalization.</strong> Example of visual generalization. Here lists some visual generalization settings including unseen objects and unseen scenes.
+<br><strong>结合本文的读图结论：</strong>该图是论文证据链的一部分。结合原始图注可知，它具体展示的是：Example of visual generalization. Here lists some visual generalization settings including unseen objects and unseen scenes.</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig10_data_distribution.png" alt="fig:data_allocation">
+<figcaption><strong>fig:data_allocation.</strong> Overview of our dataset for stage 1 training.
+<br><strong>结合本文的读图结论：</strong>这张图给出了论文方法的信息流与模块关系；关键是沿图中箭头追踪输入如何变成最终输出：Overview of our dataset for stage 1 training.</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig11_task_length.png" alt="fig:91_tasks">
+<figcaption><strong>fig:91_tasks.</strong> Average task length(seconds) of 91 tasks. fig:91_tasks
+<br><strong>结合本文的读图结论：</strong>这张图界定了论文的数据与评测覆盖范围，决定其泛化结论可以外推到哪里：Average task length(seconds) of 91 tasks. fig:91_tasks</figcaption>
+</figure></section>
+<section id="repro"><h2>6. 复现要点</h2>
+<h3>6.1 推荐复现路径与主要阻碍</h3><p>复现需要确认多机器人数据格式、动作归一化、VLM checkpoint、diffusion expert 配置和分阶段训练 recipe。</p>
+<p>最实际的路线是从官方 checkpoint 做单机器人后训练，而不是重做大规模预训练。</p>
+<p>灵巧手接入时需重新定义 action dimension、控制频率、proprioception 和安全限制。</p></section>
+<section id="discussion"><h2>7. 分析、局限与边界</h2>
+<h3>7.1 证据支持的结论与适用边界</h3><p>DexVLA 的通用性来自大规模多任务训练，但这也提高了数据和算力门槛。</p>
+<p>共享 VLM 不保证不同机器人动作知识真正互相促进，diffusion expert 仍可能学习 embodiment-specific 模式。</p>
+<p>对精细接触、触觉和长程规划的能力需要从具体实验判断，不能由模型规模直接推断。</p>
 </section>
-</main>
-</body>
-</html>
+<section id="qa"><h2>8. 组会问答与阅读笔记</h2>
+<h3>Q1：为何需要 diffusion expert？</h3><p>：连续机器人动作多峰且高维，小 action head 容量不足。</p>
+<h3>Q2：plug-in 的优势？</h3><p>：保留 VLM 语义能力，同时独立扩展动作生成容量。</p>
+<h3>Q3：它与 π0/OpenVLA 的比较重点？</h3><p>：动作生成方式、训练阶段和多 embodiment 数据。</p>
+<h3>Q4：灵巧手结果能证明什么？</h3><p>：证明接口可扩展，不一定证明专门的灵巧泛化能力。</p>
+<h3>Q5：低成本复现方式？</h3><p>：基于 checkpoint 做目标机器人后训练。</p>
+<h3>我的阅读笔记</h3><p>适合作为通用 VLA 基线。</p>
+<p>若研究重点是灵巧手，不应投入资源重做全部预训练；</p>
+<p>更合理的是把它接入目标手型，与 DexGraspVLA 分层控制或 DexLatent 动作接口比较。</p></section>
+</main></body></html>

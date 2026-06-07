@@ -1,17 +1,6 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DexWM | WAM 论文精读</title>
-  <script>
-    window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }, svg: { fontCache: 'global' } };
-  </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DexWM | 论文精读</title><link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>
     :root {
       --paper: #f6f7f3;
       --paper-deep: #e8ede7;
@@ -528,268 +517,148 @@
       background: var(--ink);
       color: var(--paper);
     }
-</style>
-</head>
-<body>
-<main>
-  <header>
-    <h1>World Models Can Leverage Human Videos for Dexterous Manipulation</h1>
-    <p class="subtitle">面向 junior PhD 组会准备的中文精读报告：围绕 WAM / 灵巧手 VLA 复现路线，拆解动机、方法、实验、图表证据和复现风险。</p>
-    <div class="meta">
-      <p><strong>项目：</strong>DexWM | <strong>arXiv：</strong><a href="https://arxiv.org/abs/2512.13644">2512.13644</a></p>
-      <p><strong>类型：</strong>灵巧手 World Model / WAM 相关 | <strong>开源：</strong>官方 PyTorch 开源 | <strong>适合程度：</strong>WAM 方向首推</p>
-      <p><strong>项目页：</strong>未解析</p>
-    </div>
-  </header>
-  <nav class="toc"><strong>目录</strong><ul>
-    <li><a href="#overview">1. 论文速览</a></li>
-    <li><a href="#motivation">2. 研究问题与动机</a></li>
-    <li><a href="#related">3. 相关工作脉络</a></li>
-    <li><a href="#method">4. 方法详解</a></li>
-    <li><a href="#experiments">5. 实验与结果</a></li>
-    <li><a href="#repro">6. 复现要点</a></li>
-    <li><a href="#discussion">7. 分析、局限与边界</a></li>
-    <li><a href="#qa">8. 组会问答准备</a></li>
-  </ul></nav>
-  <section id="overview">
-    <h2>1. 论文速览</h2>
-<h3>1.1 一句话贡献与论文定位</h3>
-<p>先明确论文解决的任务、核心机制与直接收益，再判断它属于数据、表示、世界模型、策略还是完整机器人系统。</p>
-<h3>1.2 阅读路线与核心结论</h3>
-<p>阅读顺序应从任务定义进入方法信息流，再用主结果、消融和真实部署证据检验核心结论，最后回到复现成本与适用边界。</p>
-
-    <p class="tldr"><strong>一句话总结：</strong>训练灵巧操作 world model，从大量人类/机器人视频学习手-物交互动态，并迁移到真实机器人规划。</p>
-    <div class="grid three">
-      <div class="card"><div class="kpi">4</div><div class="kpi-label">你的复现优先级</div></div>
-      <div class="card"><div class="kpi">17</div><div class="kpi-label">本地抽取图像数量</div></div>
-      <div class="card"><div class="kpi">WAM</div><div class="kpi-label">按 world-action-model / VLA 视角阅读</div></div>
-    </div>
-    <p>DexWM 学习的不是动作策略，而是动作导致的未来视觉 latent。它用人类第一视角视频和非灵巧机器人视频预训练 hand-object interaction dynamics，再用少量灵巧机器人探索数据适配，最后通过 CEM/MPC 搜索能让预测状态接近目标图像的动作。它是这组论文中最贴近 WAM/model-based manipulation 的工作。</p>
-    <p>WAM 方向最关键：不是直接学 policy，而是从人类/机器人视频学习 hand-object interaction world model，再用 CEM/MPC 做目标条件规划。</p>
-    <table><tbody>
-<tr><td>阅读项</td><td>内容</td></tr>
-<tr><td>关键词</td><td>DexWM; world model; human videos; hand consistency; latent dynamics; dexterous manipulation</td></tr>
-<tr><td>论文类型</td><td>灵巧手 World Model / WAM 相关</td></tr>
-<tr><td>复现价值</td><td>WAM 方向首推</td></tr>
-<tr><td>开源情况</td><td>官方 PyTorch 开源</td></tr>
-</tbody></table>
-    
-<figure>
-  <img src="figures/source/fig16_sim_experiments.png" alt="paper figure 1">
-  <figcaption><strong>fig:sim_experiments.</strong> Robot Task Example in Simulation. Given goal (red) and start (green) images, \ours successfully plans the trajectory by finding optimal actions using the Cross-Entropy Method inside an MPC framework. The final reached state (blue) in each task closely resembles the goal frame, demonstrating successful execution. Notably, \ours was not trained on any task-specific robot data.<br><strong>读图要点：</strong>这张图主要说明系统模块与信息流，读的时候要把输入、动作表示、模型主体和输出接口分开标注，避免只记住一个模型名字。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig09_real_world_rollout.png" alt="paper figure 2">
-  <figcaption><strong>fig:real_robot_planning.</strong> Real Robot Planning Example. Given goal and start images, \ours successfully plans and executes the trajectory by finding the optimal actions using the Cross-Entropy Method. Notably, \ours works zero-shot without any real-world training. (sec:robot_task_exec)<br><strong>读图要点：</strong>这张图主要说明系统模块与信息流，读的时候要把输入、动作表示、模型主体和输出接口分开标注，避免只记住一个模型名字。</figcaption>
-</figure>
-  </section>
-  <section id="motivation">
-    <h2>2. 研究问题与动机</h2>
-<h3>2.1 要解决什么问题</h3>
-<p>将论文问题拆成输入、输出、动作空间、任务分布与评估目标，避免只用一句宽泛的“提升泛化能力”概括。</p>
-<h3>2.2 已有方法的局限</h3>
-<p>区分数据不足、动作表示不统一、视觉泛化不足、长时序误差和真实控制接口等不同瓶颈。</p>
-<h3>2.3 本文的解决思路与关键假设</h3>
-<p>检查论文通过何种表示或模块缓解瓶颈，同时明确其成功依赖的训练数据、硬件与任务假设。</p>
-
-    <p>灵巧手 world model 需要理解指尖级动作如何改变物体，但真实灵巧机器人视频稀缺。普通视频模型缺乏精细动作条件，直接 policy 又只能解决训练过的任务。DexWM 的动机是利用大规模人类视频学习可迁移的交互动力学，并通过统一 hand keypoint action 跨越人手、平行夹爪和 Allegro 手之间的 embodiment gap。</p>
-    <p>灵巧手与普通夹爪最大的区别在于动作空间、接触模式和任务反馈都更复杂。VLA 或 world model 如果只解决语言理解，而没有解决高维动作表示和接触动态，就很难真正迁移到灵巧操作。</p>
-    <table><tbody>
-<tr><td>痛点</td><td>为什么重要</td></tr>
-<tr><td>高自由度动作</td><td>手指、腕部、物体接触共同决定成败，不能只预测末端位姿。</td></tr>
-<tr><td>数据稀缺</td><td>真实灵巧手示范昂贵，且跨手型难复用。</td></tr>
-<tr><td>跨场景泛化</td><td>光照、背景、物体形状和材质变化会破坏视觉策略。</td></tr>
-<tr><td>复现成本</td><td>硬件、数据格式、控制频率和仿真环境都会成为实际门槛。</td></tr>
-</tbody></table>
-  </section>
-  <section id="related">
-    <h2>3. 相关工作脉络</h2>
-<h3>3.1 论文自述的相关工作</h3>
-<p>按照论文自己的引用脉络定位其直接前作，重点辨认作者认为尚未解决的缺口。</p>
-<h3>3.2 直接前作与替代路线对比</h3>
-<p>比较相邻方法在数据来源、动作表示、模型结构、规划方式和真实部署上的差异，而不是只比较模型名称。</p>
-
-    <p>它区别于无动作条件的视频生成模型，也区别于直接 observation-to-action 的 Diffusion Policy。状态预测采用视觉 latent world model 路线；动作表示借鉴人体/手部关键点；测试时采用 model predictive control。与 DWM 相比，DexWM 更强调 latent dynamics 可用于真实机器人规划，而不是生成高保真交互视频。</p>
-    <table><tbody>
-<tr><td>脉络</td><td>本论文的位置</td></tr>
-<tr><td>VLA / robot foundation model</td><td>提供语言和视觉条件到动作或动作表示的接口。</td></tr>
-<tr><td>Dexterous imitation / teleoperation</td><td>提供高自由度手部数据和真实执行监督。</td></tr>
-<tr><td>World model / WAM</td><td>预测动作导致的未来状态，用于规划、筛选或策略学习。</td></tr>
-<tr><td>Action representation</td><td>决定模型能否跨机器人、跨手型和跨任务迁移。</td></tr>
-</tbody></table>
-  </section>
-  <section id="method">
-    <h2>4. 方法详解</h2>
-<h3>4.1 方法概览与信息流</h3>
-<p>从原始观测与指令开始，沿模型的数据流追踪到动作、未来状态或规划结果，明确训练和推理阶段的差异。</p>
-<h3>4.2 核心表示与模块职责</h3>
-<p>分别说明视觉、语言、动作、状态和接触信息如何编码，以及每个模块究竟承担理解、预测、生成还是控制。</p>
-<h3>4.3 训练目标、数学结构与关键假设</h3>
-<p>定位决定方法行为的损失函数、条件变量、潜变量或规划代价，并解释这些设计为何适合论文任务。</p>
-<h3>4.4 面向复现的实现细节</h3>
-<p>记录模型规模、输入输出维度、数据频率、动作分块、训练阶段和部署接口；论文未说明的部分必须标记为不确定。</p>
-
-    <p>图像由冻结 DINOv2-L 编码成 patch latent；动作由两个时刻之间的手部 3D keypoint 变化和 camera motion 表示。对于 DROID 平行夹爪，作者构造 dummy keypoints 统一动作词汇。Conditional Diffusion Transformer 根据当前 latent 与动作预测未来 latent，并通过 hand consistency loss 监督指尖和腕部 heatmap。测试时 CEM 在机器人关节轨迹空间采样，经运动学映射为 DexWM action，rollout 后以目标 latent/keypoint 代价排序。</p>
-    <h3>4.1 模块化阅读图</h3>
-    <ul><li>状态不是原始像素，而是 frozen DINOv2 patch latent；动作不是文字，而是手部 3D keypoint changes 与 camera motion。</li><li>Conditional Diffusion Transformer 学习 latent transition，预测给定手部动作后的未来视觉状态。</li><li>hand consistency loss 强制保留 fingertip/wrist heatmap 信息，避免 latent 预测忽略手部细节。</li><li>测试时用目标图像定义代价函数，CEM 在候选动作序列中选择能让 rollout 接近目标的轨迹。</li></ul>
-    <h3>4.2 关键表示与接口</h3>
-    <table><tbody>
-<tr><td>接口</td><td>应检查的问题</td></tr>
-<tr><td>视觉输入</td><td>使用原始图像、mask、DINO/ViT 特征，还是视频 latent？</td></tr>
-<tr><td>语言输入</td><td>是高层 planner、任务条件，还是直接进入 action head？</td></tr>
-<tr><td>动作表示</td><td>关节角、末端位姿、手部 keypoint、latent action，还是 action chunk？</td></tr>
-<tr><td>训练目标</td><td>behavior cloning、diffusion denoising、world-model prediction、contrastive objective 还是混合损失？</td></tr>
-<tr><td>部署方式</td><td>端到端策略、分层控制、MPC/CEM 规划，还是离线评估？</td></tr>
-</tbody></table>
-    
-<figure>
-  <img src="figures/source/fig15_real_world_experiments.png" alt="paper figure 1">
-  <figcaption><strong>fig:real_world_experiments.</strong> Real Robot Task Examples. The robot successfully grasps objects, which are highlighted by black circles in the first image of each sequence for visual clarity, given the goal (red) and start (green) images. Notably, \ours operates in a zero-shot manner, without any real-world training. In some cases, such as examples 2 and 3, the object moves slightly from its original location after being actually grasped by the gripper. We also present a failure trajectory, where a collision between the grippers and an upside-down bowl causes the bowl to move away, resulting in a missed grasp.<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig11_exploratory_data.png" alt="paper figure 2">
-  <figcaption><strong>fig:exploratory_data.</strong> Exploratory Data Examples. Sequences of the robot performing random movements in the environment were collected to fine-tune \ours for application to robotic simulation and real-world tasks. This exploratory data provides broad, unbiased coverage of the environment, aiming to bridge the embodiment gap between human and robot.<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig05_encoder_ablation.png" alt="paper figure 3">
-  <figcaption><strong>fig:backbone_ablation.</strong> Encoder Ablation. Comparing downstream robotic task success rates on RoboCasa simulation tasks.<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
-</figure>
-  </section>
-  <section id="experiments">
-    <h2>5. 实验与结果</h2>
-<h3>5.1 实验设置与评估协议</h3>
-<p>核对训练测试划分、任务数量、物体与场景覆盖、基线、指标、重试次数和成功判定。</p>
-<h3>5.2 主要结果</h3>
-<p>主结果回答方法是否有效；应同时关注绝对性能、相对提升、方差和不同任务类别上的一致性。</p>
-<h3>5.3 消融实验</h3>
-<p>消融应回答性能来自哪里；检查被移除组件、训练预算和评估条件是否公平。</p>
-<h3>5.4 定性结果、失败案例与附录证据</h3>
-<p>定性图用于理解模型行为与失败模式，附录则常包含复现所需的超参数、额外任务和边界案例。</p>
-
-    <p>EgoDex 约 829 小时人类视频与 DROID 约 100 小时机器人视频构成主要预训练数据。关键消融显示加入 EgoDex 后，RoboCasa open-loop prediction 优于仅用 DROID。反事实 rollout 通过改变手部动作展示未来预测随条件变化。真实 Franka+Allegro 的抓取实验报告约 83% 成功率，并展示 reach/grasp/place 规划，但真实评估规模相对有限。</p>
-    <h3>5.1 读实验时先看什么</h3>
-    <ul><li>EgoDex + DROID 对比 DROID-only 是核心消融：说明人类视频对机器人 world model 预训练有贡献。</li><li>counterfactual rollout 图比单条视频更重要，因为它检验 action conditioning 是否真的改变未来。</li><li>真实 Franka + Allegro 实验是 proof of transfer，但规模小，应谨慎解读泛化结论。</li><li>应把 open-loop prediction、planning cost、真实任务成功率分开理解。</li></ul>
-    <h3>5.2 图表证据链</h3>
-    <table><tbody>
-<tr><td>证据</td><td>支持的 claim</td><td>仍需警惕</td></tr>
-<tr><td>系统/架构图</td><td>说明模块职责和信息流。</td><td>架构清楚不等于每个模块都有效。</td></tr>
-<tr><td>主结果表</td><td>证明任务成功率或预测质量。</td><td>需要看任务规模和测试分布。</td></tr>
-<tr><td>消融实验</td><td>定位收益来自表示、数据还是模型。</td><td>消融是否公平、是否覆盖关键替代方案。</td></tr>
-<tr><td>定性图</td><td>展示真实/仿真交互细节。</td><td>好看的图不能替代大规模统计。</td></tr>
-<tr><td>附录细节</td><td>给出训练、数据、超参和失败案例。</td><td>很多复现风险藏在附录。</td></tr>
-</tbody></table>
-    
-<figure>
-  <img src="figures/source/fig12_rollouts.png" alt="paper figure 1">
-  <figcaption><strong>fig:supp_rollouts.</strong> Open-Loop Trajectory Rollouts. Given the initial state and an action sequence, \ours predicts future latent states over a 4-second horizon, rolling out 20 frames at 5~Hz. For visualization, predicted frames are subsampled in the figure due to space constraints. Latent states are decoded into images for visualization. The predicted rollout closely follows the ground truth trajectory even in long-horizon complex dexterous tasks.<br><strong>读图要点：</strong>这张图支撑数据/任务覆盖范围的 claim，需要关注物体、场景、手型和评估 split 是否足以支撑泛化结论。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig01_flow.png" alt="paper figure 2">
-  <figcaption><strong>fig:flow.</strong> \ours Architecture. Images are encoded into latent states using a frozen DINOv2~DINOv2 encoder. The \ours predictor takes these states, hand actions, and camera motions to predict the next state, which can then be decoded into reconstructed images and hand keypoints.<br><strong>读图要点：</strong>这张图主要说明系统模块与信息流，读的时候要把输入、动作表示、模型主体和输出接口分开标注，避免只记住一个模型名字。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig02_keypoints.png" alt="paper figure 3">
-  <figcaption><strong>fig:keypoints.</strong> \vspace*-0.3cm<br><strong>读图要点：</strong>这张图应被放入证据链中理解：它说明论文某个 claim 的可视化依据，同时也要追问它没有覆盖哪些边界情况。</figcaption>
-</figure>
-
-<figure>
-  <img src="figures/source/fig02_droid_hands.png" alt="paper figure 4">
-  <figcaption><strong>fig:keypoints.</strong> \vspace*-0.3cm<br><strong>读图要点：</strong>这张图应被放入证据链中理解：它说明论文某个 claim 的可视化依据，同时也要追问它没有覆盖哪些边界情况。</figcaption>
-</figure>
-  </section>
-  <section id="repro">
-    <h2>6. 复现要点</h2>
-<h3>6.1 最小可行复现路径</h3>
-<p>先复现单一任务或离线指标，确认数据与动作接口正确，再扩展到完整系统和真实机器人。</p>
-<h3>6.2 数据、模型、训练与硬件清单</h3>
-<p>逐项核对数据许可、预处理脚本、权重、依赖版本、训练预算、传感器、机器人与安全控制。</p>
-<h3>6.3 复现风险与验收标准</h3>
-<p>为每个阶段定义可观测的验收指标，优先排查数据时间对齐、坐标系、动作尺度和评估协议。</p>
-
-    <p>复现首先需要处理 EgoDex 的 3D hand keypoints、camera pose 与 DINOv2 latent，并统一 DROID dummy keypoint 表示。训练需要较大 batch 和大量视频；之后还需采集少量目标机器人探索数据。规划端要实现机器人运动学映射、CEM 参数和目标图像代价。建议先验证 open-loop prediction 与 counterfactual action control，再接入真实 MPC。</p>
-    <h3>6.1 复现风险清单</h3>
-    <ul><li>900 小时级视频预训练和大 batch 训练成本高。</li><li>手部 keypoint 无法显式建模接触力、摩擦和局部表面几何。</li><li>真实机器人实验不是大规模 benchmark，复现时方差可能很高。</li></ul>
-    <table><tbody>
-<tr><td>维度</td><td>检查项</td></tr>
-<tr><td>代码</td><td>仓库是否包含训练、评估、数据预处理和模型权重加载。</td></tr>
-<tr><td>数据</td><td>是否公开原始数据、标注、过滤脚本和 split。</td></tr>
-<tr><td>模型</td><td>是否给出 backbone、tokenizer、action head、world model 的尺寸与权重。</td></tr>
-<tr><td>训练</td><td>batch size、学习率、epoch、GPU、随机种子和日志是否足够。</td></tr>
-<tr><td>硬件</td><td>手型、相机、控制频率和安全策略是否能匹配。</td></tr>
-<tr><td>评估</td><td>成功率定义、重试次数、任务分布和失败统计是否清楚。</td></tr>
-</tbody></table>
-  </section>
-  <section id="discussion">
-    <h2>7. 分析、局限与边界</h2>
-<h3>7.1 最有价值的贡献</h3>
-<p>判断论文真正可迁移的资产是数据、动作表示、模型模块、训练范式，还是完整系统经验。</p>
-<h3>7.2 证据为什么站得住</h3>
-<p>把每个主要主张对应到主结果、消融、定性图和真实部署证据，并指出证据链中仍然薄弱的环节。</p>
-<h3>7.3 作者局限、额外边界与可能改进</h3>
-<p>区分论文明确承认的局限与基于证据推断的边界，提出可验证的改进方向而非空泛展望。</p>
-
-    <p>DexWM 证明人类视频动态先验可以进入机器人规划闭环，但 keypoint action 不包含显式接触力、摩擦或手掌表面几何。视觉 latent 接近目标也不必然代表物理稳定。真实实验对象和轨迹数量较少，而且真实部署未充分展示长时 receding-horizon 纠错，因此更像 proof of transfer，而非成熟通用控制器。</p>
-    <p>对你的课题而言，最重要的不是把所有论文都当成可直接复现的系统，而是判断它们在链路中的位置：有的是数据/动作表示，有的是世界模型，有的是 VLA 控制器，有的是高自由度真实系统。只有把位置分清，才知道该复现哪一段、创新该放在哪里。</p>
-    <div class="danger"><strong>边界提醒：</strong>如果论文的实验只覆盖仿真、少量物体或固定手型，不应把结果外推到任意灵巧手和任意真实物体。WAM/VLA 的 claim 必须和任务分布绑定。</div>
-  </section>
-  <section id="qa">
-    <h2>8. 组会问答准备</h2>
-    <h3>Q1: 这篇论文的核心 novelty 是什么？</h3><p>训练灵巧操作 world model，从大量人类/机器人视频学习手-物交互动态，并迁移到真实机器人规划。</p>
-    <h3>Q2: 它最适合放在你的哪条研究线上？</h3><p>WAM 方向最关键：不是直接学 policy，而是从人类/机器人视频学习 hand-object interaction world model，再用 CEM/MPC 做目标条件规划。</p>
-    <h3>Q3: 哪个实验最有说服力？</h3><p>优先看主结果表与关键消融：主结果回答“能不能做”，消融回答“为什么能做”。如果二者缺一，论文 claim 的可信度都要打折。</p>
-    <h3>Q4: 最大复现风险是什么？</h3><p>优先检查数据、动作接口和硬件环境。对灵巧手论文来说，代码开源不等于可复现，真正的难点常常在遥操作数据格式、相机标定、控制频率和安全策略。</p>
-    <h3>Q5: 下一步可以怎么用？</h3><p>这是 WAM 方向首推。复现顺序应是数据预处理→latent prediction→action-conditioned counterfactual rollout→CEM 仿真规划，最后才考虑真实 Allegro。可进一步研究触觉/力觉 action-state 表示。</p>
-  </section>
-<section id="figure-appendix">
-<h2>9. 补充图解与附录证据</h2>
-<h3>9.1 尚未在正文展开的高价值原论文插图</h3>
-<p>本节继续利用论文原始插图补足方法、数据、实验与部署证据。每张图均保留原始图注，并给出阅读重点；它们用于扩展证据链，而不是装饰页面。</p>
-<figure>
-  <img src="figures/source/fig03_planning.png" alt="fig:planning">
-  <figcaption><strong>fig:planning.</strong> Goal-Conditioned Planning with \ours. The joint angles \Theta_0, \dots, \Theta_T-1 are optimized using CEM to get the optimal actions a_0, \dots, a_T-1 to drive the system to the goal.
-  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+</style></head><body><main>
+<header>
+<h1>World Models Can Leverage Human Videos for Dexterous Manipulation</h1>
+<p class="subtitle">基于论文正文、实验、附录与原始图注整理的中文精读报告</p>
+<div class="meta"><p><strong>项目：</strong>DexWM | <strong>arXiv：</strong><a href="https://arxiv.org/abs/2512.13644">2512.13644</a></p>
+<p><strong>类型：</strong>灵巧手 World Model / WAM 相关 | <strong>开源情况：</strong>官方 PyTorch 开源 | <strong>复现判断：</strong>WAM 方向首推</p></div>
+</header>
+<nav class="toc"><strong>目录</strong><ul>
+<li><a href="#overview">1. 论文速览</a></li><li><a href="#motivation">2. 研究问题与动机</a></li>
+<li><a href="#related">3. 相关工作脉络</a></li><li><a href="#method">4. 方法详解</a></li>
+<li><a href="#experiments">5. 实验与结果</a></li><li><a href="#repro">6. 复现要点</a></li>
+<li><a href="#discussion">7. 分析、局限与边界</a></li><li><a href="#qa">8. 组会问答与阅读笔记</a></li>
+</ul></nav>
+<section id="overview"><h2>1. 论文速览</h2>
+<p class="tldr"><strong>一句话贡献：</strong>训练灵巧操作 world model，从大量人类/机器人视频学习手-物交互动态，并迁移到真实机器人规划。</p>
+<h3>1.1 核心内容</h3><p>DexWM 学习的不是动作策略，而是动作导致的未来视觉 latent。</p>
+<p>它用人类第一视角视频和非灵巧机器人视频预训练 hand-object interaction dynamics，再用少量灵巧机器人探索数据适配，最后通过 CEM/MPC 搜索能让预测状态接近目标图像的动作。</p>
+<p>它是这组论文中最贴近 WAM/model-based manipulation 的工作。</p>
+<h3>1.2 关键词</h3><p>DexWM; world model; human videos; hand consistency; latent dynamics; dexterous manipulation</p></section>
+<section id="motivation"><h2>2. 研究问题与动机</h2>
+<h3>2.1 论文试图解决的问题</h3><p>灵巧手 world model 需要理解指尖级动作如何改变物体，但真实灵巧机器人视频稀缺。</p>
+<p>普通视频模型缺乏精细动作条件，直接 policy 又只能解决训练过的任务。</p>
+<p>DexWM 的动机是利用大规模人类视频学习可迁移的交互动力学，并通过统一 hand keypoint action 跨越人手、平行夹爪和 Allegro 手之间的 embodiment gap。</p></section>
+<section id="related"><h2>3. 相关工作脉络</h2>
+<h3>3.1 论文在相关技术路线中的位置</h3><p>它区别于无动作条件的视频生成模型，也区别于直接 observation-to-action 的 Diffusion Policy。</p>
+<p>状态预测采用视觉 latent world model 路线；</p>
+<p>动作表示借鉴人体/手部关键点；</p>
+<p>测试时采用 model predictive control。</p>
+<p>与 DWM 相比，DexWM 更强调 latent dynamics 可用于真实机器人规划，而不是生成高保真交互视频。</p></section>
+<section id="method"><h2>4. 方法详解</h2>
+<h3>4.1 方法流程与核心设计</h3><p>图像由冻结 DINOv2-L 编码成 patch latent；</p>
+<p>动作由两个时刻之间的手部 3D keypoint 变化和 camera motion 表示。</p>
+<p>对于 DROID 平行夹爪，作者构造 dummy keypoints 统一动作词汇。</p>
+<p>Conditional Diffusion Transformer 根据当前 latent 与动作预测未来 latent，并通过 hand consistency loss 监督指尖和腕部 heatmap。</p>
+<p>测试时 CEM 在机器人关节轨迹空间采样，经运动学映射为 DexWM action，rollout 后以目标 latent/keypoint 代价排序。</p>
+<h3>4.2 方法相关原图逐图解读</h3><figure>
+<img src="figures/source/fig01_flow.png" alt="fig:flow">
+<figcaption><strong>fig:flow.</strong> \ours Architecture. Images are encoded into latent states using a frozen DINOv2~DINOv2 encoder. The \ours predictor takes these states, hand actions, and camera motions to predict the next state, which can then be decoded into reconstructed images and hand keypoints.
+<br><strong>结合本文的读图结论：</strong>这张图给出了论文方法的信息流与模块关系；关键是沿图中箭头追踪输入如何变成最终输出：\ours Architecture. Images are encoded into latent states using a frozen DINOv2~DINOv2 encoder. The \ours predictor takes these states, hand actions, and camera motions to predict the next state, which can then be decoded into reconstructed images and hand keypoints.</figcaption>
 </figure>
 <figure>
-  <img src="figures/source/fig04_model_size_swapped.png" alt="fig:model_size">
-  <figcaption><strong>fig:model_size.</strong> Scaling With Predictor Size. PCK@20 and Embedding L2 error improve with larger \ours models. Blue circles denote EgoDex+DROID training; red circles denote EgoDex-only training.
-  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+<img src="figures/source/fig02_keypoints.png" alt="fig:keypoints">
+<figcaption><strong>fig:keypoints.</strong> \vspace*-0.3cm
+<br><strong>结合本文的读图结论：</strong>该图是论文证据链的一部分。结合原始图注可知，它具体展示的是：\vspace*-0.3cm</figcaption>
 </figure>
 <figure>
-  <img src="figures/source/fig06_action_transfer.png" alt="fig:transfer_plot">
-  <figcaption><strong>fig:transfer_plot.</strong> Action Transfer. Transferring actions from a reference sequence to a new environment using \ours and PEVA^*. \ours better captures fine-grained hands states that match those in the reference sequence.
-  <br><strong>读图要点：</strong>检查任务、物体、场景和具身形态覆盖范围，判断实验分布是否足以支撑论文的泛化主张。</figcaption>
+<img src="figures/source/fig02_droid_hands.png" alt="fig:keypoints">
+<figcaption><strong>fig:keypoints.</strong> \vspace*-0.3cm
+<br><strong>结合本文的读图结论：</strong>该图是论文证据链的一部分。结合原始图注可知，它具体展示的是：\vspace*-0.3cm</figcaption>
 </figure>
 <figure>
-  <img src="figures/source/fig07_cosmosv4.png" alt="fig:cosmos">
-  <figcaption><strong>fig:cosmos.</strong> Conditioning on Hand Motion Enables Precise Control. \ours utilizes dense dexterous actions, enabling finer-grained control compared to text conditioned World Models like Cosmos-Predict 2~agarwal2025cosmos.
-  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+<img src="figures/source/fig03_planning.png" alt="fig:planning">
+<figcaption><strong>fig:planning.</strong> Goal-Conditioned Planning with \ours. The joint angles \Theta_0, \dots, \Theta_T-1 are optimized using CEM to get the optimal actions a_0, \dots, a_T-1 to drive the system to the goal.
+<br><strong>结合本文的读图结论：</strong>该图是论文证据链的一部分。结合原始图注可知，它具体展示的是：Goal-Conditioned Planning with \ours. The joint angles \Theta_0, \dots, \Theta_T-1 are optimized using CEM to get the optimal actions a_0, \dots, a_T-1 to drive the system to the goal.</figcaption>
 </figure>
 <figure>
-  <img src="figures/source/fig08_atomic_actions.png" alt="fig:atomic_actions">
-  <figcaption><strong>fig:atomic_actions.</strong> Simulating Counterfactual Actions. Starting from the same initial state, \ours predicts future states given different atomic actions. The model reliably follows each action sequence, while capturing environment dynamics (e.g, see third row final frame where the cup moves forward when the hand collides with the cup).
-  <br><strong>读图要点：</strong>检查任务、物体、场景和具身形态覆盖范围，判断实验分布是否足以支撑论文的泛化主张。</figcaption>
+<img src="figures/source/fig04_model_size_swapped.png" alt="fig:model_size">
+<figcaption><strong>fig:model_size.</strong> Scaling With Predictor Size. PCK@20 and Embedding L2 error improve with larger \ours models. Blue circles denote EgoDex+DROID training; red circles denote EgoDex-only training.
+<br><strong>结合本文的读图结论：</strong>该图是论文证据链的一部分。结合原始图注可知，它具体展示的是：Scaling With Predictor Size. PCK@20 and Embedding L2 error improve with larger \ours models. Blue circles denote EgoDex+DROID training; red circles denote EgoDex-only training.</figcaption>
 </figure>
 <figure>
-  <img src="figures/source/fig10_planning_time.png" alt="fig:planning_time">
-  <figcaption><strong>fig:planning_time.</strong> Planning time and success rate as optimizer iterations (with samples=512) and sample count (with optimizer iterations=10) vary.
-  <br><strong>读图要点：</strong>将比较对象、指标和控制变量逐一对应；重点判断差异是否真正支持论文的核心设计。</figcaption>
+<img src="figures/source/fig05_encoder_ablation.png" alt="fig:backbone_ablation">
+<figcaption><strong>fig:backbone_ablation.</strong> Encoder Ablation. Comparing downstream robotic task success rates on RoboCasa simulation tasks.
+<br><strong>结合本文的读图结论：</strong>这张消融图直接检验了论文组件的必要性。应结合图注中的变量与对照项阅读：Encoder Ablation. Comparing downstream robotic task success rates on RoboCasa simulation tasks.</figcaption>
+</figure></section>
+<section id="experiments"><h2>5. 实验与结果</h2>
+<h3>5.1 实验设置、主要结果与消融结论</h3><p>EgoDex 约 829 小时人类视频与 DROID 约 100 小时机器人视频构成主要预训练数据。</p>
+<p>关键消融显示加入 EgoDex 后，RoboCasa open-loop prediction 优于仅用 DROID。</p>
+<p>反事实 rollout 通过改变手部动作展示未来预测随条件变化。</p>
+<p>真实 Franka+Allegro 的抓取实验报告约 83% 成功率，并展示 reach/grasp/place 规划，但真实评估规模相对有限。</p>
+<h3>5.2 实验相关原图逐图解读</h3><figure>
+<img src="figures/source/fig06_action_transfer.png" alt="fig:transfer_plot">
+<figcaption><strong>fig:transfer_plot.</strong> Action Transfer. Transferring actions from a reference sequence to a new environment using \ours and PEVA^*. \ours better captures fine-grained hands states that match those in the reference sequence.
+<br><strong>结合本文的读图结论：</strong>这张图界定了论文的数据与评测覆盖范围，决定其泛化结论可以外推到哪里：Action Transfer. Transferring actions from a reference sequence to a new environment using \ours and PEVA^*. \ours better captures fine-grained hands states that match those in the reference sequence.</figcaption>
 </figure>
 <figure>
-  <img src="figures/source/fig13_atomic_actions.png" alt="fig:supp_atomic_actions">
-  <figcaption><strong>fig:supp_atomic_actions.</strong> Simulating Counterfactual Actions. Starting from the same initial state, \ours predicts future states given different atomic actions for controlling the right hand. The model reliably follows each action sequence while accurately capturing environment dynamics (e.g., pulling the string upward in Move Up in Example~2, and pushing the cup forward in Move Forward in Example~3.)
-  <br><strong>读图要点：</strong>检查任务、物体、场景和具身形态覆盖范围，判断实验分布是否足以支撑论文的泛化主张。</figcaption>
+<img src="figures/source/fig07_cosmosv4.png" alt="fig:cosmos">
+<figcaption><strong>fig:cosmos.</strong> Conditioning on Hand Motion Enables Precise Control. \ours utilizes dense dexterous actions, enabling finer-grained control compared to text conditioned World Models like Cosmos-Predict 2~agarwal2025cosmos.
+<br><strong>结合本文的读图结论：</strong>该图是论文证据链的一部分。结合原始图注可知，它具体展示的是：Conditioning on Hand Motion Enables Precise Control. \ours utilizes dense dexterous actions, enabling finer-grained control compared to text conditioned World Models like Cosmos-Predict 2~agarwal2025cosmos.</figcaption>
 </figure>
 <figure>
-  <img src="figures/source/fig14_action_transfer.png" alt="fig:action_transfer">
-  <figcaption><strong>fig:action_transfer.</strong> Action Transfer. Transferring actions from a reference sequence to a new environment using \ours and PEVA^*. \ours better captures fine-grained hands states that match those in the reference sequence.
-  <br><strong>读图要点：</strong>检查任务、物体、场景和具身形态覆盖范围，判断实验分布是否足以支撑论文的泛化主张。</figcaption>
+<img src="figures/source/fig08_atomic_actions.png" alt="fig:atomic_actions">
+<figcaption><strong>fig:atomic_actions.</strong> Simulating Counterfactual Actions. Starting from the same initial state, \ours predicts future states given different atomic actions. The model reliably follows each action sequence, while capturing environment dynamics (e.g, see third row final frame where the cup moves forward when the hand collides with the cup).
+<br><strong>结合本文的读图结论：</strong>这张图界定了论文的数据与评测覆盖范围，决定其泛化结论可以外推到哪里：Simulating Counterfactual Actions. Starting from the same initial state, \ours predicts future states given different atomic actions. The model reliably follows each action sequence, while capturing environment dynamics (e.g, see third row final frame where the cup moves forward when the hand collides with the cup).</figcaption>
 </figure>
-</section>
-</main>
-</body>
-</html>
+<figure>
+<img src="figures/source/fig09_real_world_rollout.png" alt="fig:real_robot_planning">
+<figcaption><strong>fig:real_robot_planning.</strong> Real Robot Planning Example. Given goal and start images, \ours successfully plans and executes the trajectory by finding the optimal actions using the Cross-Entropy Method. Notably, \ours works zero-shot without any real-world training. (sec:robot_task_exec)
+<br><strong>结合本文的读图结论：</strong>这张图属于论文的结果证据，应重点比较图注明确列出的任务、基线或指标：Real Robot Planning Example. Given goal and start images, \ours successfully plans and executes the trajectory by finding the optimal actions using the Cross-Entropy Method. Notably, \ours works zero-shot without any real-world training. (sec:robot_task_exec)</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig10_planning_time.png" alt="fig:planning_time">
+<figcaption><strong>fig:planning_time.</strong> Planning time and success rate as optimizer iterations (with samples=512) and sample count (with optimizer iterations=10) vary.
+<br><strong>结合本文的读图结论：</strong>这张图属于论文的结果证据，应重点比较图注明确列出的任务、基线或指标：Planning time and success rate as optimizer iterations (with samples=512) and sample count (with optimizer iterations=10) vary.</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig11_exploratory_data.png" alt="fig:exploratory_data">
+<figcaption><strong>fig:exploratory_data.</strong> Exploratory Data Examples. Sequences of the robot performing random movements in the environment were collected to fine-tune \ours for application to robotic simulation and real-world tasks. This exploratory data provides broad, unbiased coverage of the environment, aiming to bridge the embodiment gap between human and robot.
+<br><strong>结合本文的读图结论：</strong>这张图展示真实系统或硬件部署，是判断论文是否跨越仿真到真实差距的重要证据：Exploratory Data Examples. Sequences of the robot performing random movements in the environment were collected to fine-tune \ours for application to robotic simulation and real-world tasks. This exploratory data provides broad, unbiased coverage of the environment, aiming to bridge the embodiment gap between human and robot.</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig12_rollouts.png" alt="fig:supp_rollouts">
+<figcaption><strong>fig:supp_rollouts.</strong> Open-Loop Trajectory Rollouts. Given the initial state and an action sequence, \ours predicts future latent states over a 4-second horizon, rolling out 20 frames at 5~Hz. For visualization, predicted frames are subsampled in the figure due to space constraints. Latent states are decoded into images for visualization. The predicted rollout closely follows the ground truth trajectory even in long-horizon complex dexterous tasks.
+<br><strong>结合本文的读图结论：</strong>这张图界定了论文的数据与评测覆盖范围，决定其泛化结论可以外推到哪里：Open-Loop Trajectory Rollouts. Given the initial state and an action sequence, \ours predicts future latent states over a 4-second horizon, rolling out 20 frames at 5~Hz. For visualization, predicted frames are subsampled in the figure due to space constraints. Latent states are decoded into images for visualization. The predicted rollout closely follows the ground truth trajectory even in long-horizon complex dexterous tasks.</figcaption>
+</figure></section>
+<section id="repro"><h2>6. 复现要点</h2>
+<h3>6.1 推荐复现路径与主要阻碍</h3><p>复现首先需要处理 EgoDex 的 3D hand keypoints、camera pose 与 DINOv2 latent，并统一 DROID dummy keypoint 表示。</p>
+<p>训练需要较大 batch 和大量视频；</p>
+<p>之后还需采集少量目标机器人探索数据。</p>
+<p>规划端要实现机器人运动学映射、CEM 参数和目标图像代价。</p>
+<p>建议先验证 open-loop prediction 与 counterfactual action control，再接入真实 MPC。</p></section>
+<section id="discussion"><h2>7. 分析、局限与边界</h2>
+<h3>7.1 证据支持的结论与适用边界</h3><p>DexWM 证明人类视频动态先验可以进入机器人规划闭环，但 keypoint action 不包含显式接触力、摩擦或手掌表面几何。</p>
+<p>视觉 latent 接近目标也不必然代表物理稳定。</p>
+<p>真实实验对象和轨迹数量较少，而且真实部署未充分展示长时 receding-horizon 纠错，因此更像 proof of transfer，而非成熟通用控制器。</p>
+<figure>
+<img src="figures/source/fig13_atomic_actions.png" alt="fig:supp_atomic_actions">
+<figcaption><strong>fig:supp_atomic_actions.</strong> Simulating Counterfactual Actions. Starting from the same initial state, \ours predicts future states given different atomic actions for controlling the right hand. The model reliably follows each action sequence while accurately capturing environment dynamics (e.g., pulling the string upward in Move Up in Example~2, and pushing the cup forward in Move Forward in Example~3.)
+<br><strong>结合本文的读图结论：</strong>这张图界定了论文的数据与评测覆盖范围，决定其泛化结论可以外推到哪里：Simulating Counterfactual Actions. Starting from the same initial state, \ours predicts future states given different atomic actions for controlling the right hand. The model reliably follows each action sequence while accurately capturing environment dynamics (e.g., pulling the string upward in Move Up in Example~2, and pushing the cup forward in Move Forward in Example~3.)</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig14_action_transfer.png" alt="fig:action_transfer">
+<figcaption><strong>fig:action_transfer.</strong> Action Transfer. Transferring actions from a reference sequence to a new environment using \ours and PEVA^*. \ours better captures fine-grained hands states that match those in the reference sequence.
+<br><strong>结合本文的读图结论：</strong>这张图界定了论文的数据与评测覆盖范围，决定其泛化结论可以外推到哪里：Action Transfer. Transferring actions from a reference sequence to a new environment using \ours and PEVA^*. \ours better captures fine-grained hands states that match those in the reference sequence.</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig15_real_world_experiments.png" alt="fig:real_world_experiments">
+<figcaption><strong>fig:real_world_experiments.</strong> Real Robot Task Examples. The robot successfully grasps objects, which are highlighted by black circles in the first image of each sequence for visual clarity, given the goal (red) and start (green) images. Notably, \ours operates in a zero-shot manner, without any real-world training. In some cases, such as examples 2 and 3, the object moves slightly from its original location after being actually grasped by the gripper. We also present a failure trajectory, where a collision between the grippers and an upside-down bowl causes the bowl to move away, resulting in a missed grasp.
+<br><strong>结合本文的读图结论：</strong>这张图属于论文的结果证据，应重点比较图注明确列出的任务、基线或指标：Real Robot Task Examples. The robot successfully grasps objects, which are highlighted by black circles in the first image of each sequence for visual clarity, given the goal (red) and start (green) images. Notably, \ours operates in a zero-shot manner, without any real-world training. In some cases, such as examples 2 and 3, the object moves slightly from its original location after being actually grasped by the gripper. We also present a failure trajectory, where a collision between the grippers and an upside-down bowl causes the bowl to move away, resulting in a missed grasp.</figcaption>
+</figure>
+<figure>
+<img src="figures/source/fig16_sim_experiments.png" alt="fig:sim_experiments">
+<figcaption><strong>fig:sim_experiments.</strong> Robot Task Example in Simulation. Given goal (red) and start (green) images, \ours successfully plans the trajectory by finding optimal actions using the Cross-Entropy Method inside an MPC framework. The final reached state (blue) in each task closely resembles the goal frame, demonstrating successful execution. Notably, \ours was not trained on any task-specific robot data.
+<br><strong>结合本文的读图结论：</strong>这张图给出了论文方法的信息流与模块关系；关键是沿图中箭头追踪输入如何变成最终输出：Robot Task Example in Simulation. Given goal (red) and start (green) images, \ours successfully plans the trajectory by finding optimal actions using the Cross-Entropy Method inside an MPC framework. The final reached state (blue) in each task closely resembles the goal frame, demonstrating successful execution. Notably, \ours was not trained on any task-specific robot data.</figcaption>
+</figure></section>
+<section id="qa"><h2>8. 组会问答与阅读笔记</h2>
+<h3>Q1：DexWM 与 Diffusion Policy 的根本区别？</h3><p>：前者预测动作后果并在测试时规划，后者直接预测动作。</p>
+<h3>Q2：为何用 hand keypoints？</h3><p>：在不同人手和机器人之间提供共享动作描述。</p>
+<h3>Q3：EgoDex 的证据？</h3><p>：EgoDex+DROID 的预测指标优于 DROID-only。</p>
+<h3>Q4：hand consistency loss 为何重要？</h3><p>：防止视觉 latent 忽略对灵巧操作关键的手部构型。</p>
+<h3>Q5：最大弱点？</h3><p>：真实评估小，且动作表示缺少接触力。</p>
+<h3>我的阅读笔记</h3><p>这是 WAM 方向首推。</p>
+<p>复现顺序应是数据预处理→latent prediction→action-conditioned counterfactual rollout→CEM 仿真规划，最后才考虑真实 Allegro。</p>
+<p>可进一步研究触觉/力觉 action-state 表示。</p></section>
+</main></body></html>

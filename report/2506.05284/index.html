@@ -1,17 +1,6 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DWM: Dexterous World Models | WAM 论文精读</title>
-  <script>
-    window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }, svg: { fontCache: 'global' } };
-  </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DWM: Dexterous World Models | 论文精读</title><link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>
     :root {
       --paper: #f6f7f3;
       --paper-deep: #e8ede7;
@@ -528,208 +517,89 @@
       background: var(--ink);
       color: var(--paper);
     }
-</style>
-</head>
-<body>
-<main>
-  <header>
-    <h1>Dexterous World Models</h1>
-    <p class="subtitle">面向 junior PhD 组会准备的中文精读报告：围绕 WAM / 灵巧手 VLA 复现路线，拆解动机、方法、实验、图表证据和复现风险。</p>
-    <div class="meta">
-      <p><strong>项目：</strong>DWM: Dexterous World Models | <strong>arXiv：</strong><a href="https://arxiv.org/abs/2506.05284">2506.05284</a></p>
-      <p><strong>类型：</strong>视频扩散式 World Model | <strong>开源：</strong>代码开源 | <strong>适合程度：</strong>论文强，但显存重</p>
-      <p><strong>项目页：</strong>https://snuvclab.github.io/dwm/</p>
-    </div>
-  </header>
-  <nav class="toc"><strong>目录</strong><ul>
-    <li><a href="#overview">1. 论文速览</a></li>
-    <li><a href="#motivation">2. 研究问题与动机</a></li>
-    <li><a href="#related">3. 相关工作脉络</a></li>
-    <li><a href="#method">4. 方法详解</a></li>
-    <li><a href="#experiments">5. 实验与结果</a></li>
-    <li><a href="#repro">6. 复现要点</a></li>
-    <li><a href="#discussion">7. 分析、局限与边界</a></li>
-    <li><a href="#qa">8. 组会问答准备</a></li>
-  </ul></nav>
-  <section id="overview">
-    <h2>1. 论文速览</h2>
-<h3>1.1 一句话贡献与论文定位</h3>
-<p>先明确论文解决的任务、核心机制与直接收益，再判断它属于数据、表示、世界模型、策略还是完整机器人系统。</p>
-<h3>1.2 阅读路线与核心结论</h3>
-<p>阅读顺序应从任务定义进入方法信息流，再用主结果、消融和真实部署证据检验核心结论，最后回到复现成本与适用边界。</p>
-
-    <p class="tldr"><strong>一句话总结：</strong>提出 scene-action-conditioned video diffusion world model，用手部动作驱动静态 3D 场景生成可交互视频。</p>
-    <div class="grid three">
-      <div class="card"><div class="kpi">6</div><div class="kpi-label">你的复现优先级</div></div>
-      <div class="card"><div class="kpi">6</div><div class="kpi-label">本地抽取图像数量</div></div>
-      <div class="card"><div class="kpi">WAM</div><div class="kpi-label">按 world-action-model / VLA 视角阅读</div></div>
-    </div>
-    <p>DWM 是视频扩散式的 Dexterous World Model：给定场景和手部动作条件，生成动作作用后的交互视频，用于构建可控的交互式 digital twin。它的核心评价是生成未来是否受动作控制并保持场景一致，而不是直接在真实机器人上输出关节控制。</p>
-    <p>视频扩散式 world model，用手部动作条件驱动静态 3D 场景/视频生成，是偏重视觉生成的 WAM 路线。</p>
-    <table><tbody>
-<tr><td>阅读项</td><td>内容</td></tr>
-<tr><td>关键词</td><td>DWM; Dexterous World Models; video diffusion; interactive digital twins; egocentric hand motion; 3D scene</td></tr>
-<tr><td>论文类型</td><td>视频扩散式 World Model</td></tr>
-<tr><td>复现价值</td><td>论文强，但显存重</td></tr>
-<tr><td>开源情况</td><td>代码开源</td></tr>
-</tbody></table>
-    
-<figure>
-  <img src="figures/source/fig01_pipeline.png" alt="paper figure 1">
-  <figcaption><strong>fig:method.</strong> Overview of our system. A latent video generation model, implemented by a diffusion transformer (DiT), is conditioned on three different memory mechanisms when autoregressively generating new frames. First, recent context frames model a short-term working memory. Second, a point cloud representation (left) is autoregressively generated along with the video frames. This long-term spatial memory contains the static parts of the world. Third, a set of historical reference frames (lower left) is stored as a sparse, long-term episodic memory. Together, these memory mechanisms enable consistent long-term video generation.<br><strong>读图要点：</strong>这张图主要说明系统模块与信息流，读的时候要把输入、动作表示、模型主体和输出接口分开标注，避免只记住一个模型名字。</figcaption>
+</style></head><body><main>
+<header>
+<h1>Dexterous World Models</h1>
+<p class="subtitle">基于论文正文、实验、附录与原始图注整理的中文精读报告</p>
+<div class="meta"><p><strong>项目：</strong>DWM: Dexterous World Models | <strong>arXiv：</strong><a href="https://arxiv.org/abs/2506.05284">2506.05284</a></p>
+<p><strong>类型：</strong>视频扩散式 World Model | <strong>开源情况：</strong>代码开源 | <strong>复现判断：</strong>论文强，但显存重</p></div>
+</header>
+<nav class="toc"><strong>目录</strong><ul>
+<li><a href="#overview">1. 论文速览</a></li><li><a href="#motivation">2. 研究问题与动机</a></li>
+<li><a href="#related">3. 相关工作脉络</a></li><li><a href="#method">4. 方法详解</a></li>
+<li><a href="#experiments">5. 实验与结果</a></li><li><a href="#repro">6. 复现要点</a></li>
+<li><a href="#discussion">7. 分析、局限与边界</a></li><li><a href="#qa">8. 组会问答与阅读笔记</a></li>
+</ul></nav>
+<section id="overview"><h2>1. 论文速览</h2>
+<p class="tldr"><strong>一句话贡献：</strong>提出 scene-action-conditioned video diffusion world model，用手部动作驱动静态 3D 场景生成可交互视频。</p>
+<h3>1.1 核心内容</h3><p>DWM 是视频扩散式的 Dexterous World Model：给定场景和手部动作条件，生成动作作用后的交互视频，用于构建可控的交互式 digital twin。</p>
+<p>它的核心评价是生成未来是否受动作控制并保持场景一致，而不是直接在真实机器人上输出关节控制。</p>
+<h3>1.2 关键词</h3><p>DWM; Dexterous World Models; video diffusion; interactive digital twins; egocentric hand motion; 3D scene</p></section>
+<section id="motivation"><h2>2. 研究问题与动机</h2>
+<h3>2.1 论文试图解决的问题</h3><p>普通视频生成模型能生成看似合理的未来，却往往忽略精细手部动作，无法用于验证“如果这样移动手指会发生什么”。</p>
+<p>真实采集大量动作-后果数据昂贵。</p>
+<p>DWM 希望把场景几何、手部动作和视频扩散结合，生成可交互的视觉世界模型，服务数据增强、模拟和后续控制研究。</p></section>
+<section id="related"><h2>3. 相关工作脉络</h2>
+<h3>3.1 论文在相关技术路线中的位置</h3><p>论文位于 video diffusion、4D/3D scene representation、human hand-object interaction 和 world model 之间。</p>
+<p>与 DexWM 的 latent predictor+MPC 路线不同，DWM 更注重可视视频 rollout 和数字孪生；</p>
+<p>与普通 image-to-video 模型不同，它要求明确的手部 action conditioning，而不是只靠文本提示描述动作。</p></section>
+<section id="method"><h2>4. 方法详解</h2>
+<h3>4.1 方法流程与核心设计</h3><p>系统以场景观测和手部动作轨迹为条件，通过视频扩散模型预测后续交互帧。</p>
+<p>场景点或几何表示用于保持空间一致，手部动作条件控制接触与运动方向；</p>
+<p>模型需要同时解决手的外观、物体响应和相机视角。</p>
+<p>关键判断是 action conditioning 是否真正控制未来，而不是模型只生成常见交互模式。</p>
+<h3>4.2 方法相关原图逐图解读</h3><figure>
+<img src="figures/source/fig01_pipeline.png" alt="fig:method">
+<figcaption><strong>fig:method.</strong> Overview of our system. A latent video generation model, implemented by a diffusion transformer (DiT), is conditioned on three different memory mechanisms when autoregressively generating new frames. First, recent context frames model a short-term working memory. Second, a point cloud representation (left) is autoregressively generated along with the video frames. This long-term spatial memory contains the static parts of the world. Third, a set of historical reference frames (lower left) is stored as a sparse, long-term episodic memory. Together, these memory mechanisms enable consistent long-term video generation.
+<br><strong>结合本文的读图结论：</strong>这张图给出了论文方法的信息流与模块关系；关键是沿图中箭头追踪输入如何变成最终输出：Overview of our system. A latent video generation model, implemented by a diffusion transformer (DiT), is conditioned on three different memory mechanisms when autoregressively generating new frames. First, recent context frames model a short-term working memory. Second, a point cloud representation (left) is autoregressively generated along with the video frames. This long-term spatial memory contains the static parts of the world. Third, a set of historical reference frames (lower left) is stored as a sparse, long-term episodic memory. Together, these memory mechanisms enable consistent long-term video generation.</figcaption>
 </figure>
-
 <figure>
-  <img src="figures/source/fig02_dataset.png" alt="paper figure 2">
-  <figcaption><strong>fig:dataset.</strong> Dataset construction pipeline. We use Mega-SaM~li2024megasam to extract camera poses and dynamic point maps from the full video clip. For the source part, dynamic regions are erased via TSDF-Fusion, and the point cloud is rendered along the target trajectory to to serve as static geometry guidance for the target part. Qwen~yang2024qwen2 generates annotations for actions in future target frames.<br><strong>读图要点：</strong>这张图主要说明系统模块与信息流，读的时候要把输入、动作表示、模型主体和输出接口分开标注，避免只记住一个模型名字。</figcaption>
+<img src="figures/source/fig02_dataset.png" alt="fig:dataset">
+<figcaption><strong>fig:dataset.</strong> Dataset construction pipeline. We use Mega-SaM~li2024megasam to extract camera poses and dynamic point maps from the full video clip. For the source part, dynamic regions are erased via TSDF-Fusion, and the point cloud is rendered along the target trajectory to to serve as static geometry guidance for the target part. Qwen~yang2024qwen2 generates annotations for actions in future target frames.
+<br><strong>结合本文的读图结论：</strong>这张图给出了论文方法的信息流与模块关系；关键是沿图中箭头追踪输入如何变成最终输出：Dataset construction pipeline. We use Mega-SaM~li2024megasam to extract camera poses and dynamic point maps from the full video clip. For the source part, dynamic regions are erased via TSDF-Fusion, and the point cloud is rendered along the target trajectory to to serve as static geometry guidance for the target part. Qwen~yang2024qwen2 generates annotations for actions in future target frames.</figcaption>
 </figure>
-  </section>
-  <section id="motivation">
-    <h2>2. 研究问题与动机</h2>
-<h3>2.1 要解决什么问题</h3>
-<p>将论文问题拆成输入、输出、动作空间、任务分布与评估目标，避免只用一句宽泛的“提升泛化能力”概括。</p>
-<h3>2.2 已有方法的局限</h3>
-<p>区分数据不足、动作表示不统一、视觉泛化不足、长时序误差和真实控制接口等不同瓶颈。</p>
-<h3>2.3 本文的解决思路与关键假设</h3>
-<p>检查论文通过何种表示或模块缓解瓶颈，同时明确其成功依赖的训练数据、硬件与任务假设。</p>
-
-    <p>普通视频生成模型能生成看似合理的未来，却往往忽略精细手部动作，无法用于验证“如果这样移动手指会发生什么”。真实采集大量动作-后果数据昂贵。DWM 希望把场景几何、手部动作和视频扩散结合，生成可交互的视觉世界模型，服务数据增强、模拟和后续控制研究。</p>
-    <p>灵巧手与普通夹爪最大的区别在于动作空间、接触模式和任务反馈都更复杂。VLA 或 world model 如果只解决语言理解，而没有解决高维动作表示和接触动态，就很难真正迁移到灵巧操作。</p>
-    <table><tbody>
-<tr><td>痛点</td><td>为什么重要</td></tr>
-<tr><td>高自由度动作</td><td>手指、腕部、物体接触共同决定成败，不能只预测末端位姿。</td></tr>
-<tr><td>数据稀缺</td><td>真实灵巧手示范昂贵，且跨手型难复用。</td></tr>
-<tr><td>跨场景泛化</td><td>光照、背景、物体形状和材质变化会破坏视觉策略。</td></tr>
-<tr><td>复现成本</td><td>硬件、数据格式、控制频率和仿真环境都会成为实际门槛。</td></tr>
-</tbody></table>
-  </section>
-  <section id="related">
-    <h2>3. 相关工作脉络</h2>
-<h3>3.1 论文自述的相关工作</h3>
-<p>按照论文自己的引用脉络定位其直接前作，重点辨认作者认为尚未解决的缺口。</p>
-<h3>3.2 直接前作与替代路线对比</h3>
-<p>比较相邻方法在数据来源、动作表示、模型结构、规划方式和真实部署上的差异，而不是只比较模型名称。</p>
-
-    <p>论文位于 video diffusion、4D/3D scene representation、human hand-object interaction 和 world model 之间。与 DexWM 的 latent predictor+MPC 路线不同，DWM 更注重可视视频 rollout 和数字孪生；与普通 image-to-video 模型不同，它要求明确的手部 action conditioning，而不是只靠文本提示描述动作。</p>
-    <table><tbody>
-<tr><td>脉络</td><td>本论文的位置</td></tr>
-<tr><td>VLA / robot foundation model</td><td>提供语言和视觉条件到动作或动作表示的接口。</td></tr>
-<tr><td>Dexterous imitation / teleoperation</td><td>提供高自由度手部数据和真实执行监督。</td></tr>
-<tr><td>World model / WAM</td><td>预测动作导致的未来状态，用于规划、筛选或策略学习。</td></tr>
-<tr><td>Action representation</td><td>决定模型能否跨机器人、跨手型和跨任务迁移。</td></tr>
-</tbody></table>
-  </section>
-  <section id="method">
-    <h2>4. 方法详解</h2>
-<h3>4.1 方法概览与信息流</h3>
-<p>从原始观测与指令开始，沿模型的数据流追踪到动作、未来状态或规划结果，明确训练和推理阶段的差异。</p>
-<h3>4.2 核心表示与模块职责</h3>
-<p>分别说明视觉、语言、动作、状态和接触信息如何编码，以及每个模块究竟承担理解、预测、生成还是控制。</p>
-<h3>4.3 训练目标、数学结构与关键假设</h3>
-<p>定位决定方法行为的损失函数、条件变量、潜变量或规划代价，并解释这些设计为何适合论文任务。</p>
-<h3>4.4 面向复现的实现细节</h3>
-<p>记录模型规模、输入输出维度、数据频率、动作分块、训练阶段和部署接口；论文未说明的部分必须标记为不确定。</p>
-
-    <p>系统以场景观测和手部动作轨迹为条件，通过视频扩散模型预测后续交互帧。场景点或几何表示用于保持空间一致，手部动作条件控制接触与运动方向；模型需要同时解决手的外观、物体响应和相机视角。关键判断是 action conditioning 是否真正控制未来，而不是模型只生成常见交互模式。</p>
-    <h3>4.1 模块化阅读图</h3>
-    <ul><li>使用 scene-action conditioning 预测交互视频。</li><li>动作条件来自 egocentric hand motion 或相关手部表示。</li><li>目标是可交互 digital twin，而不是直接输出机器人控制。</li><li>与 DexWM 的区别在于更强调视频生成质量和场景可视化。</li></ul>
-    <h3>4.2 关键表示与接口</h3>
-    <table><tbody>
-<tr><td>接口</td><td>应检查的问题</td></tr>
-<tr><td>视觉输入</td><td>使用原始图像、mask、DINO/ViT 特征，还是视频 latent？</td></tr>
-<tr><td>语言输入</td><td>是高层 planner、任务条件，还是直接进入 action head？</td></tr>
-<tr><td>动作表示</td><td>关节角、末端位姿、手部 keypoint、latent action，还是 action chunk？</td></tr>
-<tr><td>训练目标</td><td>behavior cloning、diffusion denoising、world-model prediction、contrastive objective 还是混合损失？</td></tr>
-<tr><td>部署方式</td><td>端到端策略、分层控制、MPC/CEM 规划，还是离线评估？</td></tr>
-</tbody></table>
-    
 <figure>
-  <img src="figures/source/fig03_qualitative.png" alt="paper figure 1">
-  <figcaption><strong>fig:qualitative.</strong> Qualitative evaluation. We compare our approach to relevant baselines in several conditions. Baselines cannot accurately generate significant camera pose changes while maintaining a consistent scene (top). When revisiting a previously seen camera pose, baselines fail to complete sparse point clouds or forget details, resulting in inconsistency (center). The accuracy of prompted actions is often low, and sometimes the character disappears during the generation for the baselines (bottom). Our approach successfully handles these challenging scenarios. \vspace-10pt<br><strong>读图要点：</strong>这张图或表支撑实验结论，重点看 baseline、指标定义、任务数量和消融变量是否与主张一一对应。</figcaption>
+<img src="figures/source/fig03_qualitative.png" alt="fig:qualitative">
+<figcaption><strong>fig:qualitative.</strong> Qualitative evaluation. We compare our approach to relevant baselines in several conditions. Baselines cannot accurately generate significant camera pose changes while maintaining a consistent scene (top). When revisiting a previously seen camera pose, baselines fail to complete sparse point clouds or forget details, resulting in inconsistency (center). The accuracy of prompted actions is often low, and sometimes the character disappears during the generation for the baselines (bottom). Our approach successfully handles these challenging scenarios. \vspace-10pt
+<br><strong>结合本文的读图结论：</strong>这张图属于论文的结果证据，应重点比较图注明确列出的任务、基线或指标：Qualitative evaluation. We compare our approach to relevant baselines in several conditions. Baselines cannot accurately generate significant camera pose changes while maintaining a consistent scene (top). When revisiting a previously seen camera pose, baselines fail to complete sparse point clouds or forget details, resulting in inconsistency (center). The accuracy of prompted actions is often low, and sometimes the character disappears during the generation for the baselines (bottom). Our approach successfully handles these challenging scenarios. \vspace-10pt</figcaption>
 </figure>
-
 <figure>
-  <img src="figures/source/fig06_teaser.png" alt="paper figure 2">
-  <figcaption><strong>fig:teaser.</strong> We augment video world models with memory. In this context, we consider the conventional approach of conditioning autoregressively generated frames with a few recent context frames as a short-term working memory. We explore two additional mechanisms modeling different types of long-term memory: spatial and episodic memory. The former is represented as a point map that is autoregressively generated along with the video frames and fused into the spatial memory by extracting only its static scene parts. To remember visual detail and identities for long time horizons, we also store a sparse set of historical reference frames as an episodic memory. Together, our memory mechanisms significantly improve the long-term consistency of emerging video world models.<br><strong>读图要点：</strong>这张图是定性证据，适合用来解释模型行为和失败模式，但不能替代大规模定量指标。</figcaption>
+<img src="figures/source/fig04_ablation.png" alt="fig:ablation">
+<figcaption><strong>fig:ablation.</strong> Ablation of different memory mechanisms. We evaluate several variants of our model: w/o short-term working memory: the full model without recent context frames; w/o long-term episodic memory: the full model without sparse historical keyframes; full model including short-term working and long-term spatial and episodic memory. Unsurprisingly, the working memory is required for smooth and plausible motions of dynamic objects. The episodic memory is crucial in helping remember visual details from the past, including previously seen characters or objects. \vspace-10pt
+<br><strong>结合本文的读图结论：</strong>这张消融图直接检验了论文组件的必要性。应结合图注中的变量与对照项阅读：Ablation of different memory mechanisms. We evaluate several variants of our model: w/o short-term working memory: the full model without recent context frames; w/o long-term episodic memory: the full model without sparse historical keyframes; full model including short-term working and long-term spatial and episodic memory. Unsurprisingly, the working memory is required for smooth and plausible motions of dynamic objects. The episodic memory is crucial in helping remember visual details from the past, including previously seen characters or objects. \vspace-10pt</figcaption>
 </figure>
-
 <figure>
-  <img src="figures/source/fig04_ablation.png" alt="paper figure 3">
-  <figcaption><strong>fig:ablation.</strong> Ablation of different memory mechanisms. We evaluate several variants of our model: w/o short-term working memory: the full model without recent context frames; w/o long-term episodic memory: the full model without sparse historical keyframes; full model including short-term working and long-term spatial and episodic memory. Unsurprisingly, the working memory is required for smooth and plausible motions of dynamic objects. The episodic memory is crucial in helping remember visual details from the past, including previously seen characters or objects. \vspace-10pt<br><strong>读图要点：</strong>这张图或表支撑实验结论，重点看 baseline、指标定义、任务数量和消融变量是否与主张一一对应。</figcaption>
+<img src="figures/source/fig05_point_fusion.png" alt="fig:point_fusion">
+<figcaption><strong>fig:point_fusion.</strong> Autoregressive point cloud fusion. The system continuously updates spatial memory by integrating newly observed static maps. These maps are reconstructed online using CUT3R in a recurrent manner, while TSDF-Fusion filters out dynamic elements to maintain map consistency. \vspace-10pt
+<br><strong>结合本文的读图结论：</strong>该图是论文证据链的一部分。结合原始图注可知，它具体展示的是：Autoregressive point cloud fusion. The system continuously updates spatial memory by integrating newly observed static maps. These maps are reconstructed online using CUT3R in a recurrent manner, while TSDF-Fusion filters out dynamic elements to maintain map consistency. \vspace-10pt</figcaption>
 </figure>
-  </section>
-  <section id="experiments">
-    <h2>5. 实验与结果</h2>
-<h3>5.1 实验设置与评估协议</h3>
-<p>核对训练测试划分、任务数量、物体与场景覆盖、基线、指标、重试次数和成功判定。</p>
-<h3>5.2 主要结果</h3>
-<p>主结果回答方法是否有效；应同时关注绝对性能、相对提升、方差和不同任务类别上的一致性。</p>
-<h3>5.3 消融实验</h3>
-<p>消融应回答性能来自哪里；检查被移除组件、训练预算和评估条件是否公平。</p>
-<h3>5.4 定性结果、失败案例与附录证据</h3>
-<p>定性图用于理解模型行为与失败模式，附录则常包含复现所需的超参数、额外任务和边界案例。</p>
-
-    <p>实验主要看生成质量、动作可控性、场景/物体泛化以及不同条件融合方式的消融。定性 rollout 和 point-fusion 图解释模型能否保持手物关系；消融比较去掉动作或几何条件后的退化。与真实机器人任务成功率相比，这类结果更多证明视觉交互建模能力。</p>
-    <h3>5.1 读实验时先看什么</h3>
-    <ul><li>看生成视频是否真的 action-controllable。</li><li>关注与普通 video diffusion 的差异。</li><li>显存和推理成本对复现很关键。</li></ul>
-    <h3>5.2 图表证据链</h3>
-    <table><tbody>
-<tr><td>证据</td><td>支持的 claim</td><td>仍需警惕</td></tr>
-<tr><td>系统/架构图</td><td>说明模块职责和信息流。</td><td>架构清楚不等于每个模块都有效。</td></tr>
-<tr><td>主结果表</td><td>证明任务成功率或预测质量。</td><td>需要看任务规模和测试分布。</td></tr>
-<tr><td>消融实验</td><td>定位收益来自表示、数据还是模型。</td><td>消融是否公平、是否覆盖关键替代方案。</td></tr>
-<tr><td>定性图</td><td>展示真实/仿真交互细节。</td><td>好看的图不能替代大规模统计。</td></tr>
-<tr><td>附录细节</td><td>给出训练、数据、超参和失败案例。</td><td>很多复现风险藏在附录。</td></tr>
-</tbody></table>
-    
 <figure>
-  <img src="figures/source/fig05_point_fusion.png" alt="paper figure 1">
-  <figcaption><strong>fig:point_fusion.</strong> Autoregressive point cloud fusion. The system continuously updates spatial memory by integrating newly observed static maps. These maps are reconstructed online using CUT3R in a recurrent manner, while TSDF-Fusion filters out dynamic elements to maintain map consistency. \vspace-10pt<br><strong>读图要点：</strong>这张图应被放入证据链中理解：它说明论文某个 claim 的可视化依据，同时也要追问它没有覆盖哪些边界情况。</figcaption>
-</figure>
-  </section>
-  <section id="repro">
-    <h2>6. 复现要点</h2>
-<h3>6.1 最小可行复现路径</h3>
-<p>先复现单一任务或离线指标，确认数据与动作接口正确，再扩展到完整系统和真实机器人。</p>
-<h3>6.2 数据、模型、训练与硬件清单</h3>
-<p>逐项核对数据许可、预处理脚本、权重、依赖版本、训练预算、传感器、机器人与安全控制。</p>
-<h3>6.3 复现风险与验收标准</h3>
-<p>为每个阶段定义可观测的验收指标，优先排查数据时间对齐、坐标系、动作尺度和评估协议。</p>
-
-    <p>主要门槛是视频扩散训练和数据预处理，需要较大显存、视频序列、手部轨迹/动作条件以及场景几何表示。先复现短视频生成和 action-control 消融，再考虑长 rollout。需要严格核对帧率、序列长度、分辨率、扩散 backbone 和条件编码器，否则显存与结果差异会很大。</p>
-    <h3>6.1 复现风险清单</h3>
-    <ul><li>视频好看不等于能控制机器人。</li><li>长时序误差积累和物理一致性仍是问题。</li><li>显存重，复现门槛高。</li></ul>
-    <table><tbody>
-<tr><td>维度</td><td>检查项</td></tr>
-<tr><td>代码</td><td>仓库是否包含训练、评估、数据预处理和模型权重加载。</td></tr>
-<tr><td>数据</td><td>是否公开原始数据、标注、过滤脚本和 split。</td></tr>
-<tr><td>模型</td><td>是否给出 backbone、tokenizer、action head、world model 的尺寸与权重。</td></tr>
-<tr><td>训练</td><td>batch size、学习率、epoch、GPU、随机种子和日志是否足够。</td></tr>
-<tr><td>硬件</td><td>手型、相机、控制频率和安全策略是否能匹配。</td></tr>
-<tr><td>评估</td><td>成功率定义、重试次数、任务分布和失败统计是否清楚。</td></tr>
-</tbody></table>
-  </section>
-  <section id="discussion">
-    <h2>7. 分析、局限与边界</h2>
-<h3>7.1 最有价值的贡献</h3>
-<p>判断论文真正可迁移的资产是数据、动作表示、模型模块、训练范式，还是完整系统经验。</p>
-<h3>7.2 证据为什么站得住</h3>
-<p>把每个主要主张对应到主结果、消融、定性图和真实部署证据，并指出证据链中仍然薄弱的环节。</p>
-<h3>7.3 作者局限、额外边界与可能改进</h3>
-<p>区分论文明确承认的局限与基于证据推断的边界，提出可验证的改进方向而非空泛展望。</p>
-
-    <p>视觉上合理的视频不等于动力学正确，也不保证能用于真实机器人规划。扩散 rollout 容易随时间漂移，接触力和遮挡下的物体状态可能被“画出来”而非真实推演。论文适合研究世界生成和交互模拟，但从视频模型到闭环控制仍需要状态估计、代价函数或策略接口。</p>
-    <p>对你的课题而言，最重要的不是把所有论文都当成可直接复现的系统，而是判断它们在链路中的位置：有的是数据/动作表示，有的是世界模型，有的是 VLA 控制器，有的是高自由度真实系统。只有把位置分清，才知道该复现哪一段、创新该放在哪里。</p>
-    <div class="danger"><strong>边界提醒：</strong>如果论文的实验只覆盖仿真、少量物体或固定手型，不应把结果外推到任意灵巧手和任意真实物体。WAM/VLA 的 claim 必须和任务分布绑定。</div>
-  </section>
-  <section id="qa">
-    <h2>8. 组会问答准备</h2>
-    <h3>Q1: 这篇论文的核心 novelty 是什么？</h3><p>提出 scene-action-conditioned video diffusion world model，用手部动作驱动静态 3D 场景生成可交互视频。</p>
-    <h3>Q2: 它最适合放在你的哪条研究线上？</h3><p>视频扩散式 world model，用手部动作条件驱动静态 3D 场景/视频生成，是偏重视觉生成的 WAM 路线。</p>
-    <h3>Q3: 哪个实验最有说服力？</h3><p>优先看主结果表与关键消融：主结果回答“能不能做”，消融回答“为什么能做”。如果二者缺一，论文 claim 的可信度都要打折。</p>
-    <h3>Q4: 最大复现风险是什么？</h3><p>优先检查数据、动作接口和硬件环境。对灵巧手论文来说，代码开源不等于可复现，真正的难点常常在遥操作数据格式、相机标定、控制频率和安全策略。</p>
-    <h3>Q5: 下一步可以怎么用？</h3><p>适合 WAM 的生成式世界模型支线。若算力有限，不建议第一篇复现；可先使用 checkpoint 做 action controllability 和短 rollout，再研究如何把生成模型转成可规划 latent。</p>
-  </section>
-</main>
-</body>
-</html>
+<img src="figures/source/fig06_teaser.png" alt="fig:teaser">
+<figcaption><strong>fig:teaser.</strong> We augment video world models with memory. In this context, we consider the conventional approach of conditioning autoregressively generated frames with a few recent context frames as a short-term working memory. We explore two additional mechanisms modeling different types of long-term memory: spatial and episodic memory. The former is represented as a point map that is autoregressively generated along with the video frames and fused into the spatial memory by extracting only its static scene parts. To remember visual detail and identities for long time horizons, we also store a sparse set of historical reference frames as an episodic memory. Together, our memory mechanisms significantly improve the long-term consistency of emerging video world models.
+<br><strong>结合本文的读图结论：</strong>该图是论文证据链的一部分。结合原始图注可知，它具体展示的是：We augment video world models with memory. In this context, we consider the conventional approach of conditioning autoregressively generated frames with a few recent context frames as a short-term working memory. We explore two additional mechanisms modeling different types of long-term memory: spatial and episodic memory. The former is represented as a point map that is autoregressively generated along with the video frames and fused into the spatial memory by extracting only its static scene parts. To remember visual detail and identities for long time horizons, we also store a sparse set of historical reference frames as an episodic memory. Together, our memory mechanisms significantly improve the long-term consistency of emerging video world models.</figcaption>
+</figure></section>
+<section id="experiments"><h2>5. 实验与结果</h2>
+<h3>5.1 实验设置、主要结果与消融结论</h3><p>实验主要看生成质量、动作可控性、场景/物体泛化以及不同条件融合方式的消融。</p>
+<p>定性 rollout 和 point-fusion 图解释模型能否保持手物关系；</p>
+<p>消融比较去掉动作或几何条件后的退化。</p>
+<p>与真实机器人任务成功率相比，这类结果更多证明视觉交互建模能力。</p>
+<h3>5.2 实验相关原图逐图解读</h3></section>
+<section id="repro"><h2>6. 复现要点</h2>
+<h3>6.1 推荐复现路径与主要阻碍</h3><p>主要门槛是视频扩散训练和数据预处理，需要较大显存、视频序列、手部轨迹/动作条件以及场景几何表示。</p>
+<p>先复现短视频生成和 action-control 消融，再考虑长 rollout。</p>
+<p>需要严格核对帧率、序列长度、分辨率、扩散 backbone 和条件编码器，否则显存与结果差异会很大。</p></section>
+<section id="discussion"><h2>7. 分析、局限与边界</h2>
+<h3>7.1 证据支持的结论与适用边界</h3><p>视觉上合理的视频不等于动力学正确，也不保证能用于真实机器人规划。</p>
+<p>扩散 rollout 容易随时间漂移，接触力和遮挡下的物体状态可能被“画出来”而非真实推演。</p>
+<p>论文适合研究世界生成和交互模拟，但从视频模型到闭环控制仍需要状态估计、代价函数或策略接口。</p>
+</section>
+<section id="qa"><h2>8. 组会问答与阅读笔记</h2>
+<h3>Q1：DWM 与普通视频扩散的区别？</h3><p>：未来由显式手部动作和场景条件控制。</p>
+<h3>Q2：与 DexWM 的区别？</h3><p>：DWM 偏高保真视频生成，DexWM 偏 latent dynamics 与 MPC 规划。</p>
+<h3>Q3：如何证明 action controllability？</h3><p>：同一初始场景改变动作条件，比较未来差异与消融。</p>
+<h3>Q4：最大复现成本？</h3><p>：视频数据、扩散训练显存与长序列稳定性。</p>
+<h3>Q5：能直接控制机器人吗？</h3><p>：不能，需要额外的规划或策略接口。</p>
+<h3>我的阅读笔记</h3><p>适合 WAM 的生成式世界模型支线。</p>
+<p>若算力有限，不建议第一篇复现；</p>
+<p>可先使用 checkpoint 做 action controllability 和短 rollout，再研究如何把生成模型转成可规划 latent。</p></section>
+</main></body></html>
