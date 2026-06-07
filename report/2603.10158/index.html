@@ -553,6 +553,11 @@
   </ul></nav>
   <section id="overview">
     <h2>1. 论文速览</h2>
+<h3>1.1 一句话贡献与论文定位</h3>
+<p>先明确论文解决的任务、核心机制与直接收益，再判断它属于数据、表示、世界模型、策略还是完整机器人系统。</p>
+<h3>1.2 阅读路线与核心结论</h3>
+<p>阅读顺序应从任务定义进入方法信息流，再用主结果、消融和真实部署证据检验核心结论，最后回到复现成本与适用边界。</p>
+
     <p class="tldr"><strong>一句话总结：</strong>用跨手 latent action space 统一不同灵巧手的动作表示，让单个 VLA 能在多手数据上训练并迁移到新手型。</p>
     <div class="grid three">
       <div class="card"><div class="kpi">3</div><div class="kpi-label">你的复现优先级</div></div>
@@ -581,6 +586,13 @@
   </section>
   <section id="motivation">
     <h2>2. 研究问题与动机</h2>
+<h3>2.1 要解决什么问题</h3>
+<p>将论文问题拆成输入、输出、动作空间、任务分布与评估目标，避免只用一句宽泛的“提升泛化能力”概括。</p>
+<h3>2.2 已有方法的局限</h3>
+<p>区分数据不足、动作表示不统一、视觉泛化不足、长时序误差和真实控制接口等不同瓶颈。</p>
+<h3>2.3 本文的解决思路与关键假设</h3>
+<p>检查论文通过何种表示或模块缓解瓶颈，同时明确其成功依赖的训练数据、硬件与任务假设。</p>
+
     <p>现有 VLA 通常将动作 token 或连续动作绑定到特定机器人 embodiment。对于灵巧手，这个问题更严重：手指数、关节数、耦合方式和控制范围差异巨大。作者希望利用多个手型的数据共同训练，并让模型迁移到未参与训练或数据较少的新手型，因此需要一个既共享任务语义、又能保留各手精细控制能力的动作潜空间。</p>
     <p>灵巧手与普通夹爪最大的区别在于动作空间、接触模式和任务反馈都更复杂。VLA 或 world model 如果只解决语言理解，而没有解决高维动作表示和接触动态，就很难真正迁移到灵巧操作。</p>
     <table><tbody>
@@ -593,6 +605,11 @@
   </section>
   <section id="related">
     <h2>3. 相关工作脉络</h2>
+<h3>3.1 论文自述的相关工作</h3>
+<p>按照论文自己的引用脉络定位其直接前作，重点辨认作者认为尚未解决的缺口。</p>
+<h3>3.2 直接前作与替代路线对比</h3>
+<p>比较相邻方法在数据来源、动作表示、模型结构、规划方式和真实部署上的差异，而不是只比较模型名称。</p>
+
     <p>论文与通用 VLA 的 action tokenization、跨机器人策略和 representation learning 相连。传统做法可能为每种机器人设置独立 action head，难以共享低层技能；统一关节向量又无法处理拓扑不同的手。DexLatent 选择学习 embodiment-aware encoder/decoder 和共享 latent，使高层 VLA 在统一空间中建模动作。</p>
     <table><tbody>
 <tr><td>脉络</td><td>本论文的位置</td></tr>
@@ -604,6 +621,15 @@
   </section>
   <section id="method">
     <h2>4. 方法详解</h2>
+<h3>4.1 方法概览与信息流</h3>
+<p>从原始观测与指令开始，沿模型的数据流追踪到动作、未来状态或规划结果，明确训练和推理阶段的差异。</p>
+<h3>4.2 核心表示与模块职责</h3>
+<p>分别说明视觉、语言、动作、状态和接触信息如何编码，以及每个模块究竟承担理解、预测、生成还是控制。</p>
+<h3>4.3 训练目标、数学结构与关键假设</h3>
+<p>定位决定方法行为的损失函数、条件变量、潜变量或规划代价，并解释这些设计为何适合论文任务。</p>
+<h3>4.4 面向复现的实现细节</h3>
+<p>记录模型规模、输入输出维度、数据频率、动作分块、训练阶段和部署接口；论文未说明的部分必须标记为不确定。</p>
+
     <p>DexLatent 首先将不同手型的动作序列编码为共享 latent，并通过各 embodiment decoder 重建原动作；训练目标既要求动作重建，也要求 latent 保留跨手型可对应的操作语义。XL-VLA 将视觉语言观测映射到这个 latent action，而不是直接预测具体关节命令。部署时，根据目标手型选择对应 decoder，得到可执行动作。方法成败取决于 latent 是否保留指尖接触细节。</p>
     <h3>4.1 模块化阅读图</h3>
     <ul><li>先学习 DexLatent，将不同手型的低层动作压缩到可共享的 latent。</li><li>VLA 预测 latent action，再由具体 hand decoder 转回目标手型动作。</li><li>这种设计把跨手型泛化从视觉语言模型中解耦到 action representation。</li><li>读方法时要重点看 latent 的训练监督、解码器结构和是否保留接触细节。</li></ul>
@@ -634,6 +660,15 @@
   </section>
   <section id="experiments">
     <h2>5. 实验与结果</h2>
+<h3>5.1 实验设置与评估协议</h3>
+<p>核对训练测试划分、任务数量、物体与场景覆盖、基线、指标、重试次数和成功判定。</p>
+<h3>5.2 主要结果</h3>
+<p>主结果回答方法是否有效；应同时关注绝对性能、相对提升、方差和不同任务类别上的一致性。</p>
+<h3>5.3 消融实验</h3>
+<p>消融应回答性能来自哪里；检查被移除组件、训练预算和评估条件是否公平。</p>
+<h3>5.4 定性结果、失败案例与附录证据</h3>
+<p>定性图用于理解模型行为与失败模式，附录则常包含复现所需的超参数、额外任务和边界案例。</p>
+
     <p>实验的关键不是单一手型性能，而是多手联合训练是否优于各自独立训练、数据丰富手型是否能帮助低数据手型，以及模型能否 transfer 到未见任务或新 embodiment。应重点查看 DexLatent 消融、跨手型结果和 G1 等目标平台实验。若跨手型收益只出现在相似手型，通用性结论需要收缩。</p>
     <h3>5.1 读实验时先看什么</h3>
     <ul><li>最关键结果是跨手型 transfer。</li><li>消融应关注没有 latent、单手训练、多手联合训练的差异。</li><li>适合做你自己的创新点，因为它正好卡在 VLA action interface。</li></ul>
@@ -669,6 +704,13 @@
   </section>
   <section id="repro">
     <h2>6. 复现要点</h2>
+<h3>6.1 最小可行复现路径</h3>
+<p>先复现单一任务或离线指标，确认数据与动作接口正确，再扩展到完整系统和真实机器人。</p>
+<h3>6.2 数据、模型、训练与硬件清单</h3>
+<p>逐项核对数据许可、预处理脚本、权重、依赖版本、训练预算、传感器、机器人与安全控制。</p>
+<h3>6.3 复现风险与验收标准</h3>
+<p>为每个阶段定义可观测的验收指标，优先排查数据时间对齐、坐标系、动作尺度和评估协议。</p>
+
     <p>先独立复现 DexLatent，而不是直接训练完整 XL-VLA。需要至少两种动作空间明显不同的手型数据、对应机器人模型与动作归一化规则。检查 latent 插值、重建误差和实际执行轨迹，确认 latent 没有只编码手型身份。之后再将其接入 VLA。难点是多数据集时间尺度、关节范围和任务分布对齐。</p>
     <h3>6.1 复现风险清单</h3>
     <ul><li>latent 可能牺牲精细接触控制。</li><li>需要多手型数据才能训练得稳。</li><li>如果任务不是动作空间瓶颈，收益可能不明显。</li></ul>
@@ -684,6 +726,13 @@
   </section>
   <section id="discussion">
     <h2>7. 分析、局限与边界</h2>
+<h3>7.1 最有价值的贡献</h3>
+<p>判断论文真正可迁移的资产是数据、动作表示、模型模块、训练范式，还是完整系统经验。</p>
+<h3>7.2 证据为什么站得住</h3>
+<p>把每个主要主张对应到主结果、消融、定性图和真实部署证据，并指出证据链中仍然薄弱的环节。</p>
+<h3>7.3 作者局限、额外边界与可能改进</h3>
+<p>区分论文明确承认的局限与基于证据推断的边界，提出可验证的改进方向而非空泛展望。</p>
+
     <p>共享 latent 为跨手型迁移提供了优雅接口，但压缩也可能丢失指尖力控和细粒度接触信息。不同手型若能力差异过大，同一 latent 未必具有一致语义。论文的迁移结果需要结合训练手型数量、任务相似度与 decoder 是否见过目标数据判断。</p>
     <p>对你的课题而言，最重要的不是把所有论文都当成可直接复现的系统，而是判断它们在链路中的位置：有的是数据/动作表示，有的是世界模型，有的是 VLA 控制器，有的是高自由度真实系统。只有把位置分清，才知道该复现哪一段、创新该放在哪里。</p>
     <div class="danger"><strong>边界提醒：</strong>如果论文的实验只覆盖仿真、少量物体或固定手型，不应把结果外推到任意灵巧手和任意真实物体。WAM/VLA 的 claim 必须和任务分布绑定。</div>
@@ -696,6 +745,56 @@
     <h3>Q4: 最大复现风险是什么？</h3><p>优先检查数据、动作接口和硬件环境。对灵巧手论文来说，代码开源不等于可复现，真正的难点常常在遥操作数据格式、相机标定、控制频率和安全策略。</p>
     <h3>Q5: 下一步可以怎么用？</h3><p>这是最适合发展创新点的一篇。建议将 DexLatent 作为独立模块复现，并尝试触觉条件、物理约束或 world-model latent 对齐；不必首先复刻完整 VLA。</p>
   </section>
+<section id="figure-appendix">
+<h2>9. 补充图解与附录证据</h2>
+<h3>9.1 尚未在正文展开的高价值原论文插图</h3>
+<p>本节继续利用论文原始插图补足方法、数据、实验与部署证据。每张图均保留原始图注，并给出阅读重点；它们用于扩展证据链，而不是装饰页面。</p>
+<figure>
+  <img src="figures/source/fig05_demo_transparent_1.png" alt="fig:demo_xhand">
+  <figcaption><strong>fig:demo_xhand.</strong> X-Hand
+  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig05_demo_transparent_2.png" alt="fig:demo_xhand">
+  <figcaption><strong>fig:demo_xhand.</strong> X-Hand
+  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig06_demo_transparent_1.png" alt="fig:demo_xhand">
+  <figcaption><strong>fig:demo_xhand.</strong> X-Hand
+  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig06_demo_transparent_2.png" alt="fig:demo_xhand">
+  <figcaption><strong>fig:demo_xhand.</strong> X-Hand
+  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig06_demo_transparent_3.png" alt="fig:demo_xhand">
+  <figcaption><strong>fig:demo_xhand.</strong> X-Hand
+  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig06_demo_transparent_4.png" alt="fig:demo_xhand">
+  <figcaption><strong>fig:demo_xhand.</strong> X-Hand
+  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig07_camera_setup.jpeg" alt="fig:cam_setup">
+  <figcaption><strong>fig:cam_setup.</strong> xArm Camera Setup. We use a single RealSense L515 camera with the front view. Note that the D435 camera here is not used for .
+  <br><strong>读图要点：</strong>检查任务、物体、场景和具身形态覆盖范围，判断实验分布是否足以支撑论文的泛化主张。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig08_DexHands.jpg" alt="fig:dex_hands">
+  <figcaption><strong>fig:dex_hands.</strong> Dexterous Hands. We use 4 kinds of hands, with various shapes, scales, degrees of freedom, and actuated joints.
+  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig09_rs_view.png" alt="fig:cam_view">
+  <figcaption><strong>fig:cam_view.</strong> xArm Camera View. This is what our camera sees and also the input for and all the baseline methods.
+  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+</figure>
+</section>
 </main>
 </body>
 </html>

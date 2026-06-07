@@ -553,6 +553,11 @@
   </ul></nav>
   <section id="overview">
     <h2>1. 论文速览</h2>
+<h3>1.1 一句话贡献与论文定位</h3>
+<p>先明确论文解决的任务、核心机制与直接收益，再判断它属于数据、表示、世界模型、策略还是完整机器人系统。</p>
+<h3>1.2 阅读路线与核心结论</h3>
+<p>阅读顺序应从任务定义进入方法信息流，再用主结果、消融和真实部署证据检验核心结论，最后回到复现成本与适用边界。</p>
+
     <p class="tldr"><strong>一句话总结：</strong>在通用 VLM 外接 1B 级 diffusion expert，把语言视觉理解与连续机器人动作生成解耦用于多任务控制。</p>
     <div class="grid three">
       <div class="card"><div class="kpi">5</div><div class="kpi-label">你的复现优先级</div></div>
@@ -581,6 +586,13 @@
   </section>
   <section id="motivation">
     <h2>2. 研究问题与动机</h2>
+<h3>2.1 要解决什么问题</h3>
+<p>将论文问题拆成输入、输出、动作空间、任务分布与评估目标，避免只用一句宽泛的“提升泛化能力”概括。</p>
+<h3>2.2 已有方法的局限</h3>
+<p>区分数据不足、动作表示不统一、视觉泛化不足、长时序误差和真实控制接口等不同瓶颈。</p>
+<h3>2.3 本文的解决思路与关键假设</h3>
+<p>检查论文通过何种表示或模块缓解瓶颈，同时明确其成功依赖的训练数据、硬件与任务假设。</p>
+
     <p>通用 VLA 需要同时拥有语言视觉理解和高精度连续控制能力。直接让大 VLM 输出动作可能受 action token 表达能力和机器人数据规模限制；为每个机器人独立训练策略又无法共享语义知识。DexVLA 希望用共享 VLM 提供通用理解，再让 plug-in diffusion expert 专注高频、连续和多峰动作分布。</p>
     <p>灵巧手与普通夹爪最大的区别在于动作空间、接触模式和任务反馈都更复杂。VLA 或 world model 如果只解决语言理解，而没有解决高维动作表示和接触动态，就很难真正迁移到灵巧操作。</p>
     <table><tbody>
@@ -593,6 +605,11 @@
   </section>
   <section id="related">
     <h2>3. 相关工作脉络</h2>
+<h3>3.1 论文自述的相关工作</h3>
+<p>按照论文自己的引用脉络定位其直接前作，重点辨认作者认为尚未解决的缺口。</p>
+<h3>3.2 直接前作与替代路线对比</h3>
+<p>比较相邻方法在数据来源、动作表示、模型结构、规划方式和真实部署上的差异，而不是只比较模型名称。</p>
+
     <p>它延续 RT-2/OpenVLA/π0 等通用 VLA 路线，同时借鉴 Diffusion Policy 的连续动作建模。与 DexGraspVLA 的层级 planner-controller 不同，DexVLA 更强调统一大模型与可插拔动作专家；与 XL-VLA 的共享 latent 不同，它主要用 diffusion expert 解决动作生成容量。</p>
     <table><tbody>
 <tr><td>脉络</td><td>本论文的位置</td></tr>
@@ -604,6 +621,15 @@
   </section>
   <section id="method">
     <h2>4. 方法详解</h2>
+<h3>4.1 方法概览与信息流</h3>
+<p>从原始观测与指令开始，沿模型的数据流追踪到动作、未来状态或规划结果，明确训练和推理阶段的差异。</p>
+<h3>4.2 核心表示与模块职责</h3>
+<p>分别说明视觉、语言、动作、状态和接触信息如何编码，以及每个模块究竟承担理解、预测、生成还是控制。</p>
+<h3>4.3 训练目标、数学结构与关键假设</h3>
+<p>定位决定方法行为的损失函数、条件变量、潜变量或规划代价，并解释这些设计为何适合论文任务。</p>
+<h3>4.4 面向复现的实现细节</h3>
+<p>记录模型规模、输入输出维度、数据频率、动作分块、训练阶段和部署接口；论文未说明的部分必须标记为不确定。</p>
+
     <p>视觉与语言输入经 VLM 编码形成任务条件，diffusion expert 接收这些条件与机器人状态，通过去噪预测 action chunk。训练通常包含大规模多机器人数据预训练、任务/平台后训练以及新任务适配。plug-in 设计允许动作专家拥有比传统小 action head 更强的容量，同时不需要彻底改造 VLM 主干。</p>
     <h3>4.1 模块化阅读图</h3>
     <ul><li>VLM 处理语言和视觉任务条件。</li><li>diffusion expert 负责连续动作生成。</li><li>plug-in 设计降低了直接把大 VLM 改造成控制器的成本。</li><li>适合作为通用 VLA baseline。</li></ul>
@@ -634,6 +660,15 @@
   </section>
   <section id="experiments">
     <h2>5. 实验与结果</h2>
+<h3>5.1 实验设置与评估协议</h3>
+<p>核对训练测试划分、任务数量、物体与场景覆盖、基线、指标、重试次数和成功判定。</p>
+<h3>5.2 主要结果</h3>
+<p>主结果回答方法是否有效；应同时关注绝对性能、相对提升、方差和不同任务类别上的一致性。</p>
+<h3>5.3 消融实验</h3>
+<p>消融应回答性能来自哪里；检查被移除组件、训练预算和评估条件是否公平。</p>
+<h3>5.4 定性结果、失败案例与附录证据</h3>
+<p>定性图用于理解模型行为与失败模式，附录则常包含复现所需的超参数、额外任务和边界案例。</p>
+
     <p>应分别查看预训练覆盖的机器人/任务、zero-shot 或少样本能力、后训练新任务结果，以及不同 diffusion expert 规模和训练阶段的消融。论文展示通用控制和多 embodiment 能力，但评估时要区分灵巧手任务是否为核心实验，还是用于说明模型可扩展性的一个案例。</p>
     <h3>5.1 读实验时先看什么</h3>
     <ul><li>看多任务、多机器人、多 action space 下是否统一。</li><li>灵巧手实验要看是不是主结果，还是附带验证。</li><li>对比 OpenVLA/π0 类模型时关注动作生成模块差异。</li></ul>
@@ -669,6 +704,13 @@
   </section>
   <section id="repro">
     <h2>6. 复现要点</h2>
+<h3>6.1 最小可行复现路径</h3>
+<p>先复现单一任务或离线指标，确认数据与动作接口正确，再扩展到完整系统和真实机器人。</p>
+<h3>6.2 数据、模型、训练与硬件清单</h3>
+<p>逐项核对数据许可、预处理脚本、权重、依赖版本、训练预算、传感器、机器人与安全控制。</p>
+<h3>6.3 复现风险与验收标准</h3>
+<p>为每个阶段定义可观测的验收指标，优先排查数据时间对齐、坐标系、动作尺度和评估协议。</p>
+
     <p>复现需要确认多机器人数据格式、动作归一化、VLM checkpoint、diffusion expert 配置和分阶段训练 recipe。最实际的路线是从官方 checkpoint 做单机器人后训练，而不是重做大规模预训练。灵巧手接入时需重新定义 action dimension、控制频率、proprioception 和安全限制。</p>
     <h3>6.1 复现风险清单</h3>
     <ul><li>灵巧手不是唯一中心，复现到高自由度手可能需要额外适配。</li><li>diffusion expert 的训练数据与推理速度是瓶颈。</li><li>通用性 claim 需要看任务覆盖。</li></ul>
@@ -684,6 +726,13 @@
   </section>
   <section id="discussion">
     <h2>7. 分析、局限与边界</h2>
+<h3>7.1 最有价值的贡献</h3>
+<p>判断论文真正可迁移的资产是数据、动作表示、模型模块、训练范式，还是完整系统经验。</p>
+<h3>7.2 证据为什么站得住</h3>
+<p>把每个主要主张对应到主结果、消融、定性图和真实部署证据，并指出证据链中仍然薄弱的环节。</p>
+<h3>7.3 作者局限、额外边界与可能改进</h3>
+<p>区分论文明确承认的局限与基于证据推断的边界，提出可验证的改进方向而非空泛展望。</p>
+
     <p>DexVLA 的通用性来自大规模多任务训练，但这也提高了数据和算力门槛。共享 VLM 不保证不同机器人动作知识真正互相促进，diffusion expert 仍可能学习 embodiment-specific 模式。对精细接触、触觉和长程规划的能力需要从具体实验判断，不能由模型规模直接推断。</p>
     <p>对你的课题而言，最重要的不是把所有论文都当成可直接复现的系统，而是判断它们在链路中的位置：有的是数据/动作表示，有的是世界模型，有的是 VLA 控制器，有的是高自由度真实系统。只有把位置分清，才知道该复现哪一段、创新该放在哪里。</p>
     <div class="danger"><strong>边界提醒：</strong>如果论文的实验只覆盖仿真、少量物体或固定手型，不应把结果外推到任意灵巧手和任意真实物体。WAM/VLA 的 claim 必须和任务分布绑定。</div>
@@ -696,6 +745,31 @@
     <h3>Q4: 最大复现风险是什么？</h3><p>优先检查数据、动作接口和硬件环境。对灵巧手论文来说，代码开源不等于可复现，真正的难点常常在遥操作数据格式、相机标定、控制频率和安全策略。</p>
     <h3>Q5: 下一步可以怎么用？</h3><p>适合作为通用 VLA 基线。若研究重点是灵巧手，不应投入资源重做全部预训练；更合理的是把它接入目标手型，与 DexGraspVLA 分层控制或 DexLatent 动作接口比较。</p>
   </section>
+<section id="figure-appendix">
+<h2>9. 补充图解与附录证据</h2>
+<h3>9.1 尚未在正文展开的高价值原论文插图</h3>
+<p>本节继续利用论文原始插图补足方法、数据、实验与部署证据。每张图均保留原始图注，并给出阅读重点；它们用于扩展证据链，而不是装饰页面。</p>
+<figure>
+  <img src="figures/source/fig04_wo-post-training-task.png" alt="fig:easy_task_suite">
+  <figcaption><strong>fig:easy_task_suite.</strong> Examples of tasks without task-specific adaptation. We assessed our model&#x27;s performance after stage 2 training using three tasks: bin-picking easy (top), shirt folding (middle), and table bussing easy (bottom).
+  <br><strong>读图要点：</strong>将比较对象、指标和控制变量逐一对应；重点判断差异是否真正支持论文的核心设计。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig04_zero_shot_tasks.png" alt="fig:easy_task_suite">
+  <figcaption><strong>fig:easy_task_suite.</strong> Examples of tasks without task-specific adaptation. We assessed our model&#x27;s performance after stage 2 training using three tasks: bin-picking easy (top), shirt folding (middle), and table bussing easy (bottom).
+  <br><strong>读图要点：</strong>将比较对象、指标和控制变量逐一对应；重点判断差异是否真正支持论文的核心设计。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig09_visual_generalization.png" alt="fig:visual_generalization">
+  <figcaption><strong>fig:visual_generalization.</strong> Example of visual generalization. Here lists some visual generalization settings including unseen objects and unseen scenes.
+  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig11_task_length.png" alt="fig:91_tasks">
+  <figcaption><strong>fig:91_tasks.</strong> Average task length(seconds) of 91 tasks. fig:91_tasks
+  <br><strong>读图要点：</strong>检查任务、物体、场景和具身形态覆盖范围，判断实验分布是否足以支撑论文的泛化主张。</figcaption>
+</figure>
+</section>
 </main>
 </body>
 </html>

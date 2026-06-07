@@ -553,6 +553,11 @@
   </ul></nav>
   <section id="overview">
     <h2>1. 论文速览</h2>
+<h3>1.1 一句话贡献与论文定位</h3>
+<p>先明确论文解决的任务、核心机制与直接收益，再判断它属于数据、表示、世界模型、策略还是完整机器人系统。</p>
+<h3>1.2 阅读路线与核心结论</h3>
+<p>阅读顺序应从任务定义进入方法信息流，再用主结果、消融和真实部署证据检验核心结论，最后回到复现成本与适用边界。</p>
+
     <p class="tldr"><strong>一句话总结：</strong>构建 UniDex 数据、FAAS 统一动作空间和 UniDex-VLA，面向多种灵巧手实现从人类第一视角视频到机器人控制的通用套件。</p>
     <div class="grid three">
       <div class="card"><div class="kpi">2</div><div class="kpi-label">你的复现优先级</div></div>
@@ -581,6 +586,13 @@
   </section>
   <section id="motivation">
     <h2>2. 研究问题与动机</h2>
+<h3>2.1 要解决什么问题</h3>
+<p>将论文问题拆成输入、输出、动作空间、任务分布与评估目标，避免只用一句宽泛的“提升泛化能力”概括。</p>
+<h3>2.2 已有方法的局限</h3>
+<p>区分数据不足、动作表示不统一、视觉泛化不足、长时序误差和真实控制接口等不同瓶颈。</p>
+<h3>2.3 本文的解决思路与关键假设</h3>
+<p>检查论文通过何种表示或模块缓解瓶颈，同时明确其成功依赖的训练数据、硬件与任务假设。</p>
+
     <p>灵巧手研究的主要障碍之一是每种手型拥有不同关节拓扑、自由度和控制接口，导致为一只手采集的数据难以迁移到另一只手。同时，真实机器人示范昂贵，而人类第一视角视频数量丰富。UniDex 希望把人类视频转化为可被多种机器人手共同利用的训练信号，并建立统一的预训练、适配和评估管线。</p>
     <p>灵巧手与普通夹爪最大的区别在于动作空间、接触模式和任务反馈都更复杂。VLA 或 world model 如果只解决语言理解，而没有解决高维动作表示和接触动态，就很难真正迁移到灵巧操作。</p>
     <table><tbody>
@@ -593,6 +605,11 @@
   </section>
   <section id="related">
     <h2>3. 相关工作脉络</h2>
+<h3>3.1 论文自述的相关工作</h3>
+<p>按照论文自己的引用脉络定位其直接前作，重点辨认作者认为尚未解决的缺口。</p>
+<h3>3.2 直接前作与替代路线对比</h3>
+<p>比较相邻方法在数据来源、动作表示、模型结构、规划方式和真实部署上的差异，而不是只比较模型名称。</p>
+
     <p>它继承了 human motion recovery、手部 pose estimation 和 motion retargeting 的数据路线，也与跨 embodiment policy、robot foundation model 和 VLA 预训练相关。区别在于，过去工作通常只解决“恢复人手运动”或“为单一机器人重定向”；UniDex 把动作标准化、跨手型迁移、数据生成和 VLA 训练整合成一套套件。</p>
     <table><tbody>
 <tr><td>脉络</td><td>本论文的位置</td></tr>
@@ -604,6 +621,15 @@
   </section>
   <section id="method">
     <h2>4. 方法详解</h2>
+<h3>4.1 方法概览与信息流</h3>
+<p>从原始观测与指令开始，沿模型的数据流追踪到动作、未来状态或规划结果，明确训练和推理阶段的差异。</p>
+<h3>4.2 核心表示与模块职责</h3>
+<p>分别说明视觉、语言、动作、状态和接触信息如何编码，以及每个模块究竟承担理解、预测、生成还是控制。</p>
+<h3>4.3 训练目标、数学结构与关键假设</h3>
+<p>定位决定方法行为的损失函数、条件变量、潜变量或规划代价，并解释这些设计为何适合论文任务。</p>
+<h3>4.4 面向复现的实现细节</h3>
+<p>记录模型规模、输入输出维度、数据频率、动作分块、训练阶段和部署接口；论文未说明的部分必须标记为不确定。</p>
+
     <p>管线首先从 egocentric human video 恢复手部与物体运动，再将人手动作映射到机器人可执行空间。FAAS 作为跨 embodiment 的统一动作接口，描述手部运动而非绑定某一组关节索引；各机器人手通过对应映射器解释该动作。UniDex-VLA 在统一数据上进行预训练，再针对具体手型和任务微调。方法的关键不只是网络，而是坐标系、运动重定向、动作规范化和手型适配器。</p>
     <h3>4.1 模块化阅读图</h3>
     <ul><li>核心价值在于 suite：数据处理、动作空间、预训练/微调和评估流程，而不只是单个 policy。</li><li>FAAS/统一动作表示用于缓解不同灵巧手之间的 embodiment gap。</li><li>UniDex-VLA 关注从语言/视觉条件到灵巧手控制的端到端或分层迁移。</li><li>阅读时要把数据来源、手型映射、策略输入输出和下游任务分开画图。</li></ul>
@@ -634,6 +660,15 @@
   </section>
   <section id="experiments">
     <h2>5. 实验与结果</h2>
+<h3>5.1 实验设置与评估协议</h3>
+<p>核对训练测试划分、任务数量、物体与场景覆盖、基线、指标、重试次数和成功判定。</p>
+<h3>5.2 主要结果</h3>
+<p>主结果回答方法是否有效；应同时关注绝对性能、相对提升、方差和不同任务类别上的一致性。</p>
+<h3>5.3 消融实验</h3>
+<p>消融应回答性能来自哪里；检查被移除组件、训练预算和评估条件是否公平。</p>
+<h3>5.4 定性结果、失败案例与附录证据</h3>
+<p>定性图用于理解模型行为与失败模式，附录则常包含复现所需的超参数、额外任务和边界案例。</p>
+
     <p>实验应分三层阅读：首先验证从人类视频恢复和重定向出的轨迹质量；其次检查同一动作表示是否能在多种灵巧手上执行；最后看 UniDex-VLA 在空间泛化、物体泛化和跨 embodiment transfer 上的表现。原始图中包含 FAAS、工作站、任务集合、空间/物体泛化和 transfer 结果，说明作者试图用完整证据链证明 suite 的通用性。</p>
     <h3>5.1 读实验时先看什么</h3>
     <ul><li>看跨手型、跨任务、跨物体的泛化是否真的由统一动作空间贡献。</li><li>关注是否给出数据规模、预训练/微调 recipe、真实机器人验证与开源可复现性。</li><li>与 DexGraspVLA 相比，它更像基础设施；与 XL-VLA 相比，它更强调 suite 完整性。</li></ul>
@@ -669,6 +704,13 @@
   </section>
   <section id="repro">
     <h2>6. 复现要点</h2>
+<h3>6.1 最小可行复现路径</h3>
+<p>先复现单一任务或离线指标，确认数据与动作接口正确，再扩展到完整系统和真实机器人。</p>
+<h3>6.2 数据、模型、训练与硬件清单</h3>
+<p>逐项核对数据许可、预处理脚本、权重、依赖版本、训练预算、传感器、机器人与安全控制。</p>
+<h3>6.3 复现风险与验收标准</h3>
+<p>为每个阶段定义可观测的验收指标，优先排查数据时间对齐、坐标系、动作尺度和评估协议。</p>
+
     <p>复现工作量集中在数据管线。需要下载并处理人类第一视角视频、运行手部/物体运动恢复、统一坐标系、实现 FAAS 与目标手型之间的映射，并准备至少一种真实或仿真灵巧手。应先验证单条轨迹重定向是否合理，再进行 VLA 训练；否则动作标签错误会被模型学习并放大。版本、标定文件和手型 URDF 是关键依赖。</p>
     <h3>6.1 复现风险清单</h3>
     <ul><li>数据处理链条长，容易卡在格式/标定。</li><li>跨手型 mapping 可能隐藏大量工程细节。</li><li>真实复现实验需要匹配其手型与遥操作系统。</li></ul>
@@ -684,6 +726,13 @@
   </section>
   <section id="discussion">
     <h2>7. 分析、局限与边界</h2>
+<h3>7.1 最有价值的贡献</h3>
+<p>判断论文真正可迁移的资产是数据、动作表示、模型模块、训练范式，还是完整系统经验。</p>
+<h3>7.2 证据为什么站得住</h3>
+<p>把每个主要主张对应到主结果、消融、定性图和真实部署证据，并指出证据链中仍然薄弱的环节。</p>
+<h3>7.3 作者局限、额外边界与可能改进</h3>
+<p>区分论文明确承认的局限与基于证据推断的边界，提出可验证的改进方向而非空泛展望。</p>
+
     <p>UniDex 的价值是降低跨手型研究门槛，但统一动作空间可能掩盖不同手型在接触能力、关节耦合和可达空间上的本质差异。人类视频恢复误差、遮挡和尺度歧义也会进入训练数据。套件展示了 transfer 潜力，但不能保证任何人手动作都能被任意机器人手物理实现。</p>
     <p>对你的课题而言，最重要的不是把所有论文都当成可直接复现的系统，而是判断它们在链路中的位置：有的是数据/动作表示，有的是世界模型，有的是 VLA 控制器，有的是高自由度真实系统。只有把位置分清，才知道该复现哪一段、创新该放在哪里。</p>
     <div class="danger"><strong>边界提醒：</strong>如果论文的实验只覆盖仿真、少量物体或固定手型，不应把结果外推到任意灵巧手和任意真实物体。WAM/VLA 的 claim 必须和任务分布绑定。</div>
@@ -696,6 +745,41 @@
     <h3>Q4: 最大复现风险是什么？</h3><p>优先检查数据、动作接口和硬件环境。对灵巧手论文来说，代码开源不等于可复现，真正的难点常常在遥操作数据格式、相机标定、控制频率和安全策略。</p>
     <h3>Q5: 下一步可以怎么用？</h3><p>它最值得借鉴的是数据和 action interface。若计划长期做多手型灵巧操作，应优先研究 FAAS 与数据处理流程；若只想快速得到单手任务结果，DexGraspVLA 可能更直接。</p>
   </section>
+<section id="figure-appendix">
+<h2>9. 补充图解与附录证据</h2>
+<h3>9.1 尚未在正文展开的高价值原论文插图</h3>
+<p>本节继续利用论文原始插图补足方法、数据、实验与部署证据。每张图均保留原始图注，并给出阅读重点；它们用于扩展证据链，而不是装饰页面。</p>
+<figure>
+  <img src="figures/source/fig03_faas.png" alt="fig:faas">
+  <figcaption><strong>fig:faas.</strong> Function–Actuator–Aligned Space (FAAS). We show the thumb and ring fingers of Oymotion (11 actuators), Allegro (16), Inspire (12), and Wuji (20), with colors denoting individual joints, curves indicating rotation directions, and dotted lines indicating rotation axes. Indices \0,1,3,5,6\ are aligned across all four hands because the corresponding joints share similar functional roles.
+  <br><strong>读图要点：</strong>把该图放回论文论证链中阅读：它支持什么主张、控制了什么变量、又遗漏了哪些边界情况。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig08_obj_generalization.png" alt="fig:obj-generalization">
+  <figcaption><strong>fig:obj-generalization.</strong> Object generalization. Left: we replace the original black kettle with a smaller purple kettle that differs in color, size, and functional parts (handle \&amp; spout). Right: average task progress for different methods (10 trials each). \vspace*-12pt
+  <br><strong>读图要点：</strong>检查任务、物体、场景和具身形态覆盖范围，判断实验分布是否足以支撑论文的泛化主张。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig09_transfer.png" alt="fig:hand-generalization">
+  <figcaption><strong>fig:hand-generalization.</strong> Hand generalization (zero-shot skill transfer). We transfer a policy trained on the Inspire Hand to Wuji and Oymotion. Table reports \textbfaverage task progress (\ \vspace*-15pt
+  <br><strong>读图要点：</strong>检查任务、物体、场景和具身形态覆盖范围，判断实验分布是否足以支撑论文的泛化主张。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig11_unidexcap.png" alt="fig:human_data">
+  <figcaption><strong>fig:human_data.</strong> (a,b) show the components of UniDex-Cap. (c,d) shows the example captured data and converted robot-executable trajectories.
+  <br><strong>读图要点：</strong>关注真实硬件、传感器、控制频率和失败案例；这些细节决定方法离可复现系统还有多远。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig13_web_gui.png" alt="fig:web_gui">
+  <figcaption><strong>fig:web_gui.</strong> Human-friendly web-basedGUI for retargeting human demonstrations to robot executions. Users can adjust the IK parameters, dummy links, and other settings through the GUI to obtain satisfactory retargeted robot trajectories.
+  <br><strong>读图要点：</strong>关注真实硬件、传感器、控制频率和失败案例；这些细节决定方法离可复现系统还有多远。</figcaption>
+</figure>
+<figure>
+  <img src="figures/source/fig14_detailed_faas.png" alt="fig:detailed_faas">
+  <figcaption><strong>fig:detailed_faas.</strong> Joint mappings of different robotic hands used in FAAS. From left to right are Ability, Allegro, Inspire, Leap, Oymotion, Shadow, Wuji, and Xhand. The two rows show different views of the joint mappings on the right hand.
+  <br><strong>读图要点：</strong>关注真实硬件、传感器、控制频率和失败案例；这些细节决定方法离可复现系统还有多远。</figcaption>
+</figure>
+</section>
 </main>
 </body>
 </html>
