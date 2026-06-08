@@ -1,0 +1,10 @@
+{
+  "input_papers": 10,
+  "generated_blogs": 10,
+  "records": 10,
+  "missing_files": [],
+  "published": false,
+  "github_pages_200_verified": false,
+  "feishu_synced": false,
+  "notes": "Local static package generated only. Public URL and Feishu verification require Codex/local backend Action."
+}
