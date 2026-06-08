@@ -1,0 +1,46 @@
+[
+  {
+    "index": 1,
+    "label": "fig:tasks",
+    "graphics": [
+      "figures/fig3.pdf"
+    ],
+    "caption": "Task overview and challenges. Each row represents one task: (top) USB-C mating, (middle) card sliding, (bottom) bulb installation. From left to right, columns show: initial state, approach phase, critical contact moment (red boxes), and successful completion. Red boxes highlight moments where visual information is severely degraded, requiring precise tactile-based geometric reasoning. \\vspace-0.3cm",
+    "files": [
+      "figures/source/fig01_fig3.pdf"
+    ]
+  },
+  {
+    "index": 2,
+    "label": "fig:failure",
+    "graphics": [
+      "figures/failure_analysis.pdf"
+    ],
+    "caption": "Failure mode analysis of Tactile-Flat baseline. Red arrows indicate incorrect directions/orientations executed by the policy, while green arrows show the required correct directions. (Top) Bulb installation: misaligned insertion angle prevents thread engagement. (Middle) Card sliding: perpendicular thumb motion (red) instead of along-surface motion (green) causes card bending (blue curve). (Bottom) USB-C mating: incorrect plug orientation (red) and absence of thumb-index coordinated adjustment motion (blue arrows indicate the required but unlearned motion). \\vspace0cm",
+    "files": [
+      "figures/source/fig02_failure_analysis.pdf"
+    ]
+  },
+  {
+    "index": 3,
+    "label": "fig:teaser",
+    "graphics": [
+      "figures/teaser.pdf"
+    ],
+    "caption": "The importance of spatial grounding for tactile-based geometric reasoning. Left: Without spatial grounding, tactile sensors detect contact but cannot infer correct alignment—rich tactile patterns remain isolated measurements. Right: With spatial grounding in the hand's kinematic frame, the same tactile signals enable precise geometric reasoning—each measurement's spatial context guides successful USB-C mating.",
+    "files": [
+      "figures/source/fig03_teaser.pdf"
+    ]
+  },
+  {
+    "index": 4,
+    "label": "fig:method_overview",
+    "graphics": [
+      "figures/method_overview.pdf"
+    ],
+    "caption": "SaTA Framework Overview. Our method grounds raw tactile images in the hand's kinematic frame for dexterous manipulation. Multi-modal inputs (head/wrist RGB views, tactile images from fingertips, joint states) are processed through specialized encoders. The core innovation is the Spatial Anchored Tactile Encoder (yellow), which grounds each tactile measurement in the hand's kinematic frame. The detailed SAT Encoding process (gray box) shows how we compute 6D poses via forward kinematics, apply Fourier encoding for multi-scale spatial representation, and use FiLM to integrate spatial context with tactile features from ResNet. All encoded features are processed through an ACT-style Transformer to generate action sequences for precise manipulation. \\vspace-5mm",
+    "files": [
+      "figures/source/fig04_method_overview.pdf"
+    ]
+  }
+]

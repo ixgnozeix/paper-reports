@@ -1,0 +1,61 @@
+[
+  {
+    "index": 1,
+    "label": "fig:method",
+    "graphics": [
+      "method.png"
+    ],
+    "caption": "Overview of the Tacmap Framework. (a) Diagram of deform map generation in simulation and (b) diagram of deform map generation in real-world.",
+    "files": [
+      "figures/source/fig01_method.png"
+    ]
+  },
+  {
+    "index": 2,
+    "label": "fig:implementation",
+    "graphics": [
+      "implementation.png"
+    ],
+    "caption": "The implementation framework of our Tacmap in Isaac Lab and MuJoCo.",
+    "files": [
+      "figures/source/fig02_implementation.png"
+    ]
+  },
+  {
+    "index": 3,
+    "label": "fig:net_force",
+    "graphics": [
+      "cylinder.png",
+      "square.png"
+    ],
+    "caption": "Net force comparison between simulation and real-world under the same relative contact positions between object and fingertip (left: cylinder, right: square).",
+    "files": [
+      "figures/source/fig03_cylinder.png",
+      "figures/source/fig03_square.png"
+    ]
+  },
+  {
+    "index": 4,
+    "label": "fig:visualization",
+    "graphics": [
+      "visualization.png"
+    ],
+    "caption": "Visualization of deform map across simulation and real world under the same contact position with cylinder and square.",
+    "files": [
+      "figures/source/fig04_visualization.png"
+    ]
+  },
+  {
+    "index": 5,
+    "label": "fig:efficiency",
+    "graphics": [
+      "benchmark_memory.png",
+      "benchmark_speed.png"
+    ],
+    "caption": "Rendering efficiency of our Tacmap with GPU memory usage (left) and simulation rendering speed (right).",
+    "files": [
+      "figures/source/fig05_benchmark_memory.png",
+      "figures/source/fig05_benchmark_speed.png"
+    ]
+  }
+]

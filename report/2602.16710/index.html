@@ -1,0 +1,520 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EgoScale 深度精读</title><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style></head><body><main><header><h1>EgoScale: Scaling Dexterous Manipulation with Diverse Egocentric Human Data</h1><p class="subtitle">OpenMOSS/WAM 风格深度精读：EgoScale | 大规模人类第一视角数据 / 灵巧手 VLA</p><p><a href="https://arxiv.org/abs/2602.16710">arXiv:2602.16710</a> · <a href="https://research.nvidia.com/labs/gear/egoscale/">项目/论文链接</a></p></header><section><h2>1. 论文速览</h2><h3>1.1 一句话贡献</h3><p>EgoScale 的核心是证明大规模人类第一视角数据可以作为灵巧手机器人学习的可预测监督源。它不是只做视频理解，而是训练 VLA 去预测 wrist motion 和 retargeted hand actions，再通过 aligned human-robot mid-training 把这种人类运动先验落到机器人动作空间。</p><p class="analysis-note">在整篇论文中，这个要点对应 EgoScale 的主证据链：它必须同时说明任务为什么难、方法如何改变信息流、实验如何证明改变有效，以及哪些边界仍未解决。</p><p class="analysis-note">阅读 EgoScale 时不要只看最终 demo，而要把贡献句拆成可验证问题：它改变了哪个中间表示，这个表示是否真的降低了接触、泛化或 sim-to-real 难度，实验是否覆盖了这种难度。</p><p class="analysis-note">这也是判断论文价值的第一道筛选：如果贡献能被拆成清楚的输入、表示、输出和真实验证，那么它更适合后续复现和改造；如果只停留在概念层，就很难进入工程闭环。</p><h3>1.2 技术定位</h3><p>它属于 human-to-robot transfer、egocentric video pretraining 和 dexterous VLA scaling。与 UniDex/UniHM 关注动作表示不同，EgoScale 更强调数据规模和 scaling law：人类数据量、validation loss 和真实机器人成功率之间存在相关性。</p><p class="analysis-note">在整篇论文中，这个要点对应 EgoScale 的主证据链：它必须同时说明任务为什么难、方法如何改变信息流、实验如何证明改变有效，以及哪些边界仍未解决。</p><p class="analysis-note">阅读 EgoScale 时不要只看最终 demo，而要把贡献句拆成可验证问题：它改变了哪个中间表示，这个表示是否真的降低了接触、泛化或 sim-to-real 难度，实验是否覆盖了这种难度。</p><p class="analysis-note">这也是判断论文价值的第一道筛选：如果贡献能被拆成清楚的输入、表示、输出和真实验证，那么它更适合后续复现和改造；如果只停留在概念层，就很难进入工程闭环。</p><h3>1.3 关键证据</h3><p>摘要报告使用超过 20,854 小时 action-labeled egocentric human video，是 prior efforts 的 20× 以上；最终策略相对 no-pretraining baseline 平均成功率提升 54%，并能迁移到低 DoF 手。这是论文最强的证据链。</p><p class="analysis-note">在整篇论文中，这个要点对应 EgoScale 的主证据链：它必须同时说明任务为什么难、方法如何改变信息流、实验如何证明改变有效，以及哪些边界仍未解决。</p><p class="analysis-note">阅读 EgoScale 时不要只看最终 demo，而要把贡献句拆成可验证问题：它改变了哪个中间表示，这个表示是否真的降低了接触、泛化或 sim-to-real 难度，实验是否覆盖了这种难度。</p><p class="analysis-note">这也是判断论文价值的第一道筛选：如果贡献能被拆成清楚的输入、表示、输出和真实验证，那么它更适合后续复现和改造；如果只停留在概念层，就很难进入工程闭环。</p><figure><img src="figures/source/fig01_pull_figure.png" alt="fig:method_overview"><figcaption><strong>fig:method_overview.</strong> \ours: Two-stage human-to-robot learning framework. A flow-based Vision-Language-Action (VLA) policy is first pretrained on 20,854 hours of egocentric human videos using wrist motion and retargeted dexterous hand actions. A lightweight mid-training stage with aligned human robot play data (pairs highlighted with mygreengreen and mygraygray boundaries) adapts the representation to robot sensing and control. The resulting policy is post-trained on downstream tasks, enabling efficient learning of dexterous manipulation and one-shot generalization to unseen skills.\looseness=-1<br><strong>本文解读：</strong>这张图承担 EgoScale 的方法总览功能：它把输入观测、内部表示、训练目标和部署输出放到同一条信息流里。关键是看论文如何把灵巧操作问题拆成可学习的中间变量，而不是只记模块名称。</figcaption></figure><figure><img src="figures/source/fig02_dexterous_manipulation_tasks_v2.png" alt="fig:task_fig"><figcaption><strong>fig:task_fig.</strong> Post-Training Evaluation Tasks. Five dexterous manipulation tasks used to evaluate post-training performance<br><strong>本文解读：</strong>这张图说明 EgoScale 的真实任务和硬件条件。它帮助判断论文结果的外推边界：任务是否依赖特定传感器、手型、物体分布或遥操作采集流程。</figcaption></figure></section><section><h2>2. 研究问题与动机</h2><h3>2.1 核心问题</h3><p>机器人遥操作数据昂贵，尤其是高 DoF 灵巧手；而人类每天产生大量第一视角操作视频。问题是这些视频没有机器人 proprioception 和可执行动作，能否变成真正有用的 robot motor prior。</p><p class="analysis-note">这个问题定义决定了方法复杂度是否必要。若只是普通视觉模仿学习能够解决，触觉、空间锚定、人类 scaling 或物体中心 RL 都会显得多余；论文真正要证明的是旧表示在关键接触或泛化场景下不够。</p><p class="analysis-note">对 EgoScale 来说，动机部分还要追问失败发生在感知、表示、数据还是控制接口。如果瓶颈判断错了，后面的架构再复杂也只是把错误包装得更精致。</p><p class="analysis-note">因此动机不是背景介绍，而是后文实验设计的来源。一个好的实验应该正好打在这个瓶颈上，让我们能看出方法是否真的修复了原来的失败模式。</p><h3>2.2 scaling 是否成立</h3><p>论文不满足于“人类数据有帮助”的定性结论，而是寻找 log-linear scaling law：随着人类数据规模增大，validation loss 稳定下降，并与 downstream real-robot performance 相关。这个关系让数据扩展变得可预测。</p><p class="analysis-note">这个问题定义决定了方法复杂度是否必要。若只是普通视觉模仿学习能够解决，触觉、空间锚定、人类 scaling 或物体中心 RL 都会显得多余；论文真正要证明的是旧表示在关键接触或泛化场景下不够。</p><p class="analysis-note">对 EgoScale 来说，动机部分还要追问失败发生在感知、表示、数据还是控制接口。如果瓶颈判断错了，后面的架构再复杂也只是把错误包装得更精致。</p><p class="analysis-note">因此动机不是背景介绍，而是后文实验设计的来源。一个好的实验应该正好打在这个瓶颈上，让我们能看出方法是否真的修复了原来的失败模式。</p><h3>2.3 为什么需要 mid-training</h3><p>人类动作和机器人动作存在 embodiment gap。仅靠人类预训练可能学到手部运动先验，但不知道机器人传感器、关节限制和动作接口。aligned human-robot mid-training 用少量配对数据把表示锚定到机器人执行空间。</p><p class="analysis-note">这个问题定义决定了方法复杂度是否必要。若只是普通视觉模仿学习能够解决，触觉、空间锚定、人类 scaling 或物体中心 RL 都会显得多余；论文真正要证明的是旧表示在关键接触或泛化场景下不够。</p><p class="analysis-note">对 EgoScale 来说，动机部分还要追问失败发生在感知、表示、数据还是控制接口。如果瓶颈判断错了，后面的架构再复杂也只是把错误包装得更精致。</p><p class="analysis-note">因此动机不是背景介绍，而是后文实验设计的来源。一个好的实验应该正好打在这个瓶颈上，让我们能看出方法是否真的修复了原来的失败模式。</p><h3>2.4 关键假设</h3><p>论文假设人类手部运动包含可复用的 embodiment-agnostic motor prior，且这种 prior 能通过少量机器人数据对齐。若任务依赖机器人特有动力学或触觉反馈，纯人类视频先验可能不足。</p><p class="analysis-note">这个问题定义决定了方法复杂度是否必要。若只是普通视觉模仿学习能够解决，触觉、空间锚定、人类 scaling 或物体中心 RL 都会显得多余；论文真正要证明的是旧表示在关键接触或泛化场景下不够。</p><p class="analysis-note">对 EgoScale 来说，动机部分还要追问失败发生在感知、表示、数据还是控制接口。如果瓶颈判断错了，后面的架构再复杂也只是把错误包装得更精致。</p><p class="analysis-note">因此动机不是背景介绍，而是后文实验设计的来源。一个好的实验应该正好打在这个瓶颈上，让我们能看出方法是否真的修复了原来的失败模式。</p></section><section><h2>3. 相关工作脉络</h2><h3>3.1 人类视频预训练</h3><p>EgoDex 等工作证明第一视角人类数据能提供手部轨迹和任务多样性。EgoScale 将规模推到 20k 小时级别，并重点验证 scaling law 与机器人成功率相关。</p><p class="analysis-note">相关工作的重点是识别变量变化：本文究竟改变了数据来源、动作表示、触觉空间、仿真表示还是目标定义。只有抓住这个变量，才能判断它和相邻工作的实质差异。</p><p class="analysis-note">因此比较 EgoScale 和前作时，应该比较任务假设、监督来源、执行接口和评估协议，而不只是比较模型名字。灵巧手论文很容易在不同硬件和任务下看似相近，实际问题边界完全不同。</p><p class="analysis-note">这部分也能帮助我们找创新点：沿用前作的硬件和任务，改变表示；或沿用表示，换更难的跨具身、长程、触觉噪声和真实部署评估，都会形成更清楚的研究问题。</p><h3>3.2 VLA 与 action expert</h3><p>论文使用 flow-based VLA policy，视觉语言 backbone 与 DiT action expert 结合，动作包含 wrist motion 和 dexterous hand actions。相比只做语义理解，它直接面向机器人控制表示。</p><p class="analysis-note">相关工作的重点是识别变量变化：本文究竟改变了数据来源、动作表示、触觉空间、仿真表示还是目标定义。只有抓住这个变量，才能判断它和相邻工作的实质差异。</p><p class="analysis-note">因此比较 EgoScale 和前作时，应该比较任务假设、监督来源、执行接口和评估协议，而不只是比较模型名字。灵巧手论文很容易在不同硬件和任务下看似相近，实际问题边界完全不同。</p><p class="analysis-note">这部分也能帮助我们找创新点：沿用前作的硬件和任务，改变表示；或沿用表示，换更难的跨具身、长程、触觉噪声和真实部署评估，都会形成更清楚的研究问题。</p><h3>3.3 跨具身迁移</h3><p>通过 embodiment-conditioned adapters，模型可以处理不同机器人状态和手部 action space。G1 低 DoF 手实验用于检验人类运动先验是否只适用于 22-DoF 手。</p><p class="analysis-note">相关工作的重点是识别变量变化：本文究竟改变了数据来源、动作表示、触觉空间、仿真表示还是目标定义。只有抓住这个变量，才能判断它和相邻工作的实质差异。</p><p class="analysis-note">因此比较 EgoScale 和前作时，应该比较任务假设、监督来源、执行接口和评估协议，而不只是比较模型名字。灵巧手论文很容易在不同硬件和任务下看似相近，实际问题边界完全不同。</p><p class="analysis-note">这部分也能帮助我们找创新点：沿用前作的硬件和任务，改变表示；或沿用表示，换更难的跨具身、长程、触觉噪声和真实部署评估，都会形成更清楚的研究问题。</p></section><section><h2>4. 方法详解</h2><h3>4.1 两阶段框架</h3><p>第一阶段在 20,854 小时人类 egocentric video 上预训练，监督 wrist motion 和 retargeted hand actions；第二阶段加入 aligned human-robot mid-training，将人类表示对齐到机器人 proprioception 和 action space。</p><p class="analysis-note">从复现角度看，应把该模块的输入、输出和误差传播单独验收。灵巧手系统往往不是单点失败，而是表示误差、标定误差和控制误差在接触过程中连续放大。</p><p class="analysis-note">EgoScale 的方法部分尤其要看中间变量是否可视化和可诊断：触觉图、空间编码、目标位姿、人类动作 token 或 deform map 一旦无法单独检查，真实部署失败时就很难定位原因。</p><p class="analysis-note">实际实现时，每个模块都应配一个最小验收脚本：例如可视化触觉预测、检查坐标锚定、回放目标位姿、比较 sim-real deform map 或统计人类预训练 loss。这样方法才不是黑盒。</p><h3>4.2 人类动作表示</h3><p>人类演示由第一视角 RGB、相机运动和手部姿态估计组成。虽然这些信号噪声较大，但规模和多样性提供了丰富操作先验；EgoDex 的 829 小时高精度数据则帮助锚定手部 kinematic signal。</p><p class="analysis-note">从复现角度看，应把该模块的输入、输出和误差传播单独验收。灵巧手系统往往不是单点失败，而是表示误差、标定误差和控制误差在接触过程中连续放大。</p><p class="analysis-note">EgoScale 的方法部分尤其要看中间变量是否可视化和可诊断：触觉图、空间编码、目标位姿、人类动作 token 或 deform map 一旦无法单独检查，真实部署失败时就很难定位原因。</p><p class="analysis-note">实际实现时，每个模块都应配一个最小验收脚本：例如可视化触觉预测、检查坐标锚定、回放目标位姿、比较 sim-real deform map 或统计人类预训练 loss。这样方法才不是黑盒。</p><h3>4.3 mid-training 数据</h3><p>中间训练包含人类和遥操作机器人数据，用来桥接 embodiment gap。对机器人数据，模型使用 proprioceptive state；对人类数据，缺失 proprioception 时用 learnable placeholder token，让同一架构处理两类数据。</p><p class="analysis-note">从复现角度看，应把该模块的输入、输出和误差传播单独验收。灵巧手系统往往不是单点失败，而是表示误差、标定误差和控制误差在接触过程中连续放大。</p><p class="analysis-note">EgoScale 的方法部分尤其要看中间变量是否可视化和可诊断：触觉图、空间编码、目标位姿、人类动作 token 或 deform map 一旦无法单独检查，真实部署失败时就很难定位原因。</p><p class="analysis-note">实际实现时，每个模块都应配一个最小验收脚本：例如可视化触觉预测、检查坐标锚定、回放目标位姿、比较 sim-real deform map 或统计人类预训练 loss。这样方法才不是黑盒。</p><h3>4.4 多 embodiment 接口</h3><p>论文借鉴 GR00T N1 风格，用轻量 embodiment-conditioned MLP adapters 编码特定机器人状态、解码特定手部动作；共享部分包括相对腕部运动、视觉语言 backbone 和 DiT action expert。</p><p class="analysis-note">从复现角度看，应把该模块的输入、输出和误差传播单独验收。灵巧手系统往往不是单点失败，而是表示误差、标定误差和控制误差在接触过程中连续放大。</p><p class="analysis-note">EgoScale 的方法部分尤其要看中间变量是否可视化和可诊断：触觉图、空间编码、目标位姿、人类动作 token 或 deform map 一旦无法单独检查，真实部署失败时就很难定位原因。</p><p class="analysis-note">实际实现时，每个模块都应配一个最小验收脚本：例如可视化触觉预测、检查坐标锚定、回放目标位姿、比较 sim-real deform map 或统计人类预训练 loss。这样方法才不是黑盒。</p><h3>4.5 训练规模</h3><p>文中披露 Stage I 使用 100K steps、256 GB200 GPUs、global batch size 8,192 和学习率设置。这说明该方法的核心壁垒之一是数据和算力规模，不是普通实验室可轻易从零复现。</p><p class="analysis-note">从复现角度看，应把该模块的输入、输出和误差传播单独验收。灵巧手系统往往不是单点失败，而是表示误差、标定误差和控制误差在接触过程中连续放大。</p><p class="analysis-note">EgoScale 的方法部分尤其要看中间变量是否可视化和可诊断：触觉图、空间编码、目标位姿、人类动作 token 或 deform map 一旦无法单独检查，真实部署失败时就很难定位原因。</p><p class="analysis-note">实际实现时，每个模块都应配一个最小验收脚本：例如可视化触觉预测、检查坐标锚定、回放目标位姿、比较 sim-real deform map 或统计人类预训练 loss。这样方法才不是黑盒。</p><figure><img src="figures/source/fig03_success_rate_task_completion_bar_plot.png" alt="fig:main_experimental_results"><figcaption><strong>fig:main_experimental_results.</strong> Main Experimental Results. Comparison of Human Pre-train + Mid-Training, Human Pretraining, and No Pretraining across five dexterous manipulation tasks under two evaluation metrics.<br><strong>本文解读：</strong>这张图是 EgoScale 的实验证据，应该结合横纵轴、对比方法和任务划分看。它回答的不是“是否有漂亮 demo”，而是哪个设计变量带来了成功率、任务进度或训练稳定性的提升。</figcaption></figure><figure><img src="figures/source/fig04_human_data_scaling_combined.png" alt="fig:human_scaling"><figcaption><strong>fig:human_scaling.</strong> Scaling behavior of human pretraining. Left: Human validation loss versus training steps for models pretrained with increasing amounts of egocentric human data (1k–20k hours). Larger datasets yield stable, monotonic improvements, while smaller datasets exhibit early overfitting. Center: Optimal validation loss at convergence as a function of human data scale, revealing a near-perfect log-linear scaling law (R^2=0.9983). Right: Downstream robot performance after post-training, measured by average task completion score, improves consistently with increased human data scale. Together, these results demonstrate predictable scaling of learned action representations and their direct translation to improved dexterous manipulation performance.\looseness=-1 \vspace-0.5em<br><strong>本文解读：</strong>这张图是 EgoScale 的实验证据，应该结合横纵轴、对比方法和任务划分看。它回答的不是“是否有漂亮 demo”，而是哪个设计变量带来了成功率、任务进度或训练稳定性的提升。</figcaption></figure><figure><img src="figures/source/fig05_midtraining_v2.png" alt="fig:midtrain_exp"><figcaption><strong>fig:midtrain_exp.</strong> Aligned mid-training enables emergent one-shot transfer. During post-training, the policy is trained on only a single robot demonstration per task, together with aligned human demonstrations (100 trajectories per object).<br><strong>本文解读：</strong>这张图说明 EgoScale 的真实任务和硬件条件。它帮助判断论文结果的外推边界：任务是否依赖特定传感器、手型、物体分布或遥操作采集流程。</figcaption></figure></section><section><h2>5. 实验与结果</h2><h3>5.1 评估任务</h3><p>论文使用 5 个 dexterous manipulation post-training tasks 检验真实机器人性能，并关注 task completion 和 success rate。任务强调长程、精细和高 DoF 手控制。</p><p class="analysis-note">实验结果需要和论文主张一一对应：主结果说明系统可用，消融说明设计必要，真实部署说明闭环成立，失败案例则揭示外推边界。</p><p class="analysis-note">评价 EgoScale 的结果时，要区分离线指标、仿真指标和真实机器人指标。灵巧操作中视觉上合理、仿真 reward 高或轨迹误差低，都不必然等价于真实接触成功。</p><p class="analysis-note">所以实验读法应当是逐层收紧：先看作者是否证明中间表示有效，再看该表示是否改善策略，最后看真实机器人是否在未见对象、长程阶段或零样本设置中仍然成立。</p><h3>5.2 主结果</h3><p>最终 policy 相比 no-pretraining baseline 平均成功率提升 54%。这个结果说明大规模人类预训练不只是改善离线 loss，而是能转化到真实 22-DoF 灵巧手任务。</p><p class="analysis-note">实验结果需要和论文主张一一对应：主结果说明系统可用，消融说明设计必要，真实部署说明闭环成立，失败案例则揭示外推边界。</p><p class="analysis-note">评价 EgoScale 的结果时，要区分离线指标、仿真指标和真实机器人指标。灵巧操作中视觉上合理、仿真 reward 高或轨迹误差低，都不必然等价于真实接触成功。</p><p class="analysis-note">所以实验读法应当是逐层收紧：先看作者是否证明中间表示有效，再看该表示是否改善策略，最后看真实机器人是否在未见对象、长程阶段或零样本设置中仍然成立。</p><h3>5.3 scaling law</h3><p>人类 validation loss 随数据规模呈 log-linear 改善，并与真实机器人性能相关。这是论文最重要的科学结论：大规模人类数据可以成为可预测的机器人监督源。</p><p class="analysis-note">实验结果需要和论文主张一一对应：主结果说明系统可用，消融说明设计必要，真实部署说明闭环成立，失败案例则揭示外推边界。</p><p class="analysis-note">评价 EgoScale 的结果时，要区分离线指标、仿真指标和真实机器人指标。灵巧操作中视觉上合理、仿真 reward 高或轨迹误差低，都不必然等价于真实接触成功。</p><p class="analysis-note">所以实验读法应当是逐层收紧：先看作者是否证明中间表示有效，再看该表示是否改善策略，最后看真实机器人是否在未见对象、长程阶段或零样本设置中仍然成立。</p><h3>5.4 one-shot transfer</h3><p>mid-training 后，模型在每个新任务只有单条机器人 demonstration 的情况下仍能适应，说明人类预训练提供了强 prior，而少量机器人数据主要用于对齐接口。</p><p class="analysis-note">实验结果需要和论文主张一一对应：主结果说明系统可用，消融说明设计必要，真实部署说明闭环成立，失败案例则揭示外推边界。</p><p class="analysis-note">评价 EgoScale 的结果时，要区分离线指标、仿真指标和真实机器人指标。灵巧操作中视觉上合理、仿真 reward 高或轨迹误差低，都不必然等价于真实接触成功。</p><p class="analysis-note">所以实验读法应当是逐层收紧：先看作者是否证明中间表示有效，再看该表示是否改善策略，最后看真实机器人是否在未见对象、长程阶段或零样本设置中仍然成立。</p><h3>5.5 跨具身实验</h3><p>G1 低 DoF tri-finger hand 实验说明人类运动先验不仅服务 22-DoF hand；通过 adapters 和少量目标 embodiment 数据，先验可以迁移到较低自由度手。</p><p class="analysis-note">实验结果需要和论文主张一一对应：主结果说明系统可用，消融说明设计必要，真实部署说明闭环成立，失败案例则揭示外推边界。</p><p class="analysis-note">评价 EgoScale 的结果时，要区分离线指标、仿真指标和真实机器人指标。灵巧操作中视觉上合理、仿真 reward 高或轨迹误差低，都不必然等价于真实接触成功。</p><p class="analysis-note">所以实验读法应当是逐层收紧：先看作者是否证明中间表示有效，再看该表示是否改善策略，最后看真实机器人是否在未见对象、长程阶段或零样本设置中仍然成立。</p><figure><img src="figures/source/fig06_g1taskandsuccess_v3.png" alt="fig:g1_exp"><figcaption><strong>fig:g1_exp.</strong> Mid-training enables cross-embodiment generalization to G1 Tasks. Integrating a small amount of G1 play data during mid-training enables strong transfer to a low-DoF tri-finger hand, outperforming mid-training or pre-training only. \vspace-0.5em<br><strong>本文解读：</strong>这张图说明 EgoScale 的真实任务和硬件条件。它帮助判断论文结果的外推边界：任务是否依赖特定传感器、手型、物体分布或遥操作采集流程。</figcaption></figure><figure><img src="figures/source/fig09_human_video_stat.png" alt="fig:dataset_overview"><figcaption><strong>fig:dataset_overview.</strong> Statistical distributions and qualitative examples of the egocentric human activity dataset, showing long-tailed coverage across categories, environments, tasks, and objects.<br><strong>本文解读：</strong>这张图说明 EgoScale 的真实任务和硬件条件。它帮助判断论文结果的外推边界：任务是否依赖特定传感器、手型、物体分布或遥操作采集流程。</figcaption></figure></section><section><h2>6. 复现要点</h2><h3>6.1 最小复现</h3><p>完整 20k 小时预训练成本很高。更现实路线是使用公开 checkpoint 或较小人类数据子集，复现 scaling 曲线趋势，再用少量 aligned human-robot data 做目标手 mid-training。</p><p class="analysis-note">最稳妥的复现方式是先验证中间表示，再验证策略，再上真实硬件。这样可以避免把数据同步、标定、动作归一化或仿真参数问题误判为模型结构问题。</p><p class="analysis-note">对于 EgoScale，复现实验最好设计阶段性验收：先看数据和表示是否对，再看 policy 是否能在短 horizon 成功，最后再挑战长程、零样本或真实部署。</p><p class="analysis-note">如果资源有限，可以先复现论文最核心的一个变量，而不是全系统：例如只验证未来触觉预测、空间锚定、human-data scaling、object-centric reward 或 deform map 对齐。</p><h3>6.2 数据准备</h3><p>需要第一视角视频、相机运动、手部姿态、retargeted hand actions，以及机器人 teleoperation data。数据噪声、手部跟踪质量和 retargeting 会直接影响预训练信号。</p><p class="analysis-note">最稳妥的复现方式是先验证中间表示，再验证策略，再上真实硬件。这样可以避免把数据同步、标定、动作归一化或仿真参数问题误判为模型结构问题。</p><p class="analysis-note">对于 EgoScale，复现实验最好设计阶段性验收：先看数据和表示是否对，再看 policy 是否能在短 horizon 成功，最后再挑战长程、零样本或真实部署。</p><p class="analysis-note">如果资源有限，可以先复现论文最核心的一个变量，而不是全系统：例如只验证未来触觉预测、空间锚定、human-data scaling、object-centric reward 或 deform map 对齐。</p><h3>6.3 算力要求</h3><p>论文披露的 Stage I 训练使用大规模 GPU 集群，因此从零复现不现实。可行验收是检查 validation loss 与 downstream success 的相关性，而不是追求相同数据规模。</p><p class="analysis-note">最稳妥的复现方式是先验证中间表示，再验证策略，再上真实硬件。这样可以避免把数据同步、标定、动作归一化或仿真参数问题误判为模型结构问题。</p><p class="analysis-note">对于 EgoScale，复现实验最好设计阶段性验收：先看数据和表示是否对，再看 policy 是否能在短 horizon 成功，最后再挑战长程、零样本或真实部署。</p><p class="analysis-note">如果资源有限，可以先复现论文最核心的一个变量，而不是全系统：例如只验证未来触觉预测、空间锚定、human-data scaling、object-centric reward 或 deform map 对齐。</p><h3>6.4 风险</h3><p>如果 mid-training 数据质量低或 embodiment adapter 设计不好，人类 prior 可能无法落到机器人执行空间。另一个风险是 validation loss 与真实任务相关性在新任务族上变弱。</p><p class="analysis-note">最稳妥的复现方式是先验证中间表示，再验证策略，再上真实硬件。这样可以避免把数据同步、标定、动作归一化或仿真参数问题误判为模型结构问题。</p><p class="analysis-note">对于 EgoScale，复现实验最好设计阶段性验收：先看数据和表示是否对，再看 policy 是否能在短 horizon 成功，最后再挑战长程、零样本或真实部署。</p><p class="analysis-note">如果资源有限，可以先复现论文最核心的一个变量，而不是全系统：例如只验证未来触觉预测、空间锚定、human-data scaling、object-centric reward 或 deform map 对齐。</p></section><section><h2>7. 分析、局限与边界</h2><h3>7.1 最大价值</h3><p>EgoScale 的最大价值是把灵巧手学习从“收集更多机器人数据”转向“利用人类行为规模”。它提供了一个 scaling 视角，而不只是一个任务模型。</p><p class="analysis-note">这一点也提示后续研究切入：不要只复制整套系统，而要挑出最可迁移的表示或最脆弱的假设，设计新的消融和更难任务去验证。</p><p class="analysis-note">EgoScale 的边界通常也就是创新机会：如果它依赖特定触觉传感器、特定手型、大规模数据或刚体工具假设，那么跨传感器、跨手型、小数据和非刚体任务就是下一步值得问的问题。</p><p class="analysis-note">对组会和选题来说，最有价值的是把局限改写成实验：换数据、换硬件、换任务 horizon 或换感知模态，观察论文核心表示是否仍然保持优势。</p><h3>7.2 证据为何强</h3><p>20,854 小时数据、log-linear scaling、54% success improvement、one-shot adaptation 和 cross-embodiment transfer 构成闭合证据链，覆盖数据规模、训练目标和真实部署。</p><p class="analysis-note">这一点也提示后续研究切入：不要只复制整套系统，而要挑出最可迁移的表示或最脆弱的假设，设计新的消融和更难任务去验证。</p><p class="analysis-note">EgoScale 的边界通常也就是创新机会：如果它依赖特定触觉传感器、特定手型、大规模数据或刚体工具假设，那么跨传感器、跨手型、小数据和非刚体任务就是下一步值得问的问题。</p><p class="analysis-note">对组会和选题来说，最有价值的是把局限改写成实验：换数据、换硬件、换任务 horizon 或换感知模态，观察论文核心表示是否仍然保持优势。</p><h3>7.3 局限</h3><p>方法高度依赖大规模数据、手部跟踪和算力。它没有消除 embodiment gap，只是通过 mid-training 缓解；对于强触觉、力控或非人手型任务，迁移仍可能受限。</p><p class="analysis-note">这一点也提示后续研究切入：不要只复制整套系统，而要挑出最可迁移的表示或最脆弱的假设，设计新的消融和更难任务去验证。</p><p class="analysis-note">EgoScale 的边界通常也就是创新机会：如果它依赖特定触觉传感器、特定手型、大规模数据或刚体工具假设，那么跨传感器、跨手型、小数据和非刚体任务就是下一步值得问的问题。</p><p class="analysis-note">对组会和选题来说，最有价值的是把局限改写成实验：换数据、换硬件、换任务 horizon 或换感知模态，观察论文核心表示是否仍然保持优势。</p><h3>7.4 后续方向</h3><p>可以将 EgoScale 的人类预训练 prior 与 UniDex/DexLatent 的跨手型 action representation 结合，或加入 ViTacFormer/SaTA 类触觉表示来处理接触精度。</p><p class="analysis-note">这一点也提示后续研究切入：不要只复制整套系统，而要挑出最可迁移的表示或最脆弱的假设，设计新的消融和更难任务去验证。</p><p class="analysis-note">EgoScale 的边界通常也就是创新机会：如果它依赖特定触觉传感器、特定手型、大规模数据或刚体工具假设，那么跨传感器、跨手型、小数据和非刚体任务就是下一步值得问的问题。</p><p class="analysis-note">对组会和选题来说，最有价值的是把局限改写成实验：换数据、换硬件、换任务 horizon 或换感知模态，观察论文核心表示是否仍然保持优势。</p></section><section><h2>8. 组会问答准备</h2><h3>Q1：EgoScale 的核心不是数据大吗？</h3><p>不只是大。关键是证明数据规模、validation loss 和真实机器人表现之间存在可预测关系。</p><p class="analysis-note">组会讨论时，可以继续追问：如果换一个手型、换一个传感器、减少数据或延长任务 horizon，这个结论是否还成立。这个追问能帮助判断方法的真实边界。</p><p class="analysis-note">回答 EgoScale 的问题时，尽量把答案落到论文证据上：引用具体任务、指标、消融或图，而不是只说“泛化更好”或“触觉更有用”。</p><p class="analysis-note">好的问答准备应该能同时支持两种讨论：一是解释作者为什么这样设计，二是指出如果我们复现或扩展，最先应该验证哪个假设。</p><h3>Q2：为什么需要 aligned mid-training？</h3><p>人类视频没有机器人 proprioception 和可执行动作，mid-training 用少量配对数据把人类 prior 锚定到机器人接口。</p><p class="analysis-note">组会讨论时，可以继续追问：如果换一个手型、换一个传感器、减少数据或延长任务 horizon，这个结论是否还成立。这个追问能帮助判断方法的真实边界。</p><p class="analysis-note">回答 EgoScale 的问题时，尽量把答案落到论文证据上：引用具体任务、指标、消融或图，而不是只说“泛化更好”或“触觉更有用”。</p><p class="analysis-note">好的问答准备应该能同时支持两种讨论：一是解释作者为什么这样设计，二是指出如果我们复现或扩展，最先应该验证哪个假设。</p><h3>Q3：54% 提升说明什么？</h3><p>说明人类预训练带来的表示能显著改善真实 22-DoF 手任务，但也依赖后续对齐。</p><p class="analysis-note">组会讨论时，可以继续追问：如果换一个手型、换一个传感器、减少数据或延长任务 horizon，这个结论是否还成立。这个追问能帮助判断方法的真实边界。</p><p class="analysis-note">回答 EgoScale 的问题时，尽量把答案落到论文证据上：引用具体任务、指标、消融或图，而不是只说“泛化更好”或“触觉更有用”。</p><p class="analysis-note">好的问答准备应该能同时支持两种讨论：一是解释作者为什么这样设计，二是指出如果我们复现或扩展，最先应该验证哪个假设。</p><h3>Q4：最大复现壁垒是什么？</h3><p>数据规模和算力，其次是高质量手部 tracking 与 retargeting。</p><p class="analysis-note">组会讨论时，可以继续追问：如果换一个手型、换一个传感器、减少数据或延长任务 horizon，这个结论是否还成立。这个追问能帮助判断方法的真实边界。</p><p class="analysis-note">回答 EgoScale 的问题时，尽量把答案落到论文证据上：引用具体任务、指标、消融或图，而不是只说“泛化更好”或“触觉更有用”。</p><p class="analysis-note">好的问答准备应该能同时支持两种讨论：一是解释作者为什么这样设计，二是指出如果我们复现或扩展，最先应该验证哪个假设。</p><h3>Q5：和 UniDex/UniHM 的关系？</h3><p>EgoScale 强调人类数据 scaling，UniDex/UniHM 更强调跨手型动作表示；两者可以互补。</p><p class="analysis-note">组会讨论时，可以继续追问：如果换一个手型、换一个传感器、减少数据或延长任务 horizon，这个结论是否还成立。这个追问能帮助判断方法的真实边界。</p><p class="analysis-note">回答 EgoScale 的问题时，尽量把答案落到论文证据上：引用具体任务、指标、消融或图，而不是只说“泛化更好”或“触觉更有用”。</p><p class="analysis-note">好的问答准备应该能同时支持两种讨论：一是解释作者为什么这样设计，二是指出如果我们复现或扩展，最先应该验证哪个假设。</p></section></main></body></html>

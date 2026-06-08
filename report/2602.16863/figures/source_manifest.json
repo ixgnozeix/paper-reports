@@ -1,0 +1,177 @@
+[
+  {
+    "index": 1,
+    "label": "fig:pipeline",
+    "graphics": [
+      "images/Train_vs_Inference_v19.pdf"
+    ],
+    "caption": "Overview of \\methodname. (Top) Training in Simulation: We train a goal-conditioned RL policy in simulation that manipulates a wide variety of procedurally-generated objects to randomly sampled goal poses. (Bottom) Inference in Real: We deploy this policy zero-shot on real-world tools from DexToolBench, following tool trajectories from human videos.",
+    "files": [
+      "figures/source/fig01_Train_vs_Inference_v19.pdf"
+    ]
+  },
+  {
+    "index": 2,
+    "label": "fig:inference",
+    "graphics": [
+      "images/Merged_Input_Output_v20.pdf"
+    ],
+    "caption": "Real-World Deployment. (Left) Human Video Processing: We collect an RGB-D human video and process it using vision foundation models. We use SAM 3D~chen2025sam to generate a metric-scale object mesh and segment a 3D grasp bounding box. Then, we use FoundationPose~wen2024foundationpose to extract a sequence of 6D goal poses. (Right) Inference-Time Pipeline: Our LSTM policy takes in proprioception, object pose, grasp bounding box, and goal pose, and it outputs joint position targets for the 29-DoF dexterous robot (arm + hand).",
+    "files": [
+      "figures/source/fig02_Merged_Input_Output_v20.pdf"
+    ]
+  },
+  {
+    "index": 3,
+    "label": "fig:dexFuncComparison",
+    "graphics": [
+      "images/Fig5/Fig5_KEYNOTE_GOOD.pdf"
+    ],
+    "caption": "Comparison against Baselines in the Real World. We compare \\methodname\\; against baselines on two variations of sweeping a table with a brush: with and without requiring tool rotation based on the initial states shown on the left. Average Task Progress is indicated in parentheses. \\methodname\\; succeeds on both variations, performing dexterous in-hand tool rotations in the harder variation. Fixed Grasp succeeds on the simpler variation of this task without tool rotation. However, when rotation is required, enforcing a fixed grasp causes the arm to collide with the table while tracking the target trajectory. Kinematic Retargeting fails to reason about contact forces, and is unable to grasp the brush in both variations.",
+    "files": [
+      "figures/source/fig03_Fig5_KEYNOTE_GOOD.pdf"
+    ]
+  },
+  {
+    "index": 4,
+    "label": "fig:generalizationResults",
+    "graphics": [
+      "images/final_experiment_plots/verbs_generalization_instance_colors_v2.png"
+    ],
+    "caption": "\\textbfGeneralization to Unseen DexToolBench Tools and Tasks in the Real World. We evaluate our policy in the real world on unseen tool-use tasks in DexToolBench. Our evaluations span 24 unique task trajectories across 6 different object categories and 12 object instances. Each bar corresponds to 1 task trajectory on 1 object instance. We report the average Task Progress across 5 rollouts. Despite not being trained on these objects or trajectories, our policy demonstrates strong generalization to diverse tools of varying masses and geometries.",
+    "files": [
+      "figures/source/fig04_verbs_generalization_instance_colors_v2.png"
+    ]
+  },
+  {
+    "index": 5,
+    "label": "fig:ablations",
+    "graphics": [
+      "images/final_experiment_plots/training_reward_vs_env_steps.png"
+    ],
+    "caption": "Ablation of RL Training Components. We compare the training reward across environment steps of \\methodname\\; against ablations averaged across 5 seeds. Replacing SAPG~sapg2024 with PPO~PPO or not using Asymmetric Critic~asymmetric_actor_critic results in a significant performance drop, highlighting their importance.",
+    "files": [
+      "figures/source/fig05_training_reward_vs_env_steps.png"
+    ]
+  },
+  {
+    "index": 6,
+    "label": "fig:trainTestCorrelation",
+    "graphics": [
+      "images/final_experiment_plots/sim_tp_and_reward_vs_env_steps.png"
+    ],
+    "caption": "Training Objective Drives Generalization. In simulation, we evaluate (Left) the episode reward on procedurally-generated objects and (Right) the zero-shot Task Progress on unseen DexToolBench tools on different policy checkpoints throughout training. The strong correlation between the two curves validates our core hypothesis: improving random goal-pose reaching performance on diverse object primitives drives corresponding gains in generalization to unseen tool-use tasks.",
+    "files": [
+      "figures/source/fig06_sim_tp_and_reward_vs_env_steps.png"
+    ]
+  },
+  {
+    "index": 7,
+    "label": "fig:specialistComparison",
+    "graphics": [
+      "images/final_experiment_plots/new_specialist_comparison_3settings_revised.png"
+    ],
+    "caption": "Comparison against Specialists. We compare \\methodname\\; in simulation against specialist policies trained on a single object (Obj A) and trajectory (Traj A). We train one specialist policy for each of the 6 object categories in DexToolBench and report the average Task Progress across these categories. While the specialists succeed on their training setup (Obj A / Traj A), performance degrades under deviation in the trajectory (Obj A / Traj B) or the object (Obj B / Traj A). \\methodname\\; has high zero-shot performance across all variants, despite not being trained on these objects or trajectories.",
+    "files": [
+      "figures/source/fig07_new_specialist_comparison_3settings_revised.png"
+    ]
+  },
+  {
+    "index": 8,
+    "label": "fig:fixed_grasp_visualization",
+    "graphics": [
+      "appendix/appendix_images/Fixed_Grasp_v4.pdf"
+    ],
+    "caption": "Fixed Grasp Baselines. We first use our SimToolReal policy to grasp and lift the object. We then attempt to follow the trajectory using a fixed grasp. Option 1 (Damped Least Squares): Tracks the target poses but causes severe collisions with the table. Option 2 (Collision-Free Trajectory Optimization): Avoids collisions but fails to reach the target poses.",
+    "files": [
+      "figures/source/fig08_Fixed_Grasp_v4.pdf"
+    ]
+  },
+  {
+    "index": 9,
+    "label": "fig:keypoints",
+    "graphics": [
+      "appendix/appendix_images/Keypoints.pdf"
+    ],
+    "caption": "Object Keypoints. (Left) Visualization of 4 pose keypoints in the local object frame. (Right) Visualization of the keypoint distances used to compute the distance d(o_t, g).",
+    "files": [
+      "figures/source/fig09_Keypoints.pdf"
+    ]
+  },
+  {
+    "index": 10,
+    "label": "fig:kinematic_retargeting_visualization",
+    "graphics": [
+      "appendix/appendix_images/Kinematic_Retargeting_v5_compressed.pdf"
+    ],
+    "caption": "Kinematic Retargeting Pipeline. From the RGB-D human video, we use SAM 2~ravi2024sam2 for hand masks and HaMeR~pavlakos2024reconstructing for hand pose prediction. Next, we use ICP registration to align the hand pose prediction with the segmented hand point cloud to obtain accurate 3D hand poses. Lastly, we perform IK-based retargeting of the arm and hand to match the human wrist pose and fingertip positions.",
+    "files": [
+      "figures/source/fig10_Kinematic_Retargeting_v5_compressed.pdf"
+    ]
+  },
+  {
+    "index": 11,
+    "label": "fig:real_sim_objects",
+    "graphics": [
+      "appendix/appendix_images/Real_vs_Sim_Objects.pdf"
+    ],
+    "caption": "\\textbfDexToolBench Objects. (Left): Real-world objects. (Right): SAM 3D~chen2025sam generated meshes of these objects.",
+    "files": [
+      "figures/source/fig11_Real_vs_Sim_Objects.pdf"
+    ]
+  },
+  {
+    "index": 12,
+    "label": "fig:real_world_task_frames",
+    "graphics": [
+      "appendix/appendix_images/Visualize_Tasks_v5.pdf"
+    ],
+    "caption": "\\textbfRepresentative Examples of DexToolBench Tasks. Visual breakdown of representative tasks in DexToolBench across the 6 tool categories, highlighting the diversity of objects and manipulation tasks.",
+    "files": [
+      "figures/source/fig12_Visualize_Tasks_v5.pdf"
+    ]
+  },
+  {
+    "index": 13,
+    "label": "fig:sam_pipeline",
+    "graphics": [
+      "appendix/appendix_images/SAM_Pipeline_v3.pdf"
+    ],
+    "caption": "Metric-Scale Mesh and Grasp Bounding Box Acquisition. We present a semi-automated pipeline to extract a metric-scale mesh and grasp bounding box from a single RGB-D video scan. (1) We first segment the target object in the initial frame and reconstruct a 3D mesh using SAM 3D~chen2025sam, injecting the captured depth map to ensure metric accuracy. (2) To establish a canonical coordinate frame, we virtually render the mesh from multiple views and use SAM 2~ravi2024sam2 to segment the geometry into ``handle'' and ``head'' regions based on user prompts. (3) The final grasp bounding box is derived from the handle's geometry: it is centered on the handle, with the positive x-axis oriented toward the head, ensuring consistent alignment with policy training.",
+    "files": [
+      "figures/source/fig13_SAM_Pipeline_v3.pdf"
+    ]
+  },
+  {
+    "index": 14,
+    "label": "fig:specialist_all_reuslts",
+    "graphics": [
+      "appendix/appendix_images/per_tool_figures/brush_comparison.png",
+      "appendix/appendix_images/per_tool_figures/eraser_comparison.png",
+      "appendix/appendix_images/per_tool_figures/hammer_comparison.png",
+      "appendix/appendix_images/per_tool_figures/marker_comparison.png",
+      "appendix/appendix_images/per_tool_figures/screwdriver_comparison.png",
+      "appendix/appendix_images/per_tool_figures/spatula_comparison.png"
+    ],
+    "caption": "Detailed Comparison against Specialists. We provide a breakdown of the results in Fig.~fig:specialistComparison. Each plot compares SimToolReal to a specialist policy trained on a single object and trajectory (Obj A / Traj A) for a single object category.",
+    "files": [
+      "figures/source/fig14_brush_comparison.png",
+      "figures/source/fig14_eraser_comparison.png",
+      "figures/source/fig14_hammer_comparison.png",
+      "figures/source/fig14_marker_comparison.png",
+      "figures/source/fig14_screwdriver_comparison.png",
+      "figures/source/fig14_spatula_comparison.png"
+    ]
+  },
+  {
+    "index": 15,
+    "label": "fig:visualized_policy_observations",
+    "graphics": [
+      "appendix/appendix_images/Visualized_Policy_Observations.pdf"
+    ],
+    "caption": "Visualization of Policy Observations during Real-World Deployment. (Top) Image frames from a real-world rollout of the brush manipulation task. (Bottom) The corresponding visualization of the policy observations at each timestep, consisting of the robot state, estimated object pose, and goal pose (green). When the distance between the current pose and goal pose is sufficiently small, the goal pose is updated to the next pose in the goal sequence. Note that this visualization is a rendering of the policy's inputs, not a physics-based simulation.",
+    "files": [
+      "figures/source/fig15_Visualized_Policy_Observations.pdf"
+    ]
+  }
+]

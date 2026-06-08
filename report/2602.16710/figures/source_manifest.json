@@ -1,0 +1,79 @@
+[
+  {
+    "index": 1,
+    "label": "fig:method_overview",
+    "graphics": [
+      "assets/sources/figures/pull_figure.pdf"
+    ],
+    "caption": "\\ours: Two-stage human-to-robot learning framework. A flow-based Vision-Language-Action (VLA) policy is first pretrained on 20,854 hours of egocentric human videos using wrist motion and retargeted dexterous hand actions. A lightweight mid-training stage with aligned human robot play data (pairs highlighted with mygreengreen and mygraygray boundaries) adapts the representation to robot sensing and control. The resulting policy is post-trained on downstream tasks, enabling efficient learning of dexterous manipulation and one-shot generalization to unseen skills.\\looseness=-1",
+    "files": [
+      "figures/source/fig01_pull_figure.pdf"
+    ]
+  },
+  {
+    "index": 2,
+    "label": "fig:task_fig",
+    "graphics": [
+      "assets/dexterous_manipulation_tasks_v2.pdf"
+    ],
+    "caption": "Post-Training Evaluation Tasks. Five dexterous manipulation tasks used to evaluate post-training performance",
+    "files": [
+      "figures/source/fig02_dexterous_manipulation_tasks_v2.pdf"
+    ]
+  },
+  {
+    "index": 3,
+    "label": "fig:main_experimental_results",
+    "graphics": [
+      "assets/success_rate_task_completion_bar_plot.pdf"
+    ],
+    "caption": "Main Experimental Results. Comparison of Human Pre-train + Mid-Training, Human Pretraining, and No Pretraining across five dexterous manipulation tasks under two evaluation metrics.",
+    "files": [
+      "figures/source/fig03_success_rate_task_completion_bar_plot.pdf"
+    ]
+  },
+  {
+    "index": 4,
+    "label": "fig:human_scaling",
+    "graphics": [
+      "assets/human_data_scaling_combined.pdf"
+    ],
+    "caption": "Scaling behavior of human pretraining. Left: Human validation loss versus training steps for models pretrained with increasing amounts of egocentric human data (1k–20k hours). Larger datasets yield stable, monotonic improvements, while smaller datasets exhibit early overfitting. Center: Optimal validation loss at convergence as a function of human data scale, revealing a near-perfect log-linear scaling law (R^2=0.9983). Right: Downstream robot performance after post-training, measured by average task completion score, improves consistently with increased human data scale. Together, these results demonstrate predictable scaling of learned action representations and their direct translation to improved dexterous manipulation performance.\\looseness=-1 \\vspace-0.5em",
+    "files": [
+      "figures/source/fig04_human_data_scaling_combined.pdf"
+    ]
+  },
+  {
+    "index": 5,
+    "label": "fig:midtrain_exp",
+    "graphics": [
+      "assets/sources/figures/midtraining_v2.pdf"
+    ],
+    "caption": "Aligned mid-training enables emergent one-shot transfer. During post-training, the policy is trained on only a single robot demonstration per task, together with aligned human demonstrations (100 trajectories per object).",
+    "files": [
+      "figures/source/fig05_midtraining_v2.pdf"
+    ]
+  },
+  {
+    "index": 6,
+    "label": "fig:g1_exp",
+    "graphics": [
+      "assets/sources/figures/g1taskandsuccess_v3.pdf"
+    ],
+    "caption": "Mid-training enables cross-embodiment generalization to G1 Tasks. Integrating a small amount of G1 play data during mid-training enables strong transfer to a low-DoF tri-finger hand, outperforming mid-training or pre-training only. \\vspace-0.5em",
+    "files": [
+      "figures/source/fig06_g1taskandsuccess_v3.pdf"
+    ]
+  },
+  {
+    "index": 9,
+    "label": "fig:dataset_overview",
+    "graphics": [
+      "assets/sources/figures/human_video_stat.pdf"
+    ],
+    "caption": "Statistical distributions and qualitative examples of the egocentric human activity dataset, showing long-tailed coverage across categories, environments, tasks, and objects.",
+    "files": [
+      "figures/source/fig09_human_video_stat.pdf"
+    ]
+  }
+]

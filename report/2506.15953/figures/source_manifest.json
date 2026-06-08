@@ -1,0 +1,140 @@
+[
+  {
+    "index": 1,
+    "label": "fig:visual-input",
+    "graphics": [
+      "img/input_view.pdf"
+    ],
+    "caption": "Four types of camera views",
+    "files": [
+      "figures/source/fig01_input_view.pdf"
+    ]
+  },
+  {
+    "index": 2,
+    "label": "fig:task-setup-overview",
+    "graphics": [
+      "img/objects.pdf"
+    ],
+    "caption": "Short-horizon task setup. (a) All four short-horizon tasks share a common set of objects. (b) The tabletop workspace marked with a grid.",
+    "files": [
+      "figures/source/fig02_objects.pdf"
+    ]
+  },
+  {
+    "index": 3,
+    "label": "fig:short-task-execution",
+    "graphics": [
+      "img/execution.pdf"
+    ],
+    "caption": "Execution examples for short-horizon tasks. Representative keyframes from four tasks: peg insertion, cap twist, vase wipe, and book flip. Each task demonstrates a full execution sequence from perception to manipulation.",
+    "files": [
+      "figures/source/fig03_execution.pdf"
+    ]
+  },
+  {
+    "index": 4,
+    "label": "fig:failure-cases",
+    "graphics": [
+      "img/failure_case.pdf"
+    ],
+    "caption": "Representative failure cases across all tasks. Each row corresponds to one task, with two failure case sequences shown side by side.",
+    "files": [
+      "figures/source/fig04_failure_case.pdf"
+    ]
+  },
+  {
+    "index": 5,
+    "label": "fig:long-setup",
+    "graphics": [
+      "img/long_horizon.jpg"
+    ],
+    "caption": "Long-horizon task setup. Seven components are placed in predefined zones—circular (ingredients) or rectangular (tools). Objects are randomly initialized within these areas to test spatial generalization.",
+    "files": [
+      "figures/source/fig05_long_horizon.jpg"
+    ]
+  },
+  {
+    "index": 6,
+    "label": "fig:hardware",
+    "graphics": [
+      "img/new_hardware.pdf"
+    ],
+    "caption": "An overview of our system hardware and teleoperation setup. (a) Our hardware system setup. (b) Teleoperator with exoskeleton gloves and VR headset. (c) VR interface with binocular and wrist views, and tactile feedback overlay.",
+    "files": [
+      "figures/source/fig06_new_hardware.pdf"
+    ]
+  },
+  {
+    "index": 7,
+    "label": "fig:arch",
+    "graphics": [
+      "img/vitac_method.pdf"
+    ],
+    "caption": "The neural network architecture for ViTacFormer is a conditional variational auto-encoder. Left: a transformer-based encoder maps action sequence and robot proprioception to action style variable z. Right: a transformer-based encoder-decoder uses style variable z, robot proprioception (joints), and visuo-tactile observations to auto-regressively predict future tactile signals and generate actions.",
+    "files": [
+      "figures/source/fig07_vitac_method.pdf"
+    ]
+  },
+  {
+    "index": 8,
+    "label": "fig:cross_atten",
+    "graphics": [
+      "img/attention.pdf"
+    ],
+    "caption": "Cross-attention-based multimodal integration between visual and tactile observations.",
+    "files": [
+      "figures/source/fig08_attention.pdf"
+    ]
+  },
+  {
+    "index": 9,
+    "label": "fig:benchmark",
+    "graphics": [
+      "img/experiments_simple.png"
+    ],
+    "caption": "Four short-horizon visuo-tactile manipulation tasks: Peg Insertion, Cap Twist, Vase Wipe, and Book Flip.",
+    "files": [
+      "figures/source/fig09_experiments_simple.png"
+    ]
+  },
+  {
+    "index": 10,
+    "label": "fig:long_task",
+    "graphics": [
+      "img/long.pdf"
+    ],
+    "caption": "Successful model rollout on long-horizon task, i.e., making hamburger. We show the successful model rollout with keyframes in 11 stages. The first row represents the robot hand turning the brand to \"open\". The second row represents the robot hand shoveling meat to bread. The third row represents the robot hand assembling the hamburger. The fourth row represents the robot hand handing over the hamburger to the plate. The fifth row represents the robot hand turning the brand to \"close\".",
+    "files": [
+      "figures/source/fig10_long.pdf"
+    ]
+  },
+  {
+    "index": 11,
+    "label": "fig:ablation",
+    "graphics": [
+      "img/SuccRate3.pdf",
+      "img/HumanScore3.pdf"
+    ],
+    "caption": "Ablation study. Performance comparison by removing different components from the full ViTacFormer (Ours).",
+    "files": [
+      "figures/source/fig11_SuccRate3.pdf",
+      "figures/source/fig11_HumanScore3.pdf"
+    ]
+  },
+  {
+    "index": 12,
+    "label": "fig:failure",
+    "graphics": [
+      "img/Failure_Insertion.pdf",
+      "img/Failure_Cap.pdf",
+      "img/Failure_Book.pdf"
+    ],
+    "caption": "Failure Study. The first row is peg insertion failure, the second row is cap twist failure, and the third row is book flip failure.",
+    "files": [
+      "figures/source/fig12_Failure_Insertion.pdf",
+      "figures/source/fig12_Failure_Cap.pdf",
+      "figures/source/fig12_Failure_Book.pdf"
+    ]
+  }
+]
