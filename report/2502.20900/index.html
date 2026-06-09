@@ -1,6 +1,11 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DexGraspVLA 深度精读</title><link rel="preconnect" href="https://fonts.googleapis.com">
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DexGraspVLA 深度精读</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
     :root {
       --paper: #f6f7f3;
       --paper-deep: #e8ede7;
@@ -517,4 +522,127 @@
       background: var(--ink);
       color: var(--paper);
     }
-</style></head><body><main><header><h1>DexGraspVLA: A Vision-Language-Action Framework Towards General Dexterous Grasping</h1><p class="subtitle">按照 OpenMOSS 内容脉络整理的证据驱动深度精读</p></header><section><h2>1. 论文速览</h2><h3>1 一句话贡献；论文速览；关键词</h3><p>提出分层 VLA 框架：上层 VLM 负责语言目标分解和目标定位，下层 diffusion controller 负责灵巧手闭环抓取。</p><p>DexGraspVLA 将开放词汇灵巧抓取拆成两个频率不同的层级：低频 VLM 负责理解自由语言指令、选择目标并检查任务是否完成；高频 diffusion controller 负责真正的多指接近、闭合与抬起。它的关键设计不是让大模型直接输出关节动作，而是用 SAM mask 与冻结的 DINOv2 特征把复杂视觉场景变成低层控制器更容易泛化的条件。对于首次复现灵巧手 VLA，它的模块边界清晰、问题定义集中，是较好的起点。</p><p>关键词：DexGraspVLA; 分层 VLA; 灵巧抓取; diffusion policy; VLM planner; 泛化抓取</p><p>DexGraspVLA 把开放词汇理解、目标定位和高自由度闭环抓取拆成两个时间尺度：低频 VLM planner 负责语义目标与任务阶段，高频 diffusion controller 围绕目标 mask 输出连续动作。论文贡献在于这种分工与完整真实系统，而不是让 VLM 直接预测关节角。</p><figure><img src="figures/source/fig01_aaaiteaser-v4.png" alt="fig:teaser"><figcaption><strong>fig:teaser.</strong> We propose DexGraspVLA, a hierarchical VLA framework that reaches a 90+\ fig:teaser \vspace-10pt<br><strong>本文解读：</strong>对 DexGraspVLA 而言，这张图需要重点核对 90、DexGraspVLA 之间的关系。这是一张系统总览图。应顺着箭头确认观测、核心表示、训练目标与执行输出的先后关系，并检查论文的主要创新究竟插入了信息流的哪一段。它支撑的是 DexGraspVLA 的方法结构与模块分工，不直接证明性能提升；性能因果仍需由对应消融和真实任务结果确认。 本图的证据场景限定为：fig:teaser. We propose DexGraspVLA, a hierarchical VLA framework that reaches a 90+\ fig:teaser -10pt。</figcaption></figure><figure><img src="figures/source/fig02_framworkv12.jpg" alt="fig:framework"><figcaption><strong>fig:framework.</strong> Overview of DexGraspVLA. A pre-trained VLM-based high-level planner (purple) decomposes prompts into object-level grasping instructions with bounding boxes. The diffusion-based low-level controller (pink) tracks the target mask, encodes multimodal observations (RGB images, mask, proprioception), and predicts an action chunk via a DiT model. The planner monitors execution and continually proposes new instructions based on the updated scene until the task is fully completed.<br><strong>本文解读：</strong>对 DexGraspVLA 而言，这张图需要重点核对 DexGraspVLA 之间的关系。这是一张系统总览图。应顺着箭头确认观测、核心表示、训练目标与执行输出的先后关系，并检查论文的主要创新究竟插入了信息流的哪一段。它支撑的是 DexGraspVLA 的方法结构与模块分工，不直接证明性能提升；性能因果仍需由对应消融和真实任务结果确认。 本图的证据场景限定为：fig:framework.。</figcaption></figure></section><section><h2>2. 研究问题与动机</h2><h3>2 核心问题；研究动机；为什么现有方法不够；替代路线为何不选；关键假设与成立条件</h3><p>现有灵巧抓取方法往往在单物体、固定背景或有限类别中训练，换到杂乱桌面、未见物体和自由语言指令后容易失效。</p><p>DexGraspVLA 的动机是保留预训练视觉语言模型的语义与视觉泛化能力，只让低层策略学习接触丰富的抓取动作，从而用有限真实示范覆盖更大的物体、背景和光照分布。</p><p>有限真实示范很难覆盖未见物体、背景、光照和自由语言目标。作者把可从预训练模型继承的语义泛化交给 VLM、SAM 和 DINOv2，把必须由机器人示范学习的接触控制留给 mask-conditioned controller，从而减少端到端控制所需的数据覆盖。</p></section><section><h2>3. 相关工作脉络</h2><h3>3 论文自述的相关工作；直接前作；替代技术路线；本文的独特位置；补充要点 5；补充要点 6；补充要点 7</h3><p>论文位于三条技术线的交叉处。</p><p>OpenVLA、π0 等端到端 VLA 统一视觉语言动作，却可能在有限机器人数据上丢失视觉泛化；</p><p>DexGraspVLA 选择模块化组合：foundation models 负责语义规划、分割与表征，专用 diffusion policy 负责多指动作。</p><p>与传统 dexterous grasping 相比，它增加开放词汇目标选择；与通用 VLA 相比，它不要求大模型直接承担全部闭环控制；与纯视觉 grounding 相比，它最终必须在真实灵巧手上完成目标抓取与长程任务。</p></section><section><h2>4. 方法详解</h2><h3>4 总体方法流程；核心表示；训练阶段；推理与部署；关键模块一；关键模块二；关键模块三；方法小结；补充要点 9</h3><p>高层 planner 接收自由指令与场景图像，依次执行子任务提议、目标 bounding box 预测、抓取结果识别与任务完成检查。</p><p>低层控制器融合第三视角 RGB、目标 mask、腕部第一视角图像与 proprioception；</p><p>长程任务由高层逐物体调用低层控制器完成。</p><p>SAM 将高层输出的 bbox 转成目标 mask，tracker 在执行期间维持目标身份，低层控制器融合第三视角 RGB、目标 mask、腕部视角和 proprioception。</p><p>planner 先把自然语言拆成对象级抓取指令并产生 bounding box，SAM 将框转为 mask，tracker 在执行中维持目标身份，冻结 DINOv2 提取视觉特征，DiT action head 再生成 action chunk。任何上层目标或 mask 错误都会级联到低层控制。</p><figure><img src="figures/source/fig03_hardware-platform-v5.png" alt="fig:robot-platform"><figcaption><strong>fig:robot-platform.</strong> Our hardware platform.<br><strong>本文解读：</strong>对 DexGraspVLA 而言，这张图对应一个可单独检查的论文证据。这张图把算法放回真实系统：相机视角、手型、传感器、遥操作接口和工作空间都会影响结果。复现时应先对齐这些条件，再比较模型结构。它能证明 DexGraspVLA 在该硬件配置下可运行，但不能自动说明换传感器、换控制频率或换手型后仍保持相同性能。 本图的证据场景限定为：fig:robot-platform. Our hardware platform。</figcaption></figure><figure><img src="figures/source/fig04_dino-attn-v2.png" alt="fig:dino-attn"><figcaption><strong>fig:dino-attn.</strong> DexGraspVLA is robust to environmental variations. The same cluttered scene (1st row) is arranged in four visually different environments (four columns). DINOv2 features (2nd row), masks (3rd row), and attention maps (4th row) are consistent across variations. The 5th row confirms DexGraspVLA is attending to the correct object.<br><strong>本文解读：</strong>对 DexGraspVLA 而言，这张图需要重点核对 DexGraspVLA、DINOv2 之间的关系。四列改变背景与光照，而 DINOv2 feature、目标 mask 和 attention map 仍应聚焦同一目标。逐行比较可以判断鲁棒性来自冻结视觉特征、显式 mask，还是控制器偶然记住场景外观。该图支持视觉条件在环境变化下保持一致，但它主要是定性证据，仍需结合相同条件下的成功率。 本图的证据场景限定为：fig:dino-attn.。</figcaption></figure></section><section><h2>5. 实验与结果</h2><h3>5 实验设置；数据与任务；评估指标；主结果；消融分析；定性结果；真实部署；证据边界</h3><p>核心实验不是单个 seen-object 成功率，而是 360 个未见物体、6 个未见背景和 3 种未见光照构成的大规模组合测试。</p><p>长程语言任务还分别统计 instruction、bbox、controller 与 completion check 的错误。</p><p>nonprehensile 场景进一步测试先推至桌边再抓取的复合动作。</p><p>长程任务单独统计 instruction、bbox、controller 和 completion check 的错误，用于定位瓶颈究竟在高层语义还是低层控制。</p><p>实验覆盖 360 个未见对象以及背景、光照变化，并报告单次与多次尝试成功率。长程实验进一步把 instruction、bbox、controller 与 completion check 错误分开统计，因此不仅回答系统能否工作，也揭示不同层的责任边界。</p><figure><img src="figures/source/fig05_data-collect-env.jpg" alt="fig:data-collection-env"><figcaption><strong>fig:data-collection-env.</strong> Our data collection site.<br><strong>本文解读：</strong>对 DexGraspVLA 而言，这张图对应一个可单独检查的论文证据。这张图说明训练或评估数据覆盖了哪些对象、任务、场景与具身。判断泛化结论时，应把图中的覆盖范围与测试集逐项比较，尤其关注长尾类别和训练中未出现的组合。它证明的是 DexGraspVLA 数据的覆盖与多样性，而不是单独证明模型已利用这些多样性产生泛化。 本图的证据场景限定为：fig:data-collection-env. Our data collection site。</figcaption></figure></section><section><h2>6. 复现要点</h2><h3>6 最小可行复现路径；数据准备；模型与训练设置；硬件与部署要求；复现风险</h3><p>优先复现单物体抓取，再接入高层 planner。</p><p>最容易出问题的是 mask 跟踪、相机与 proprioception 时间对齐、不同硬件动作维度，以及 VLM prompt 与原论文不一致导致的目标框错误。</p><p>最小复现应从单目标 mask-conditioned diffusion controller 开始，先固定目标框与 mask 验证低层抓取，再逐步接 tracker、SAM 与 VLM planner。这样才能区分动作策略失败与上层 grounding 失败。</p></section><section><h2>7. 分析、局限与边界</h2><h3>7 最有价值的贡献；证据为何站得住；作者局限；额外边界</h3><p>模块化结构使错误来源可定位，但也产生明显级联风险：VLM 选错物体、SAM 分错 mask 或 tracker 丢失目标，低层控制再强也无法恢复。</p><p>90% 以上成功率依赖特定硬件、重试策略和测试协议，不能直接外推到任意灵巧手。</p><p>分层设计带来可诊断性，也引入级联风险：目标选错、bbox 偏移、mask 丢失或完成判断错误都会使低层围绕错误条件执行。论文证明的是开放环境中的强抓取泛化，而不是消除了所有上层感知错误。</p></section><section><h2>8. 组会问答准备</h2><h3>8 问题一；问题二；问题三；问题四；问题五；补充问题；补充要点 7；补充要点 8；补充要点 9；补充要点 10</h3><p>Q1：核心创新为何不是简单的“VLM+Diffusion Policy”？</p><p>Q2：为什么冻结 DINOv2？</p><p>Q3：最强证据是什么？</p><p>Q4：系统最脆弱的环节？</p><p>Q5：最值得先复现什么？</p><p>讨论时应追问：360 个未见物体的覆盖是否足以代表开放世界；三次尝试成功率是否掩盖首次抓取不稳定；以及长程任务中 planner、mask 与 controller 哪一层最值得进一步联合优化。</p></section><section><h2>9. 补充图解与附录证据</h2><figure><img src="figures/source/fig06_generalization-environment-conditions.png" alt="fig:generalization-eval-env"><figcaption><strong>fig:generalization-eval-env.</strong> Environment conditions used in our generalization evaluations of dexterous grasping (subsec:generalization-eval) and nonprehensile grasping (subsec:nonprehensile-grasping).<br><strong>本文解读：</strong>对 DexGraspVLA 而言，这张图对应一个可单独检查的论文证据。这张图具体展示的是：fig:generalization-eval-env. Environment conditions used in our generalization evaluations of dexterous grasping (subsec:generalization-eval) and nonprehensile grasping (subsec:nonprehensile-grasping)。阅读时应把画面中的对象、阶段和对照关系与正文对应起来，而不是把它当作装饰性示例。它直接支持图注所描述的局部论点，结论范围不应超过图中给出的实验条件。 本图的证据场景限定为：fig:generalization-eval-env.。</figcaption></figure><figure><img src="figures/source/fig07_objects-and-tsne-0516-small.png" alt="fig:tSNE"><figcaption><strong>fig:tSNE.</strong> (Left) A representative part of all 360 unseen objects used to evaluate DexGraspVLA. (Right) A t-SNE projection illustrating the diversity and broad coverage of these objects in length, width, height, mass (denoted by marker size), roughness (marker type), and shape (marker color).<br><strong>本文解读：</strong>对 DexGraspVLA 而言，这张图需要重点核对 360、DexGraspVLA 之间的关系。左侧实物样例说明测试对象并非少量手挑案例；右侧 t-SNE 同时编码尺寸、质量、粗糙度和形状，用于检查 360 个未见物体是否覆盖多种属性组合。该图加强了泛化评估的可信度，因为测试集分布较宽；但 t-SNE 的二维分离本身不代表抓取难度或成功率。 本图的证据场景限定为：fig:tSNE.。</figcaption></figure><figure><img src="figures/source/fig08_nonprehensile-train-objects.png" alt="fig:nonprehensile-demo-objects"><figcaption><strong>fig:nonprehensile-demo-objects.</strong> The 32 objects used to collect nonprehensile grasping demonstrations.<br><strong>本文解读：</strong>对 DexGraspVLA 而言，这张图需要重点核对 32 objects 之间的关系。这张图说明训练或评估数据覆盖了哪些对象、任务、场景与具身。判断泛化结论时，应把图中的覆盖范围与测试集逐项比较，尤其关注长尾类别和训练中未出现的组合。它证明的是 DexGraspVLA 数据的覆盖与多样性，而不是单独证明模型已利用这些多样性产生泛化。 本图的证据场景限定为：fig:nonprehensile-demo-objects. The 32 objects used to collect nonprehensile grasping demonstrations。</figcaption></figure><figure><img src="figures/source/fig09_dino-attn-full.png" alt="fig:dino-attn-full"><figcaption><strong>fig:dino-attn-full.</strong> The complete, uncropped version of fig:dino-attn.<br><strong>本文解读：</strong>对 DexGraspVLA 而言，这张图对应一个可单独检查的论文证据。这张图具体展示的是：fig:dino-attn-full. The complete, uncropped version of fig:dino-attn。阅读时应把画面中的对象、阶段和对照关系与正文对应起来，而不是把它当作装饰性示例。它直接支持图注所描述的局部论点，结论范围不应超过图中给出的实验条件。 本图的证据场景限定为：fig:dino-attn-full. The complete, uncropped version of fig:dino-attn。</figcaption></figure><figure><img src="figures/source/fig10_long-horizon.png" alt="fig:long-horizon-initial"><figcaption><strong>fig:long-horizon-initial.</strong> The head camera images observed by DexGraspVLA planner and generated masks for a long-horizon task: &quot;Grasp all edible objects, including food and drinks.&quot;<br><strong>本文解读：</strong>对 DexGraspVLA 而言，这张图需要重点核对 Grasp all edible objects, including food and drinks.、DexGraspVLA 之间的关系。这张图说明训练或评估数据覆盖了哪些对象、任务、场景与具身。判断泛化结论时，应把图中的覆盖范围与测试集逐项比较，尤其关注长尾类别和训练中未出现的组合。它证明的是 DexGraspVLA 数据的覆盖与多样性，而不是单独证明模型已利用这些多样性产生泛化。 本图的证据场景限定为：fig:long-horizon-initial.。</figcaption></figure><figure><img src="figures/source/fig11_bbox-1.png" alt="fig:bbox"><figcaption><strong>fig:bbox.</strong> Bounding-box predictions made by DexGraspVLA planner. Across diverse lighting and background conditions, it accurately grounds the language instruction to the target object in cluttered scenes and marks the correct bounding box.<br><strong>本文解读：</strong>对 DexGraspVLA 而言，这张图需要重点核对 DexGraspVLA 之间的关系。这张图具体展示的是：fig:bbox.。阅读时应把画面中的对象、阶段和对照关系与正文对应起来，而不是把它当作装饰性示例。它直接支持图注所描述的局部论点，结论范围不应超过图中给出的实验条件。 本图的证据场景限定为：fig:bbox.。</figcaption></figure></section></main></body></html>
+</style></head>
+<body><main>
+<header><div class="title-wrap"><h1>DexGraspVLA: A Vision-Language-Action Framework Towards General Dexterous Grasping</h1>
+<p class="subtitle">以论文正文、实验、附录与原始图注为证据的参考级中文精读</p>
+<p class="lead"><strong>一句话贡献：</strong>提出分层 VLA 框架：上层 VLM 负责语言目标分解和目标定位，下层 diffusion controller 负责灵巧手闭环抓取。</p>
+<div class="meta"><span class="pill">arXiv:2502.20900</span><span class="pill">DexGraspVLA</span><span class="pill">灵巧手 VLA / 分层 VLA</span></div>
+<p><a href="https://arxiv.org/abs/2502.20900">论文原文</a> · <a href="https://dexgraspvla.github.io/">项目页</a></p>
+<p><strong>关键词：</strong>DexGraspVLA; 分层 VLA; 灵巧抓取; diffusion policy; VLM planner; 泛化抓取</p></div></header>
+
+<nav class="toc"><a href="#overview">1. 论文速览与证据链</a><a href="#motivation">2. 研究问题与动机</a><a href="#related">3. 相关工作与技术定位</a><a href="#method">4. 方法、表示与训练流程</a><a href="#experiments">5. 实验设计、结果与消融</a><a href="#repro">6. 复现路线与工程风险</a><a href="#discussion">7. 分析、局限与边界</a><a href="#qa">8. 组会问答与阅读结论</a></nav>
+<section id="overview"><h2>1. 论文速览与证据链</h2><h3>1.0 一句话贡献与关键词</h3><p>提出分层 VLA 框架：上层 VLM 负责语言目标分解和目标定位，下层 diffusion controller 负责灵巧手闭环抓取。这一定义把 DexGraspVLA 的任务对象、核心机制和预期收益放在同一句话中。关键词包括：DexGraspVLA; 分层 VLA; 灵巧抓取; diffusion policy; VLM planner; 泛化抓取。这些概念共同界定了该工作位于灵巧操作、动作表示、感知融合或跨具身学习中的具体技术位置。</p><h3>1.1 技术定位与核心贡献</h3><p>DexGraspVLA 将开放词汇灵巧抓取拆成两个频率不同的层级：低频 VLM 负责理解自由语言指令、选择目标并检查任务是否完成；高频 diffusion controller 负责真正的多指接近、闭合与抬起。它的关键设计不是让大模型直接输出关节动作，而是用 SAM mask 与冻结的 DINOv2 特征把复杂视觉场景变成低层控制器更容易泛化的条件。对于首次复现灵巧手 VLA，它的模块边界清晰、问题定义集中，是较好的起点。DexGraspVLA 把开放词汇理解、目标定位和高自由度闭环抓取拆成两个时间尺度：低频 VLM planner 负责语义目标与任务阶段，高频 diffusion controller 围绕目标 mask 输出连续动作。论文贡献在于这种分工与完整真实系统，而不是让 VLM 直接预测关节角。</p></section><section id="motivation"><h2>2. 研究问题与动机</h2><h3>2.1 论文面对的真实瓶颈</h3><p>现有灵巧抓取方法往往在单物体、固定背景或有限类别中训练，换到杂乱桌面、未见物体和自由语言指令后容易失效。直接微调通用 VLA 又需要大量覆盖视觉变化的机器人数据。DexGraspVLA 的动机是保留预训练视觉语言模型的语义与视觉泛化能力，只让低层策略学习接触丰富的抓取动作，从而用有限真实示范覆盖更大的物体、背景和光照分布。有限真实示范很难覆盖未见物体、背景、光照和自由语言目标。作者把可从预训练模型继承的语义泛化交给 VLM、SAM 和 DINOv2，把必须由机器人示范学习的接触控制留给 mask-conditioned controller，从而减少端到端控制所需的数据覆盖。</p></section><section id="related"><h2>3. 相关工作与技术定位</h2><h3>3.1 直接技术前作</h3><p>论文位于三条技术线的交叉处。传统 dexterous grasping 关注 grasp pose、轨迹优化或 RL，但常缺少开放词汇目标选择；OpenVLA、π0 等端到端 VLA 统一视觉语言动作，却可能在有限机器人数据上丢失视觉泛化；SAM、DINOv2 和 VLM 等 foundation model 擅长目标定位与稳定表征。DexGraspVLA 选择模块化组合：foundation models 负责语义规划、分割与表征，专用 diffusion policy 负责多指动作。与传统 dexterous grasping 相比，它增加开放词汇目标选择；与通用 VLA 相比，它不要求大模型直接承担全部闭环控制；与纯视觉 grounding 相比，它最终必须在真实灵巧手上完成目标抓取与长程任务。</p></section><section id="method"><h2>4. 方法、表示与训练流程</h2><h3>4.1 总体方法链路</h3><p>高层 planner 接收自由指令与场景图像，依次执行子任务提议、目标 bounding box 预测、抓取结果识别与任务完成检查。目标框交给 SAM 生成 mask，并通过 tracker 在执行过程中维持目标身份。低层控制器融合第三视角 RGB、目标 mask、腕部第一视角图像与 proprioception；冻结 DINOv2 编码 RGB，ViT 编码 mask，DiT action head 通过去噪生成未来 action chunk。长程任务由高层逐物体调用低层控制器完成。planner 先把自然语言拆成对象级抓取指令并产生 bounding box，SAM 将框转为 mask，tracker 在执行中维持目标身份，冻结 DINOv2 提取视觉特征，DiT action head 再生成 action chunk。任何上层目标或 mask 错误都会级联到低层控制。</p>
+<h3>图解 1：fig:teaser</h3>
+<figure>
+  <img src="figures/source/fig01_aaaiteaser-v4.png" alt="fig:teaser">
+  <figcaption><strong>论文原图：</strong>We propose DexGraspVLA, a hierarchical VLA framework that reaches a 90+ fig:teaser -10pt</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:teaser”这一环；当前证据切片来自 fig01_aaaiteaser-v4。原图明确展示：We propose DexGraspVLA, a hierarchical VLA framework that reaches a 90+ fig:teaser -10pt 这幅方法图的重点是模块职责：上游负责产生什么条件，中间表示保留什么信息，下游最终预测什么。对 DexGraspVLA 而言，这决定了训练数据如何被使用，也决定复现时应在哪些接口分别验收。框架完整不等于每个模块必要，因此还需与去除组件后的结果联合判断。</div>
+
+<h3>图解 2：fig:framework</h3>
+<figure>
+  <img src="figures/source/fig02_framworkv12.jpg" alt="fig:framework">
+  <figcaption><strong>论文原图：</strong>Overview of DexGraspVLA. A pre-trained VLM-based high-level planner (purple) decomposes prompts into object-level grasping instructions with bounding boxes. The diffusion-based low-level controller (pink) tracks the target mask, encodes multimodal observations (RGB images, mask, proprioception), and predicts an action chunk via a DiT model. The planner monitors execution and continually proposes new instructions based on the updated scene until the task is fully completed.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:framework”这一环；当前证据切片来自 fig02_framworkv12。原图明确展示：Overview of DexGraspVLA. A pre-trained VLM-based high-level planner (purple) decomposes prompts into object-level grasping instructions with bounding boxes. The diffusion-based low-level controller (pink) tracks the target mask, encodes multimodal observations (RGB images, mask, proprioception), and predicts an action chunk via a DiT model. The planner monitors execution and continually proposes new instructions based on the updated scene until the task is fully completed. 图里呈现的不是单纯网络结构，而是一条从数据到部署的计算链。DexGraspVLA 的关键假设被编码在模块连接方式中：可共享的部分被放入主干，具身或任务专属部分被留在适配接口。该图支撑设计逻辑，但不单独支撑泛化结论。</div>
+</section><section id="experiments"><h2>5. 实验设计、结果与消融</h2><h3>5.1 任务、数据与评估协议</h3><p>核心实验不是单个 seen-object 成功率，而是 360 个未见物体、6 个未见背景和 3 种未见光照构成的大规模组合测试。论文报告 Ours@1 约 90.8%，允许三次尝试时约 96.9%；长程语言任务还分别统计 instruction、bbox、controller 与 completion check 的错误。冻结 DINOv2 的消融优于重新训练的小视觉 backbone；nonprehensile 场景进一步测试先推至桌边再抓取的复合动作。实验覆盖 360 个未见对象以及背景、光照变化，并报告单次与多次尝试成功率。长程实验进一步把 instruction、bbox、controller 与 completion check 错误分开统计，因此不仅回答系统能否工作，也揭示不同层的责任边界。</p>
+<h3>图解 1：fig:robot-platform</h3>
+<figure>
+  <img src="figures/source/fig03_hardware-platform-v5.png" alt="fig:robot-platform">
+  <figcaption><strong>论文原图：</strong>Our hardware platform.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:robot-platform”这一环；当前证据切片来自 fig03_hardware-platform-v5。原图明确展示：Our hardware platform. 这张部署图的价值在于揭示工程闭环：数据如何采集、状态如何同步、动作如何下发、结果如何观察。DexGraspVLA 已展示在该平台上的可执行性，但不能由此推断任意硬件替换后仍保持同样性能。</div>
+
+<h3>图解 2：fig:dino-attn</h3>
+<figure>
+  <img src="figures/source/fig04_dino-attn-v2.png" alt="fig:dino-attn">
+  <figcaption><strong>论文原图：</strong>DexGraspVLA is robust to environmental variations. The same cluttered scene (1st row) is arranged in four visually different environments (four columns). DINOv2 features (2nd row), masks (3rd row), and attention maps (4th row) are consistent across variations. The 5th row confirms DexGraspVLA is attending to the correct object.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:dino-attn”这一环；当前证据切片来自 fig04_dino-attn-v2。原图明确展示：DexGraspVLA is robust to environmental variations. The same cluttered scene (1st row) is arranged in four visually different environments (four columns). DINOv2 features (2nd row), masks (3rd row), and attention maps (4th row) are consistent across variations. The 5th row confirms DexGraspVLA is attending to the correct object. 这幅图给出了论文能力声明的样本基础。可见的长尾、任务组合或场景变化说明模型需要处理哪些分布差异，同时也暴露高频类别可能主导训练。DexGraspVLA 的泛化结论应限制在图中数据生成流程与测试划分能够支持的范围。</div>
+
+<h3>图解 3：fig:data-collection-env</h3>
+<figure>
+  <img src="figures/source/fig05_data-collect-env.jpg" alt="fig:data-collection-env">
+  <figcaption><strong>论文原图：</strong>Our data collection site.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:data-collection-env”这一环；当前证据切片来自 fig05_data-collect-env。原图明确展示：Our data collection site. 这里展示的是 DexGraspVLA 的真实数据采集场地，而不是算法成功案例。它说明训练示范来自受控硬件、固定相机与实际工作空间，因而后续未见背景和光照实验是在该采集分布之外人为改变视觉条件。这张图能够帮助复现者恢复相机与桌面布局，但不能单独说明数据中的对象、抓取姿态或失败轨迹是否足够多样。</div>
+
+<h3>图解 4：fig:data-collection-env</h3>
+<figure>
+  <img src="figures/source/fig05_test-env.jpg" alt="fig:data-collection-env">
+  <figcaption><strong>论文原图：</strong>Our data collection site.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:data-collection-env”这一环；当前证据切片来自 fig05_test-env。原图明确展示：Our data collection site. 这里展示的是 DexGraspVLA 的真实数据采集场地，而不是算法成功案例。它说明训练示范来自受控硬件、固定相机与实际工作空间，因而后续未见背景和光照实验是在该采集分布之外人为改变视觉条件。这张图能够帮助复现者恢复相机与桌面布局，但不能单独说明数据中的对象、抓取姿态或失败轨迹是否足够多样。</div>
+
+<h3>图解 5：fig:generalization-eval-env</h3>
+<figure>
+  <img src="figures/source/fig06_generalization-environment-conditions.png" alt="fig:generalization-eval-env">
+  <figcaption><strong>论文原图：</strong>Environment conditions used in our generalization evaluations of dexterous grasping (subsec:generalization-eval) and nonprehensile grasping (subsec:nonprehensile-grasping).</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:generalization-eval-env”这一环；当前证据切片来自 fig06_generalization-environment-conditions。原图明确展示：Environment conditions used in our generalization evaluations of dexterous grasping (subsec:generalization-eval) and nonprehensile grasping (subsec:nonprehensile-grasping). 图中对象、任务、场景和分布不是背景信息，它们决定了 DexGraspVLA 学到的先验以及测试结论能外推到哪里。训练覆盖与评估变化必须逐项对应：只有被明确留出的对象、位置或任务才构成泛化证据，其他样例主要说明数据多样性。</div>
+
+<h3>图解 6：fig:tSNE</h3>
+<figure>
+  <img src="figures/source/fig07_objects-and-tsne-0516-small.png" alt="fig:tSNE">
+  <figcaption><strong>论文原图：</strong>(Left) A representative part of all 360 unseen objects used to evaluate DexGraspVLA. (Right) A t-SNE projection illustrating the diversity and broad coverage of these objects in length, width, height, mass (denoted by marker size), roughness (marker type), and shape (marker color).</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:tSNE”这一环；当前证据切片来自 fig07_objects-and-tsne-0516-small。原图明确展示：(Left) A representative part of all 360 unseen objects used to evaluate DexGraspVLA. (Right) A t-SNE projection illustrating the diversity and broad coverage of these objects in length, width, height, mass (denoted by marker size), roughness (marker type), and shape (marker color). 任务和数据图把抽象的“多样性”具体化为对象、动作阶段和环境条件。对 DexGraspVLA 的实验而言，图中没有出现的动态扰动、材质、接触模式或具身不应被默认已经覆盖；它证明的是评估设计的广度，而非自动证明策略成功。</div>
+
+<h3>图解 7：fig:nonprehensile-demo-objects</h3>
+<figure>
+  <img src="figures/source/fig08_nonprehensile-train-objects.png" alt="fig:nonprehensile-demo-objects">
+  <figcaption><strong>论文原图：</strong>The 32 objects used to collect nonprehensile grasping demonstrations.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:nonprehensile-demo-objects”这一环；当前证据切片来自 fig08_nonprehensile-train-objects。原图明确展示：The 32 objects used to collect nonprehensile grasping demonstrations. 图中对象、任务、场景和分布不是背景信息，它们决定了 DexGraspVLA 学到的先验以及测试结论能外推到哪里。训练覆盖与评估变化必须逐项对应：只有被明确留出的对象、位置或任务才构成泛化证据，其他样例主要说明数据多样性。</div>
+
+<h3>图解 8：fig:nonprehensile-demo-objects</h3>
+<figure>
+  <img src="figures/source/fig08_nonprehensile-test-objects.png" alt="fig:nonprehensile-demo-objects">
+  <figcaption><strong>论文原图：</strong>The 32 objects used to collect nonprehensile grasping demonstrations.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:nonprehensile-demo-objects”这一环；当前证据切片来自 fig08_nonprehensile-test-objects。原图明确展示：The 32 objects used to collect nonprehensile grasping demonstrations. 这幅图给出了论文能力声明的样本基础。可见的长尾、任务组合或场景变化说明模型需要处理哪些分布差异，同时也暴露高频类别可能主导训练。DexGraspVLA 的泛化结论应限制在图中数据生成流程与测试划分能够支持的范围。</div>
+
+<h3>图解 9：fig:dino-attn-full</h3>
+<figure>
+  <img src="figures/source/fig09_dino-attn-full.png" alt="fig:dino-attn-full">
+  <figcaption><strong>论文原图：</strong>The complete, uncropped version of fig:dino-attn.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:dino-attn-full”这一环；当前证据切片来自 fig09_dino-attn-full。原图明确展示：The complete, uncropped version of fig:dino-attn. 这是 DINO 注意力可视化的完整未裁剪版本，用来检查冻结视觉 backbone 在杂乱场景、不同对象和视角下是否仍将注意力集中到目标相关区域。它为 DexGraspVLA 保留预训练视觉特征的设计提供机制解释，但注意力落在目标上并不自动保证 bounding box、mask 跟踪或最终抓取成功。</div>
+
+<h3>图解 10：fig:long-horizon-initial</h3>
+<figure>
+  <img src="figures/source/fig10_long-horizon.png" alt="fig:long-horizon-initial">
+  <figcaption><strong>论文原图：</strong>The head camera images observed by DexGraspVLA planner and generated masks for a long-horizon task: &quot;Grasp all edible objects, including food and drinks.&quot;</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:long-horizon-initial”这一环；当前证据切片来自 fig10_long-horizon。原图明确展示：The head camera images observed by DexGraspVLA planner and generated masks for a long-horizon task: &quot;Grasp all edible objects, including food and drinks.&quot; 这幅图给出了论文能力声明的样本基础。可见的长尾、任务组合或场景变化说明模型需要处理哪些分布差异，同时也暴露高频类别可能主导训练。DexGraspVLA 的泛化结论应限制在图中数据生成流程与测试划分能够支持的范围。</div>
+
+<h3>图解 11：fig:bbox</h3>
+<figure>
+  <img src="figures/source/fig11_bbox-1.png" alt="fig:bbox">
+  <figcaption><strong>论文原图：</strong>Bounding-box predictions made by DexGraspVLA planner. Across diverse lighting and background conditions, it accurately grounds the language instruction to the target object in cluttered scenes and marks the correct bounding box.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:bbox”这一环；当前证据切片来自 fig11_bbox-1。原图明确展示：Bounding-box predictions made by DexGraspVLA planner. Across diverse lighting and background conditions, it accurately grounds the language instruction to the target object in cluttered scenes and marks the correct bounding box. 这组可视化让读者看到模型输出如何随时间作用于物体，而不是只看到一个终态。对 DexGraspVLA 来说，关键是动作是否连贯、对象响应是否符合条件、不同样例是否保持同一机制；图外的失败频率仍需量化结果回答。</div>
+
+<h3>图解 12：fig:bbox</h3>
+<figure>
+  <img src="figures/source/fig11_bbox-2.png" alt="fig:bbox">
+  <figcaption><strong>论文原图：</strong>Bounding-box predictions made by DexGraspVLA planner. Across diverse lighting and background conditions, it accurately grounds the language instruction to the target object in cluttered scenes and marks the correct bounding box.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:bbox”这一环；当前证据切片来自 fig11_bbox-2。原图明确展示：Bounding-box predictions made by DexGraspVLA planner. Across diverse lighting and background conditions, it accurately grounds the language instruction to the target object in cluttered scenes and marks the correct bounding box. 图中每一列或每一帧对应交互链中的一个局部状态，可以据此检查方法是否真正执行了目标技能，而不是偶然到达相似终态。该图支持案例层面的可行性，无法单独代表完整分布上的稳定性。</div>
+</section><section id="repro"><h2>6. 复现路线与工程风险</h2><h3>6.1 最小可行复现路径</h3><p>优先复现单物体抓取，再接入高层 planner。需要多指手与机械臂、第三视角和腕部相机、20Hz 左右控制链路、遥操作示范、SAM/DINOv2、可进行视觉 grounding 的 VLM，以及 diffusion action-chunk 训练代码。最容易出问题的是 mask 跟踪、相机与 proprioception 时间对齐、不同硬件动作维度，以及 VLM prompt 与原论文不一致导致的目标框错误。最小复现应从单目标 mask-conditioned diffusion controller 开始，先固定目标框与 mask 验证低层抓取，再逐步接 tracker、SAM 与 VLM planner。这样才能区分动作策略失败与上层 grounding 失败。</p></section><section id="discussion"><h2>7. 分析、局限与边界</h2><h3>7.1 最有价值的贡献</h3><p>模块化结构使错误来源可定位，但也产生明显级联风险：VLM 选错物体、SAM 分错 mask 或 tracker 丢失目标，低层控制再强也无法恢复。实验主要围绕桌面抓取、清理和先推后抓，尚未证明工具使用、双手协作、透明/强反光物体或精细力控能力。90% 以上成功率依赖特定硬件、重试策略和测试协议，不能直接外推到任意灵巧手。分层设计带来可诊断性，也引入级联风险：目标选错、bbox 偏移、mask 丢失或完成判断错误都会使低层围绕错误条件执行。论文证明的是开放环境中的强抓取泛化，而不是消除了所有上层感知错误。</p>
+<h3>图解 1：fig:bbox</h3>
+<figure>
+  <img src="figures/source/fig11_bbox-3.png" alt="fig:bbox">
+  <figcaption><strong>论文原图：</strong>Bounding-box predictions made by DexGraspVLA planner. Across diverse lighting and background conditions, it accurately grounds the language instruction to the target object in cluttered scenes and marks the correct bounding box.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:bbox”这一环；当前证据切片来自 fig11_bbox-3。原图明确展示：Bounding-box predictions made by DexGraspVLA planner. Across diverse lighting and background conditions, it accurately grounds the language instruction to the target object in cluttered scenes and marks the correct bounding box. 连续帧与并列样例显示了动作推进、接触变化或场景保持的具体过程，补充了最终成功率无法表达的中间行为。它能确认 DexGraspVLA 在这些案例中完成了哪些阶段，也应与失败样例和全量统计一起判断，避免只由精选结果得出结论。</div>
+
+<h3>图解 2：fig:bbox</h3>
+<figure>
+  <img src="figures/source/fig11_bbox-4.png" alt="fig:bbox">
+  <figcaption><strong>论文原图：</strong>Bounding-box predictions made by DexGraspVLA planner. Across diverse lighting and background conditions, it accurately grounds the language instruction to the target object in cluttered scenes and marks the correct bounding box.</figcaption>
+</figure>
+<div class="note"><strong>逐图分析：</strong>这张图在 DexGraspVLA 的证据链中承担的是“fig:bbox”这一环；当前证据切片来自 fig11_bbox-4。原图明确展示：Bounding-box predictions made by DexGraspVLA planner. Across diverse lighting and background conditions, it accurately grounds the language instruction to the target object in cluttered scenes and marks the correct bounding box. 这组可视化让读者看到模型输出如何随时间作用于物体，而不是只看到一个终态。对 DexGraspVLA 来说，关键是动作是否连贯、对象响应是否符合条件、不同样例是否保持同一机制；图外的失败频率仍需量化结果回答。</div>
+</section><section id="qa"><h2>8. 组会问答与阅读结论</h2><h3>Q1：核心创新为何不是简单的“VLM+Diffusion Policy”？</h3><p>关键是把语义、目标表征和接触控制拆开，并用 foundation features 稳定低层输入。</p><h3>Q2：为什么冻结 DINOv2？</h3><p>避免有限机器人示范破坏预训练视觉泛化。</p><h3>Q3：最强证据是什么？</h3><p>大规模未见组合测试与低层视觉表征消融。</p><h3>Q4：系统最脆弱的环节？</h3><p>高层 grounding 与 mask 跟踪的错误会级联。</p><h3>Q5：最值得先复现什么？</h3><p>单目标 mask-conditioned diffusion controller。</p><h3>阅读结论与研究启发</h3><p>适合作为灵巧手 VLA 复现起点。建议先跑通 mask-conditioned 低层 controller，再替换 VLM 或视觉特征做创新；不要一开始就复现完整长程系统。与 DexVLA 比，它更专注灵巧抓取；与 UniHM 比，它的高低层职责更清楚。</p></section>
+</main></body></html>
