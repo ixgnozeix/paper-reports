@@ -1,15 +1,624 @@
-<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>GAIA-1: A Generative World Model for Autonomous Driving</title><link rel='stylesheet' href='../../assets/style.css'></head><body>
-    <div class='toc'><div class='wrap'><a href='../../index.html'>← 首页</a><a href='#quick'>论文速览</a><a href='#motivation'>动机</a><a href='#method'>方法</a><a href='#exp'>实验</a><a href='#repro'>复现</a><a href='#qa'>Q&A</a><a href='#figs'>图解</a></div></div>
-    <main class='wrap'><section class='hero'><div class='eyebrow'>Paper Report · Generative world model / video-text-action autoregressive model</div><h1>GAIA-1: A Generative World Model for Autonomous Driving</h1><div class='meta'>Anthony Hu, Lloyd Russell, Hudson Yeo, Zak Murez, George Fedoseev, Alex Kendall, Jamie Shotton, Gianluca Corrado · 2023 · arXiv: 2309.17080</div><div class='grid'><div class='card'><b>一句话贡献</b><br>GAIA-1 将视频、文本和动作都编码为 token，用自回归 Transformer 预测未来视觉 token，并通过扩散解码生成可控驾驶视频，从而形成可按动作和文本条件 rollout 的驾驶世界模型。</div><div class='card'><b>关键词</b><br>world model、autoregressive transformer、video tokens、action conditioning、text conditioning、diffusion decoder、Wayve、neural simulation</div><div class='card'><b>技术定位</b><br>Generative world model / video-text-action autoregressive model</div><div class='card'><b>是否开源</b><br>否，技术报告与演示公开，完整数据/代码未公开</div><div class='card'><b>适合程度</b><br>高：世界模型主线代表，适合作为 DriveDreamer/Drive-WM 对照</div></div><p><a href='https://ixgnozeix.github.io/paper-reports/report/gaia-1/'>计划公网链接：https://ixgnozeix.github.io/paper-reports/report/gaia-1/</a></p></section>
-    <section id='quick'><h2>1. 论文速览</h2><p>GAIA-1 是自动驾驶世界模型中的标志性技术报告。它把真实驾驶视频、ego action 和文本描述映射到共同 token 空间，使用 GPT-like autoregressive transformer 预测下一 token，再通过视频 decoder 生成未来帧。模型能从视频 prompt rollout 多种未来，并用 action 控制 ego 行为、用 text 修改天气/场景属性。论文强调 emergent properties：高层结构、场景动态、上下文意识、几何理解和可控生成；但它主要展示生成能力，而不是闭环规划指标。</p><div><span class='tag'>world model</span><span class='tag'>autoregressive transformer</span><span class='tag'>video tokens</span><span class='tag'>action conditioning</span><span class='tag'>text conditioning</span><span class='tag'>diffusion decoder</span><span class='tag'>Wayve</span><span class='tag'>neural simulation</span></div></section>
-    <section id='motivation'><h2>2. 研究问题与动机</h2><p>真实道路未来具有多模态不确定性，纯监督 planner 很难覆盖所有可发生后果。世界模型的理想作用是在行动前模拟“如果我转向/减速会发生什么”。GAIA-1 选择 tokenized autoregressive modeling，是因为它能像语言模型一样在长序列上建模视频、动作和文本条件，利用大规模无标注驾驶视频学习世界动态。</p></section>
-    <section id='related'><h2>3. 相关工作脉络</h2><p>GAIA-1 继承了 Dreamer/MuZero 类世界模型思想，也受 VQ/VAE tokenization、GPT 自回归和 diffusion decoder 影响。相对 DriveGAN/MILE 等早期驾驶生成模型，GAIA-1 强调视频-文本-动作多模态和大模型 scaling。相对 Drive-WM，它是单/前向视角为主的通用 neural simulator，不直接给出现有 E2E planner 的 reward tree 集成。</p></section>
-    <section id='method'><h2>4. 方法详解</h2><p>模型分三层：第一，视频 tokenizer 把图像帧离散成 image tokens，并通过 DINO distillation 增强 token 语义一致性；第二，text/action encoder 把文本与控制量映射到共享 embedding；第三，自回归 world model 预测未来 image tokens。解码阶段使用 video diffusion decoder，根据预测 token 和上下文生成高分辨率视频。训练目标本质是无监督序列建模，使用大规模真实英国城市驾驶数据。</p></section>
-    <section id='exp'><h2>5. 实验与结果</h2><p>论文主要通过定性 rollout、action/text controllability、token 语义可视化和 decoder 任务展示能力。Figure 3 显示 DINO distillation 后同类语义区域 token embedding 更一致；Figure 4 展示 decoder 支持未来预测、插值和修复等训练任务。证据能说明模型学到一定场景结构和可控生成，但不能证明生成视频可直接用于安全规划；也缺少 nuScenes/CARLA 类可复现 open-loop/closed-loop 指标。</p></section>
-    <section id='repro'><h2>6. 复现要点</h2><p>完整复现需要大规模真实驾驶视频、动作日志、文本条件、image tokenizer、AR transformer 和 diffusion decoder，成本极高。学术最小复现可在 nuScenes/BBD100K 上做小规模 tokenized video prediction：先训练 VQ tokenizer，再训练 action-conditioned transformer，最后用轻量 decoder 重建帧。阻塞点是数据规模、tokenizer 质量、长视频训练稳定性和生成评估指标。验收标准应是 FVD/FID、action controllability 和多未来一致性，而不是只看单张漂亮图。</p></section>
-    <section id='analysis'><h2>7. 分析、局限与边界</h2><p>GAIA-1 的价值是提出“驾驶世界模型可以像 GPT 一样扩展”的想象空间。它的边界是非常清楚的：生成 plausible video 不等于物理正确，不等于可验证安全，更不等于闭环驾驶策略。后续研究需要把世界模型与 planner reward、occupancy/BEV 结构和安全验证结合，Drive-WM、DriveDreamer、OccWorld 都是在不同表示空间中沿这个方向前进。</p></section>
-    <section id='qa'><h2>8. 组会问答准备</h2><div class='qa'><b>Q：GAIA-1 为什么使用离散 token？</b><br>A：离散 token 使视频、文本、动作可以放入统一自回归序列，借用 GPT 式下一 token 预测。</div><div class='qa'><b>Q：动作条件起什么作用？</b><br>A：它允许同一视频 prompt 在不同 ego action 下 rollout 不同未来，形成可控模拟。</div><div class='qa'><b>Q：DINO distillation 为什么重要？</b><br>A：它让 image tokens 更有语义一致性，同类区域 embedding 更接近，利于 world model 学结构。</div><div class='qa'><b>Q：GAIA-1 是否能直接规划？</b><br>A：论文主要展示生成和可控性，没有充分给出现有 planner 上的安全提升指标。</div><div class='qa'><b>Q：复现最大难点？</b><br>A：大规模真实驾驶视频和训练成本，以及高质量 tokenizer/decoder 的联合工程。</div></section>
-    <section id='figs'><h2>9. 补充图解与附录证据</h2><div class='figure'><img src='figures/figure1.png' alt='Figure 1. GAIA-1 multimodal video generation。'><div class='caption'>Figure 1. GAIA-1 multimodal video generation。</div><div class='interp'><b>本文解读：</b>图中同一视频 prompt 可被 action/text 条件引导生成不同未来，说明模型不是无条件视频生成器。它支撑可控 rollout，但不能证明物理因果完全正确。</div></div><div class='figure'><img src='figures/figure2.png' alt='Figure 2. GAIA-1 architecture。'><div class='caption'>Figure 2. GAIA-1 architecture。</div><div class='interp'><b>本文解读：</b>视频、文本、动作先编码成 token，自回归 transformer 预测未来 image tokens，再经 decoder 生成视频。图连接到论文“world modeling as sequence modeling”的核心。</div></div><div class='figure'><img src='figures/figure3.png' alt='Figure 3. DINO distillation token 可视化。'><div class='caption'>Figure 3. DINO distillation token 可视化。</div><div class='interp'><b>本文解读：</b>PCA 颜色展示 token embedding 语义一致性，说明 distillation 改善 token 语义结构。它支撑 tokenizer 设计，但不是规划性能证据。</div></div></section>
-    <section><h2>我的阅读笔记</h2><p>GAIA-1 适合作为世界模型总纲：tokenized AR + diffusion decoder。与 Drive-WM/DriveDreamer/OccWorld 对比时应强调表示差异：像素视频、结构条件、多视角、3D occupancy。</p></section>
-    <div class='footer'>Generated as a static OpenMOSS/WAM-style local report. Source PDF/images are stored under this report folder when available.</div>
-    </main></body></html>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GAIA-1: A Generative World Model for Autonomous Driving · 深度解读</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style></head><body><main>
+<header><div class="title-wrap"><h1>GAIA-1: A Generative World Model for Autonomous Driving</h1>
+<p class="subtitle">Zotero「自驾」分类 · 按新版论文深度解读大纲重构</p>
+<p class="lead"><strong>一句话贡献：</strong>GAIA-1 将视频、文本和动作都编码为 token，用自回归 Transformer 预测未来视觉 token，并通过扩散解码生成可控驾驶视频，从而形成可按动作和文本条件 rollout 的驾驶世界模型。</p>
+<div class="meta"><span class="pill">Generative world model / video-text-action autoregressive model</span><span class="pill">arXiv:2309.17080</span><span class="pill">否，技术报告与演示公开，完整数据/代码未公开</span></div>
+<p><a href="https://arxiv.org/abs/2309.17080">arXiv</a> · <a href="https://arxiv.org/abs/2309.17080">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/gaia-1/">当前 Blog</a></p></div></header>
+
+<nav class="toc">
+<a href="#identity">0. 论文身份卡片</a><a href="#quick">1. 论文速览</a><a href="#motivation">2. 研究问题与动机</a>
+<a href="#lineage">3. 相关工作脉络</a><a href="#overview-fig">4. 方法总览图</a><a href="#method">5. 方法详解</a>
+<a href="#figures">6. 原论文图解</a><a href="#experiments">7. 实验与结果</a><a href="#failures">8. 消融、失败与证据缺口</a>
+<a href="#repro">9. 复现要点</a><a href="#analysis">10. 分析、局限与边界</a><a href="#qa">11. 组会问答</a>
+<a href="#notes">12. 我的阅读笔记</a><a href="#appendix">13. 附录证据</a><a href="#refs">14. 参考资料</a>
+</nav>
+<section id="identity"><h2>0. 页面头部：论文身份卡片</h2>
+<table><tbody><tr><th>论文</th><td>GAIA-1: A Generative World Model for Autonomous Driving</td></tr><tr><th>作者</th><td>Hu, Anthony；Russell, Lloyd；Yeo, Hudson；Murez, Zak；Fedoseev, George；Kendall, Alex；Shotton, Jamie；Corrado, Gianluca</td></tr><tr><th>时间</th><td>2023/09/29</td></tr><tr><th>方向</th><td>Generative world model / video-text-action autoregressive model</td></tr><tr><th>核心贡献</th><td>GAIA-1 将视频、文本和动作都编码为 token，用自回归 Transformer 预测未来视觉 token，并通过扩散解码生成可控驾驶视频，从而形成可按动作和文本条件 rollout 的驾驶世界模型。</td></tr><tr><th>模型类型</th><td>动作与文本条件的生成式驾驶世界模型：在 token 空间自回归预测未来，再用扩散解码器生成视频。</td></tr><tr><th>输入</th><td>历史视频、ego 动作和可选文本条件。</td></tr><tr><th>中间表示</th><td>视频、文本和动作分别 token 化；自回归 Transformer 预测未来图像 token；扩散视频解码器恢复像素帧。</td></tr><tr><th>输出</th><td>一个或多个受动作/文本控制的未来驾驶视频。</td></tr><tr><th>训练目标</th><td>世界模型做 next-token prediction，视频解码器做条件扩散去噪，并对数据分布进行平衡采样。</td></tr><tr><th>代码与复现状态</th><td>否，技术报告与演示公开，完整数据/代码未公开；高：世界模型主线代表，适合作为 DriveDreamer/Drive-WM 对照</td></tr></tbody></table>
+</section>
+
+<section id="quick"><h2>1. 论文速览：用一页讲清楚价值</h2>
+<h3>1.1 一句话贡献</h3><p>GAIA-1 将视频、文本和动作都编码为 token，用自回归 Transformer 预测未来视觉 token，并通过扩散解码生成可控驾驶视频，从而形成可按动作和文本条件 rollout 的驾驶世界模型。</p>
+<h3>1.2 论文专属关键词</h3><p>world model、autoregressive transformer、video tokens、action conditioning、text conditioning、diffusion decoder、Wayve、neural simulation</p>
+<h3>1.3 技术定位</h3><p>动作与文本条件的生成式驾驶世界模型：在 token 空间自回归预测未来，再用扩散解码器生成视频。</p>
+<h3>1.4 论文构建了什么</h3><table><tbody><tr><th>输入</th><td>历史视频、ego 动作和可选文本条件。</td></tr><tr><th>编码与融合</th><td>视频、文本和动作分别 token 化；自回归 Transformer 预测未来图像 token；扩散视频解码器恢复像素帧。</td></tr><tr><th>输出</th><td>一个或多个受动作/文本控制的未来驾驶视频。</td></tr><tr><th>训练目标</th><td>世界模型做 next-token prediction，视频解码器做条件扩散去噪，并对数据分布进行平衡采样。</td></tr></tbody></table>
+<h3>1.5 核心结论与证据链</h3><p>GAIA-1 是自动驾驶世界模型中的标志性技术报告。它把真实驾驶视频、ego action 和文本描述映射到共同 token 空间，使用 GPT-like autoregressive transformer 预测下一 token，再通过视频 decoder 生成未来帧。模型能从视频 prompt rollout 多种未来，并用 action 控制 ego 行为、用 text 修改天气/场景属性。论文强调 emergent properties：高层结构、场景动态、上下文意识、几何理解和可控生成；但它主要展示生成能力，而不是闭环规划指标。</p><p>核心证据来自：动作/文本条件生成、多 plausible future、长视频生成、数据平衡与 scaling 预测实验。。证据边界是：视频清晰和条件可控不等于几何、动力学与碰撞后果准确；论文没有闭环规划成功率。</p>
+</section>
+
+<section id="motivation"><h2>2. 研究问题与动机：为什么需要这篇论文</h2>
+<h3>2.1 核心问题与成功标准</h3><p>真实道路未来具有多模态不确定性，纯监督 planner 很难覆盖所有可发生后果。世界模型的理想作用是在行动前模拟“如果我转向/减速会发生什么”。GAIA-1 选择 tokenized autoregressive modeling，是因为它能像语言模型一样在长序列上建模视频、动作和文本条件，利用大规模无标注驾驶视频学习世界动态。</p>
+<h3>2.2 现有方法的具体不足</h3><p>该论文针对的瓶颈不是笼统的“泛化不足”，而是：直接像素自回归成本过高；只预测单一未来忽略交通多模态性；token 世界模型与扩散解码分担动态建模和视觉质量。</p>
+<h3>2.3 为什么不走显而易见的替代路线</h3><p>直接像素自回归成本过高；只预测单一未来忽略交通多模态性；token 世界模型与扩散解码分担动态建模和视觉质量。</p>
+</section>
+
+<section id="lineage"><h2>3. 相关工作脉络：这篇论文从哪里来</h2>
+<h3>3.1 技术家族与直接前作</h3><p>GAIA-1 继承了 Dreamer/MuZero 类世界模型思想，也受 VQ/VAE tokenization、GPT 自回归和 diffusion decoder 影响。相对 DriveGAN/MILE 等早期驾驶生成模型，GAIA-1 强调视频-文本-动作多模态和大模型 scaling。相对 Drive-WM，它是单/前向视角为主的通用 neural simulator，不直接给出现有 E2E planner 的 reward tree 集成。</p>
+<h3>3.2 本文新意属于表示、架构、训练还是评估</h3><p>从技术地图看，本文的主要新意可概括为：动作与文本条件的生成式驾驶世界模型：在 token 空间自回归预测未来，再用扩散解码器生成视频。。它并非简单替换 backbone，而是围绕输入表示、中间信息流或评价方式重新定义了论文的核心问题。</p>
+</section>
+
+<section id="overview-fig"><h2>4. 方法总览图：先看完整信息流</h2>
+<h3>4.1 主框架图与机制</h3><figure><img src="figures/source/fig01_prediction_tasks.png" alt="原论文图 1"><figcaption><strong>原论文 Figure 1：</strong>GAIA-1 multimodal video generation. GAIA-1 can generate videos by performing future rollouts starting from a video prompt. These future rollouts can be further conditioned on actions to influence particular behaviors of the ego-vehicle (e.g. steer left), or on text to drive a change in some aspects of the scene (change the color of the traffic light). For speed and curvature we condition the model by passing the sequence of future speed and / or curvature values. Our model can also generate realistic videos from text prompts, or by simply drawing samples from its prior distribution (fully unconditional generation).</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>同一视频上下文可在无额外条件、动作条件或文本条件下 rollout，分别改变 ego 行为或天气等场景属性。它界定 GAIA-1 的条件生成能力；画面响应条件不代表动作后果符合精确车辆动力学。</div>
+<h3>4.2 信息流一句话串联</h3><p>输入：历史视频、ego 动作和可选文本条件。；中间处理：视频、文本和动作分别 token 化；自回归 Transformer 预测未来图像 token；扩散视频解码器恢复像素帧。；最终输出：一个或多个受动作/文本控制的未来驾驶视频。；训练约束：世界模型做 next-token prediction，视频解码器做条件扩散去噪，并对数据分布进行平衡采样。</p>
+</section>
+
+<section id="method"><h2>5. 方法详解：输入、表示、融合、解码、训练与部署</h2>
+<h3>5.1 输入表示</h3><p>历史视频、ego 动作和可选文本条件。。复现时首先要确保各模态的时间同步、坐标系、可见范围与训练时一致；任何一个上游输入偏移都可能被后续大模型放大。</p>
+<h3>5.2 编码器与融合设计</h3><p>视频、文本和动作分别 token 化；自回归 Transformer 预测未来图像 token；扩散视频解码器恢复像素帧。</p>
+<h3>5.3 中间表示为何重要</h3><p>中间表示决定模型保留何种几何、语义和时间信息。该论文的关键中间链路是：视频、文本和动作分别 token 化；自回归 Transformer 预测未来图像 token；扩散视频解码器恢复像素帧。。它让最终输出能够利用这些信息，但也把上游表示误差带入规划或预测。</p>
+<h3>5.4 解码、动作生成或未来预测</h3><p>一个或多个受动作/文本控制的未来驾驶视频。</p>
+<h3>5.5 训练目标及副作用</h3><p>世界模型做 next-token prediction，视频解码器做条件扩散去噪，并对数据分布进行平衡采样。。这些目标直接约束对应监督输出，却不会自动保证真实闭环安全、跨域鲁棒性或因果可解释性。</p>
+<h3>5.6 训练阶段与数据风险</h3><p>模型分三层：第一，视频 tokenizer 把图像帧离散成 image tokens，并通过 DINO distillation 增强 token 语义一致性；第二，text/action encoder 把文本与控制量映射到共享 embedding；第三，自回归 world model 预测未来 image tokens。解码阶段使用 video diffusion decoder，根据预测 token 和上下文生成高分辨率视频。训练目标本质是无监督序列建模，使用大规模真实英国城市驾驶数据。</p>
+<h3>5.7 推理与部署流程</h3><p>用于未来想象与数据生成，不直接输出可执行规划；若用于控制还需要奖励、轨迹选择和安全验证。</p>
+</section>
+
+<section id="figures"><h2>6. 原论文图解：逐图拆解证据含义</h2><h3>7.1 Figure 1：GAIA-1 multimodal video generation. GAIA-1 can generate vide</h3><figure><img src="figures/source/fig01_prediction_tasks.png" alt="原论文图 1"><figcaption><strong>原论文 Figure 1：</strong>GAIA-1 multimodal video generation. GAIA-1 can generate videos by performing future rollouts starting from a video prompt. These future rollouts can be further conditioned on actions to influence particular behaviors of the ego-vehicle (e.g. steer left), or on text to drive a change in some aspects of the scene (change the color of the traffic light). For speed and curvature we condition the model by passing the sequence of future speed and / or curvature values. Our model can also generate realistic videos from text prompts, or by simply drawing samples from its prior distribution (fully unconditional generation).</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>同一视频上下文可在无额外条件、动作条件或文本条件下 rollout，分别改变 ego 行为或天气等场景属性。它界定 GAIA-1 的条件生成能力；画面响应条件不代表动作后果符合精确车辆动力学。</div>
+<h3>7.2 Figure 2：Architecture of GAIA-1. First, we encode information from al</h3><figure><img src="figures/source/fig02_gaia_schematic.png" alt="原论文图 2"><figcaption><strong>原论文 Figure 2：</strong>Architecture of GAIA-1. First, we encode information from all input modalities (video, text, action) into a common representation: images, text and actions are encoded as a sequence of tokens. The world model is an autoregressive transformer that predicts the next image token conditioned on past image, text, and action tokens. Finally, the video decoder maps the predicted image tokens back to the pixel space, at a higher temporal resolution.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>视频、文本和动作统一 token 化，自回归世界模型预测未来图像 token，扩散解码器恢复像素。该分工让动力学建模和高质量生成解耦；清晰解码无法修复世界 token 中已发生的物理错误。</div>
+<h3>7.3 Figure 5：Data sampling. The top row shows the empirical distribution </h3><figure><img src="figures/source/fig05_data_balancing_latitude.png" alt="原论文图 5"><img src="figures/source/fig05_data_balancing_longitude.png" alt="原论文图 5"><img src="figures/source/fig05_data_balancing_weather.png" alt="原论文图 5"><img src="figures/source/fig05_data_heatmap_empirical.png" alt="原论文图 5"><figcaption><strong>原论文 Figure 5：</strong>Data sampling. The top row shows the empirical distribution and the sampled distribution for three features we selected to balance over during training: latitude, longitude and weather condition. Dashed lines indicate data outside of the range we balanced over. The bottom row shows the geographical heatmap of sampled latitude and longitude coordinates for the whole training set, the sampled training set and the geofenced validation set.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>上排比较经纬度和天气的原始/重采样分布，下排显示地理热力图变化，说明训练前主动平衡了高频与稀有条件。它减少数据偏置，却不能创造训练集中完全不存在的交通行为。</div>
+<h3>7.4 Figure 8：The final performance of the GAIA-1 world model could be pre</h3><figure><img src="figures/source/fig08_predict_performance.png" alt="原论文图 8"><img src="figures/source/fig08_compute.png" alt="原论文图 8"><figcaption><strong>原论文 Figure 8：</strong>The final performance of the GAIA-1 world model could be predicted with smaller models trained with less than 20\times the compute.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>小模型和较少计算得到的性能用于拟合最终大模型趋势，图中展示可预测 scaling。该关系有助于配置训练预算，但只针对论文使用的 token 目标，不能保证视频物理一致性同步 scaling。</div>
+<h3>7.5 Figure 11：Examples of multiple plausible futures predicted by the worl</h3><figure><img src="figures/source/fig11_multimodal.png" alt="原论文图 11"><figcaption><strong>原论文 Figure 11：</strong>Examples of multiple plausible futures predicted by the world model from a given video context. 1) We observe a complex giving way interaction between the white vehicle and the ego-vehicle. In the first future, the white vehicle reverses to give way to the ego-vehicle. In the second future, the opposite occurs and the ego-vehicle slows down to give way to the white vehicle. 2) We see two plausible ego-behaviors: going straight or turning right at the roundabout. 3) The model predicts two futures with varying traffic levels.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>同一历史上下文生成多个可行未来，例如会车双方不同让行选择，体现交通未来的多模态性。它证明模型能采样差异化结果，但没有给出每种未来的校准概率或对规划的实际帮助。</div>
+<h3>7.6 Figure 13：The world model can predict different outcomes conditioned o</h3><figure><img src="figures/source/fig13_actions.png" alt="原论文图 13"><figcaption><strong>原论文 Figure 13：</strong>The world model can predict different outcomes conditioned on its actions. In the first four rows, we execute different out-of-distribution actions (left, strong left, right, strong right --- while maintaining speed) from a given context video. The world model can predict the corresponding states with accurate geometry. In the last row, we force the ego-vehicle to steer right while maintaining speed, and as a consequence, we observe the oncoming vehicle reacting and making a maneuver to avoid a collision.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>从相同上下文施加左、强左、右、强右等分布外动作，生成未来道路视角随转向变化且大体保持几何连续。它支持动作条件控制；极端动作下长期轨迹、碰撞与道路边界是否准确仍未量化。</div></section>
+
+<section id="experiments"><h2>7. 实验与结果：把证据链拆开</h2>
+<h3>7.1 数据集、任务与划分</h3><p>实验围绕该论文的技术定位组织：动作与文本条件的生成式驾驶世界模型：在 token 空间自回归预测未来，再用扩散解码器生成视频。。需要特别区分离线预测、生成质量、开环规划与真实/仿真闭环，因为它们使用不同成功标准；本论文主要证据为：动作/文本条件生成、多 plausible future、长视频生成、数据平衡与 scaling 预测实验。</p>
+<h3>7.2 Baseline 为什么重要</h3><p>论文的比较应围绕其技术定位理解：动作与文本条件的生成式驾驶世界模型：在 token 空间自回归预测未来，再用扩散解码器生成视频。。强 baseline 用来判断收益来自新增信息流、模型容量还是评估协议；仅与较弱旧方法比较不足以证明论文主张。</p>
+<h3>7.3 指标如何对应论文主张</h3><p>本文实验所依赖的证据为：动作/文本条件生成、多 plausible future、长视频生成、数据平衡与 scaling 预测实验。。离线预测误差、生成质量、规划指标或闭环分数各自只衡量部分能力，不能互相替代。</p>
+<h3>7.4 主结果与机制是否一致</h3><p>论文主要通过定性 rollout、action/text controllability、token 语义可视化和 decoder 任务展示能力。Figure 3 显示 DINO distillation 后同类语义区域 token embedding 更一致；Figure 4 展示 decoder 支持未来预测、插值和修复等训练任务。证据能说明模型学到一定场景结构和可控生成，但不能证明生成视频可直接用于安全规划；也缺少 nuScenes/CARLA 类可复现 open-loop/closed-loop 指标。</p>
+</section>
+
+<section id="failures"><h2>8. 消融、失败案例与证据缺口</h2>
+<h3>8.1 消融实验应回答什么</h3><p>最关键的消融需要隔离该论文的核心信息流：动作/文本条件生成、多 plausible future、长视频生成、数据平衡与 scaling 预测实验。。如果去掉核心模块后只在部分指标下降，需要进一步判断收益是否集中于特定场景。</p>
+<h3>8.2 失败案例与证据缺口</h3><p>视频清晰和条件可控不等于几何、动力学与碰撞后果准确；论文没有闭环规划成功率。</p>
+<h3>8.3 论文没有证明什么</h3><p>现有结果不能直接推出：视频清晰和条件可控不等于几何、动力学与碰撞后果准确；论文没有闭环规划成功率。</p>
+</section>
+
+<section id="repro"><h2>9. 复现要点：真正动手会遇到什么</h2>
+<h3>9.1 最小可行复现路线</h3><p>完整复现需要大规模真实驾驶视频、动作日志、文本条件、image tokenizer、AR transformer 和 diffusion decoder，成本极高。学术最小复现可在 nuScenes/BBD100K 上做小规模 tokenized video prediction：先训练 VQ tokenizer，再训练 action-conditioned transformer，最后用轻量 decoder 重建帧。阻塞点是数据规模、tokenizer 质量、长视频训练稳定性和生成评估指标。验收标准应是 FVD/FID、action controllability 和多未来一致性，而不是只看单张漂亮图。</p>
+<h3>9.2 数据、模型、硬件与阻塞点</h3><p>数据与接口重点：历史视频、ego 动作和可选文本条件。。模型重点：视频、文本和动作分别 token 化；自回归 Transformer 预测未来图像 token；扩散视频解码器恢复像素帧。。部署重点：用于未来想象与数据生成，不直接输出可执行规划；若用于控制还需要奖励、轨迹选择和安全验证。。论文未明确披露的硬件与训练成本不在此推测。</p>
+<h3>9.3 验收标准</h3><p>复现成功不应只以脚本运行结束为标准，而应至少复现论文核心趋势：动作/文本条件生成、多 plausible future、长视频生成、数据平衡与 scaling 预测实验。；同时检查输出是否在论文声称的边界外快速退化。</p>
+</section>
+
+<section id="analysis"><h2>10. 分析、局限与边界：作者没说完的部分</h2>
+<h3>10.1 最有价值贡献</h3><p>GAIA-1 的价值是提出“驾驶世界模型可以像 GPT 一样扩展”的想象空间。它的边界是非常清楚的：生成 plausible video 不等于物理正确，不等于可验证安全，更不等于闭环驾驶策略。后续研究需要把世界模型与 planner reward、occupancy/BEV 结构和安全验证结合，Drive-WM、DriveDreamer、OccWorld 都是在不同表示空间中沿这个方向前进。</p>
+<h3>10.2 主张—证据—充分性</h3><table><tbody><tr><th>论文主张</th><td>动作与文本条件的生成式驾驶世界模型：在 token 空间自回归预测未来，再用扩散解码器生成视频。</td></tr><tr><th>支撑证据</th><td>动作/文本条件生成、多 plausible future、长视频生成、数据平衡与 scaling 预测实验。</td></tr><tr><th>充分性判断</th><td>对论文评测范围内的机制结论较有支持；对真实闭环、跨域或安全泛化仍不足。</td></tr><tr><th>原因</th><td>视频清晰和条件可控不等于几何、动力学与碰撞后果准确；论文没有闭环规划成功率。</td></tr></tbody></table>
+<h3>10.3 可行改进方向</h3><p>加入 3D occupancy/深度一致性；用规划器选择反事实 rollout；评估长时预测中交通规则与几何漂移。</p>
+<h3>10.4 后续实验建议</h3><table><tbody><tr><th>核心模块去除/替换</th><td>隔离论文主张，观察核心指标是否按预期下降</td></tr><tr><th>跨域或扰动测试</th><td>检查方法是否依赖训练分布和干净输入</td></tr><tr><th>闭环 rollout</th><td>观察误差累积、碰撞与恢复</td></tr><tr><th>不确定性/安全验证</th><td>识别高风险预测并建立 fallback</td></tr></tbody></table>
+</section>
+
+<section id="qa"><h2>11. 组会问答准备</h2><p>Q: GAIA-1 为什么使用离散 token？<br>A: 离散 token 使视频、文本、动作可以放入统一自回归序列，借用 GPT 式下一 token 预测。<br>Q: 动作条件起什么作用？<br>A: 它允许同一视频 prompt 在不同 ego action 下 rollout 不同未来，形成可控模拟。<br>Q: DINO distillation 为什么重要？<br>A: 它让 image tokens 更有语义一致性，同类区域 embedding 更接近，利于 world model 学结构。<br>Q: GAIA-1 是否能直接规划？<br>A: 论文主要展示生成和可控性，没有充分给出现有 planner 上的安全提升指标。<br>Q: 复现最大难点？<br>A: 大规模真实驾驶视频和训练成本，以及高质量 tokenizer/decoder 的联合工程。</p></section>
+<section id="notes"><h2>12. 我的阅读笔记：转成自己的研究素材</h2>
+<h3>12.1 最值得借鉴的点</h3><p>GAIA-1 适合作为世界模型总纲：tokenized AR + diffusion decoder。与 Drive-WM/DriveDreamer/OccWorld 对比时应强调表示差异：像素视频、结构条件、多视角、3D occupancy。</p>
+<h3>12.2 与同目录论文的比较钩子</h3><p>可从“语言是否直接影响动作、是否显式预测未来世界、是否真实闭环、是否保留 3D 几何、是否使用 agent/tool/memory”五条轴与同目录论文比较。本文的定位为：动作与文本条件的生成式驾驶世界模型：在 token 空间自回归预测未来，再用扩散解码器生成视频。</p>
+<h3>12.3 可行动创新点</h3><p>加入 3D occupancy/深度一致性；用规划器选择反事实 rollout；评估长时预测中交通规则与几何漂移。</p>
+</section>
+<section id="appendix"><h2>13. 附录图解与证据索引</h2><p>本文使用的原始图件均来自 arXiv 源码，图注保留或准确转述。其他附录图未被机械堆入页面；只有能够解释方法、结果、消融或失败的图件才被选择。</p></section>
+<section id="refs"><h2>14. 参考资料与链接</h2><p><a href="https://arxiv.org/abs/2309.17080">arXiv</a> · <a href="https://arxiv.org/abs/2309.17080">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/gaia-1/">当前 Blog</a></p></section>
+</main></body></html>

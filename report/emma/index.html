@@ -1,15 +1,624 @@
-<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>EMMA: End-to-End Multimodal Model for Autonomous Driving</title><link rel='stylesheet' href='../../assets/style.css'></head><body>
-    <div class='toc'><div class='wrap'><a href='../../index.html'>← 首页</a><a href='#quick'>论文速览</a><a href='#motivation'>动机</a><a href='#method'>方法</a><a href='#exp'>实验</a><a href='#repro'>复现</a><a href='#qa'>Q&A</a><a href='#figs'>图解</a></div></div>
-    <main class='wrap'><section class='hero'><div class='eyebrow'>Paper Report · MLLM generalist / end-to-end planning</div><h1>EMMA: End-to-End Multimodal Model for Autonomous Driving</h1><div class='meta'>Jyh-Jing Hwang, Runsheng Xu, Hubert Lin, Wei-Chih Hung, Jingwei Ji, Kristy Choi, Di Huang, Tong He, Paul Covington, Benjamin Sapp, Yin Zhou, James Guo, Dragomir Anguelov, Mingxing Tan · 2024 / TMLR 2025 · arXiv: 2410.23262</div><div class='grid'><div class='card'><b>一句话贡献</b><br>EMMA 基于多模态大语言模型，把导航、ego 状态、轨迹、3D 位置、检测和道路图输出都文本化，在同一语言空间中统一规划、感知和道路理解任务。</div><div class='card'><b>关键词</b><br>EMMA、Gemini、MLLM generalist、textual trajectory、camera-only planning、CoT rationale、nuScenes、Waymo Open Motion Dataset</div><div class='card'><b>技术定位</b><br>MLLM generalist / end-to-end planning</div><div class='card'><b>是否开源</b><br>否，论文公开但模型/训练数据主要依赖 Gemini 与内部数据</div><div class='card'><b>适合程度</b><br>高：适合研究 MLLM generalist 在自动驾驶中的任务统一</div></div><p><a href='https://ixgnozeix.github.io/paper-reports/report/emma/'>计划公网链接：https://ixgnozeix.github.io/paper-reports/report/emma/</a></p></section>
-    <section id='quick'><h2>1. 论文速览</h2><p>EMMA 的核心不是再训练一个专用 planner，而是把自动驾驶多任务统一成多模态 prompt-to-text 生成：输入为高层命令、ego 历史状态和环视相机视频，输出可以是未来 ego 轨迹、对象 3D 位置、道路图元素或带 grounding 的决策 rationale。论文报告 EMMA 在 nuScenes motion planning 达到 SOTA，并在 WOMD、WOD camera-primary 3D 检测和 road graph 任务上有竞争力；co-training 规划、检测和道路图任务可互相增益。作者也明确指出局限：只能处理少量图像帧，不使用 LiDAR/radar，计算成本高，真实车部署面临推理延迟。</p><div><span class='tag'>EMMA</span><span class='tag'>Gemini</span><span class='tag'>MLLM generalist</span><span class='tag'>textual trajectory</span><span class='tag'>camera-only planning</span><span class='tag'>CoT rationale</span><span class='tag'>nuScenes</span><span class='tag'>Waymo Open Motion Dataset</span></div></section>
-    <section id='motivation'><h2>2. 研究问题与动机</h2><p>模块化自动驾驶在 perception、prediction、planning 之间传递结构化中间结果，容易产生级联误差和信息瓶颈。端到端 planner 又往往缺少通用世界知识，难以解释复杂场景。EMMA 假设 MLLM 预训练得到的世界知识和语言推理能力可以成为自动驾驶 generalist 的底座；为了让模型统一处理数值轨迹和空间对象，作者把非传感器输入和输出转成自然语言 token，而不是增加多个独立任务头。</p></section>
-    <section id='related'><h2>3. 相关工作脉络</h2><p>EMMA 与 GPT-Driver 都把轨迹语言化，但 GPT-Driver 更像 GPT-3.5 motion planner，输入依赖结构化感知；EMMA 则从 camera video 直接到规划/检测/道路图多任务。它也不同于 DriveVLM 的 dual-system，因为 EMMA 更强调一个 MLLM generalist 统一多任务输出。与传统 Wayformer/MotionLM 相比，EMMA 使用 camera 和 ego 历史，减少对高质量 LiDAR/road graph/agent labels 的依赖。</p></section>
-    <section id='method'><h2>4. 方法详解</h2><p>EMMA 采用多模态大模型作为骨干，将图像帧编码为视觉上下文，把导航命令和 ego 状态写入文本 prompt。规划时，模型生成候选未来 waypoint 序列，并可同时生成 CoT rationale 与 critical object grounding；generalist 设置中，task prompt 决定输出格式，例如 planner trajectory、3D object、road graph element。训练目标是自回归文本预测，输出再由解析器转回轨迹或结构化对象。多任务 co-training 让视觉表征共享规划、检测、道路拓扑约束。推理时可采样多条轨迹，论文 Fig.3 显示候选数量增加能改善 ADE@5s，但超过约 12 条收益递减。</p></section>
-    <section id='exp'><h2>5. 实验与结果</h2><p>实验覆盖内部规划 benchmark、nuScenes、WOMD 和 WOD。论文 Table 2 中 MotionLM* 在 5s L2 为 0.696、Wayformer* 为 0.628；EMMA+ w/ CoT 被报告在 5s horizon 相对之前 SOTA 有 13.5% 提升。关键消融包括基础 MLLM、是否使用 CoT、是否使用大规模内部数据、采样轨迹数量和多任务 co-training。定性图展示模型能把 cyclist/vehicle 等 critical objects 写进 rationale 并输出未来 waypoint。证据缺口是内部数据和 Gemini 权重不可完全复现，开源社区很难确认同等规模下的训练收益。</p></section>
-    <section id='repro'><h2>6. 复现要点</h2><p>最小可行复现应退化为 open-source MLLM 版本：用 PaLI/LLaVA/Qwen-VL 类模型，构造 camera + ego state prompt，将轨迹离散/文本化，训练生成未来 waypoints；再增加 object/road graph prompt 做多任务 co-training。需要 nuScenes/WOMD/WOD 数据、图像帧抽取、轨迹字符串解析和候选轨迹采样器。硬件门槛较高，瓶颈是长上下文视频帧和 MLLM fine-tuning。验收标准是规划 L2/ADE、检测 AP、road graph 结构指标分别能体现 co-training 正增益。</p></section>
-    <section id='analysis'><h2>7. 分析、局限与边界</h2><p>EMMA 最重要的贡献是把“驾驶输出也是语言”做成统一接口，这让 planner、detector、map head 能共享 MLLM 推理空间。证据支持 MLLM generalist 在开环任务上的潜力，但不能说明模型可直接上车：帧数、传感器缺失、延迟和内部数据依赖都是硬边界。下一步可以研究轻量蒸馏、低延迟解码、VLA-style action head，以及用可验证安全层约束文本轨迹。</p></section>
-    <section id='qa'><h2>8. 组会问答准备</h2><div class='qa'><b>Q：EMMA 为什么把轨迹写成文本？</b><br>A：这样可以让 MLLM 用同一自回归语言目标生成轨迹、对象和道路图，避免为每个任务设计独立输出头。</div><div class='qa'><b>Q：CoT 在 EMMA 中的作用是什么？</b><br>A：它让模型先写出 critical objects 和 driving rationale，再生成轨迹，提升解释性并改善长时域规划质量。</div><div class='qa'><b>Q：EMMA 和 MotionLM/Wayformer 的输入差异？</b><br>A：MotionLM/Wayformer使用 agent history、road graph、traffic lights 等强结构输入；EMMA 强调 camera + ego history 和 MLLM 预训练。</div><div class='qa'><b>Q：为什么难复现？</b><br>A：核心 Gemini 权重和 mega-scale 内部数据不可得，完整结果只能通过论文报告验证。</div><div class='qa'><b>Q：最大部署瓶颈？</b><br>A：大模型推理延迟、少帧输入、没有 LiDAR/radar 精确深度，以及安全验证缺失。</div></section>
-    <section id='figs'><h2>9. 补充图解与附录证据</h2><div class='figure'><img src='figures/figure1.png' alt='Figure 1. EMMA overview diagram。'><div class='caption'>Figure 1. EMMA overview diagram。</div><div class='interp'><b>本文解读：</b>左侧三类输入是 router command、ego history 和 surround-view video；中心 MLLM 生成 rationale 与 trajectory；底部扩展到 spatial reasoning、road comprehension、scene understanding。图说明 EMMA 是多任务 generalist，而不只是 planner；但图本身不能证明实时部署可行。</div></div><div class='figure'><img src='figures/figure2.png' alt='Figure 2. EMMA Generalist 输出示意。'><div class='caption'>Figure 2. EMMA Generalist 输出示意。</div><div class='interp'><b>本文解读：</b>task prompt 决定模型输出为轨迹、对象或道路图，再解析成结构化结果覆盖到图像。它支撑统一语言空间的设计，但解析器和数值精度仍是工程约束。</div></div><div class='figure'><img src='figures/figure3.png' alt='Figure 3. 采样轨迹数量消融。'><div class='caption'>Figure 3. 采样轨迹数量消融。</div><div class='interp'><b>本文解读：</b>横轴候选轨迹数量增加，ADE@5s 改善后趋于饱和，说明多样化采样有用但有边际收益。它不能证明无限采样会提升安全，只说明采样-选择策略的重要性。</div></div></section>
-    <section><h2>我的阅读笔记</h2><p>EMMA 是“自动驾驶 generalist MLLM”的关键对照。可作为 OpenEMMA/OpenDriveVLA 的上游思想来源：文本化输出能统一任务，但复现应优先用开源 MLLM + 小数据验证机制，而不是追求论文绝对数值。</p></section>
-    <div class='footer'>Generated as a static OpenMOSS/WAM-style local report. Source PDF/images are stored under this report folder when available.</div>
-    </main></body></html>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EMMA: End-to-End Multimodal Model for Autonomous Driving · 深度解读</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style></head><body><main>
+<header><div class="title-wrap"><h1>EMMA: End-to-End Multimodal Model for Autonomous Driving</h1>
+<p class="subtitle">Zotero「自驾」分类 · 按新版论文深度解读大纲重构</p>
+<p class="lead"><strong>一句话贡献：</strong>EMMA 基于多模态大语言模型，把导航、ego 状态、轨迹、3D 位置、检测和道路图输出都文本化，在同一语言空间中统一规划、感知和道路理解任务。</p>
+<div class="meta"><span class="pill">MLLM generalist / end-to-end planning</span><span class="pill">arXiv:2410.23262</span><span class="pill">否，论文公开但模型/训练数据主要依赖 Gemini 与内部数据</span></div>
+<p><a href="https://arxiv.org/abs/2410.23262">arXiv</a> · <a href="https://arxiv.org/abs/2410.23262">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/emma/">当前 Blog</a></p></div></header>
+
+<nav class="toc">
+<a href="#identity">0. 论文身份卡片</a><a href="#quick">1. 论文速览</a><a href="#motivation">2. 研究问题与动机</a>
+<a href="#lineage">3. 相关工作脉络</a><a href="#overview-fig">4. 方法总览图</a><a href="#method">5. 方法详解</a>
+<a href="#figures">6. 原论文图解</a><a href="#experiments">7. 实验与结果</a><a href="#failures">8. 消融、失败与证据缺口</a>
+<a href="#repro">9. 复现要点</a><a href="#analysis">10. 分析、局限与边界</a><a href="#qa">11. 组会问答</a>
+<a href="#notes">12. 我的阅读笔记</a><a href="#appendix">13. 附录证据</a><a href="#refs">14. 参考资料</a>
+</nav>
+<section id="identity"><h2>0. 页面头部：论文身份卡片</h2>
+<table><tbody><tr><th>论文</th><td>EMMA: End-to-End Multimodal Model for Autonomous Driving</td></tr><tr><th>作者</th><td>Hwang, Jyh-Jing；Xu, Runsheng；Lin, Hubert；Hung, Wei-Chih；Ji, Jingwei；Choi, Kristy；Huang, Di；He, Tong；Covington, Paul；Sapp, Benjamin；Zhou, Yin；Guo, James 等</td></tr><tr><th>时间</th><td>2024/10/30</td></tr><tr><th>方向</th><td>MLLM generalist / end-to-end planning</td></tr><tr><th>核心贡献</th><td>EMMA 基于多模态大语言模型，把导航、ego 状态、轨迹、3D 位置、检测和道路图输出都文本化，在同一语言空间中统一规划、感知和道路理解任务。</td></tr><tr><th>模型类型</th><td>以统一多模态生成模型同时承担端到端运动规划、3D 检测和道路图估计，研究通用模型是否能覆盖自动驾驶多种输出接口。</td></tr><tr><th>输入</th><td>环视相机视频、高层路线命令和 ego 历史状态；不同任务通过文本 prompt 指定。</td></tr><tr><th>中间表示</th><td>多模态大模型把视觉与状态编码到共享 token 空间，各任务的几何对象、道路图与轨迹均文本化或序列化。</td></tr><tr><th>输出</th><td>未来 ego 轨迹、3D 对象、道路图以及相应文本式结构化预测。</td></tr><tr><th>训练目标</th><td>自回归 next-token 目标统一多任务监督，并对规划轨迹采用多样采样与候选选择。</td></tr><tr><th>代码与复现状态</th><td>否，论文公开但模型/训练数据主要依赖 Gemini 与内部数据；高：适合研究 MLLM generalist 在自动驾驶中的任务统一</td></tr></tbody></table>
+</section>
+
+<section id="quick"><h2>1. 论文速览：用一页讲清楚价值</h2>
+<h3>1.1 一句话贡献</h3><p>EMMA 基于多模态大语言模型，把导航、ego 状态、轨迹、3D 位置、检测和道路图输出都文本化，在同一语言空间中统一规划、感知和道路理解任务。</p>
+<h3>1.2 论文专属关键词</h3><p>EMMA、Gemini、MLLM generalist、textual trajectory、camera-only planning、CoT rationale、nuScenes、Waymo Open Motion Dataset</p>
+<h3>1.3 技术定位</h3><p>以统一多模态生成模型同时承担端到端运动规划、3D 检测和道路图估计，研究通用模型是否能覆盖自动驾驶多种输出接口。</p>
+<h3>1.4 论文构建了什么</h3><table><tbody><tr><th>输入</th><td>环视相机视频、高层路线命令和 ego 历史状态；不同任务通过文本 prompt 指定。</td></tr><tr><th>编码与融合</th><td>多模态大模型把视觉与状态编码到共享 token 空间，各任务的几何对象、道路图与轨迹均文本化或序列化。</td></tr><tr><th>输出</th><td>未来 ego 轨迹、3D 对象、道路图以及相应文本式结构化预测。</td></tr><tr><th>训练目标</th><td>自回归 next-token 目标统一多任务监督，并对规划轨迹采用多样采样与候选选择。</td></tr></tbody></table>
+<h3>1.5 核心结论与证据链</h3><p>EMMA 的核心不是再训练一个专用 planner，而是把自动驾驶多任务统一成多模态 prompt-to-text 生成：输入为高层命令、ego 历史状态和环视相机视频，输出可以是未来 ego 轨迹、对象 3D 位置、道路图元素或带 grounding 的决策 rationale。论文报告 EMMA 在 nuScenes motion planning 达到 SOTA，并在 WOMD、WOD camera-primary 3D 检测和 road graph 任务上有竞争力；co-training 规划、检测和道路图任务可互相增益。作者也明确指出局限：只能处理少量图像帧，不使用 LiDAR/radar，计算成本高，真实车部署面临推理延迟。</p><p>核心证据来自：数据 scaling 曲线、采样数量消融、3D 检测与道路图结果、多任务定性预测和明确失败案例。。证据边界是：内部大规模数据不可完整复现；检测/道路图与规划共享模型的收益未等同于闭环安全收益。</p>
+</section>
+
+<section id="motivation"><h2>2. 研究问题与动机：为什么需要这篇论文</h2>
+<h3>2.1 核心问题与成功标准</h3><p>模块化自动驾驶在 perception、prediction、planning 之间传递结构化中间结果，容易产生级联误差和信息瓶颈。端到端 planner 又往往缺少通用世界知识，难以解释复杂场景。EMMA 假设 MLLM 预训练得到的世界知识和语言推理能力可以成为自动驾驶 generalist 的底座；为了让模型统一处理数值轨迹和空间对象，作者把非传感器输入和输出转成自然语言 token，而不是增加多个独立任务头。</p>
+<h3>2.2 现有方法的具体不足</h3><p>该论文针对的瓶颈不是笼统的“泛化不足”，而是：为每个任务训练独立网络会重复计算且难共享语义；但纯文本化几何可能损失连续精度，因此 EMMA 依赖结构化解码与大量数据。</p>
+<h3>2.3 为什么不走显而易见的替代路线</h3><p>为每个任务训练独立网络会重复计算且难共享语义；但纯文本化几何可能损失连续精度，因此 EMMA 依赖结构化解码与大量数据。</p>
+</section>
+
+<section id="lineage"><h2>3. 相关工作脉络：这篇论文从哪里来</h2>
+<h3>3.1 技术家族与直接前作</h3><p>EMMA 与 GPT-Driver 都把轨迹语言化，但 GPT-Driver 更像 GPT-3.5 motion planner，输入依赖结构化感知；EMMA 则从 camera video 直接到规划/检测/道路图多任务。它也不同于 DriveVLM 的 dual-system，因为 EMMA 更强调一个 MLLM generalist 统一多任务输出。与传统 Wayformer/MotionLM 相比，EMMA 使用 camera 和 ego 历史，减少对高质量 LiDAR/road graph/agent labels 的依赖。</p>
+<h3>3.2 本文新意属于表示、架构、训练还是评估</h3><p>从技术地图看，本文的主要新意可概括为：以统一多模态生成模型同时承担端到端运动规划、3D 检测和道路图估计，研究通用模型是否能覆盖自动驾驶多种输出接口。。它并非简单替换 backbone，而是围绕输入表示、中间信息流或评价方式重新定义了论文的核心问题。</p>
+</section>
+
+<section id="overview-fig"><h2>4. 方法总览图：先看完整信息流</h2>
+<h3>4.1 主框架图与机制</h3><figure><img src="figures/source/fig01_efm_e2e_compact.png" alt="原论文图 1"><figcaption><strong>原论文 Figure 1：</strong>\model\ overview diagram. It takes 3 inputs (left): 1) a high-level command from the router, 2) historical status of the ego vehicle, and 3) surround-view camera videos. The model then predicts ego future trajectories (right) for motion planning that will be transformed into vehicle driving control signals. Further, we can ask the model to explain its rationale (top) before predicting trajectories, which enhances both the performance and explainability of the model through chain-of-thought reasoning. Notably, we incorporate visual grounding into the rationale so that the model also predicts the accurate 3D/BEV location for critical objects. In addition to end-to-end planning, we highlight three additional perception capabilities of our model (bottom).</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>环视视频、高层命令和 ego 历史共同进入 EMMA，输出未来轨迹；旁支任务让同一模型生成检测和道路图。该图说明共享多任务接口，不证明多任务一定互相促进，梯度冲突需要靠实验消融判断。</div>
+<h3>4.2 信息流一句话串联</h3><p>输入：环视相机视频、高层路线命令和 ego 历史状态；不同任务通过文本 prompt 指定。；中间处理：多模态大模型把视觉与状态编码到共享 token 空间，各任务的几何对象、道路图与轨迹均文本化或序列化。；最终输出：未来 ego 轨迹、3D 对象、道路图以及相应文本式结构化预测。；训练约束：自回归 next-token 目标统一多任务监督，并对规划轨迹采用多样采样与候选选择。</p>
+</section>
+
+<section id="method"><h2>5. 方法详解：输入、表示、融合、解码、训练与部署</h2>
+<h3>5.1 输入表示</h3><p>环视相机视频、高层路线命令和 ego 历史状态；不同任务通过文本 prompt 指定。。复现时首先要确保各模态的时间同步、坐标系、可见范围与训练时一致；任何一个上游输入偏移都可能被后续大模型放大。</p>
+<h3>5.2 编码器与融合设计</h3><p>多模态大模型把视觉与状态编码到共享 token 空间，各任务的几何对象、道路图与轨迹均文本化或序列化。</p>
+<h3>5.3 中间表示为何重要</h3><p>中间表示决定模型保留何种几何、语义和时间信息。该论文的关键中间链路是：多模态大模型把视觉与状态编码到共享 token 空间，各任务的几何对象、道路图与轨迹均文本化或序列化。。它让最终输出能够利用这些信息，但也把上游表示误差带入规划或预测。</p>
+<h3>5.4 解码、动作生成或未来预测</h3><p>未来 ego 轨迹、3D 对象、道路图以及相应文本式结构化预测。</p>
+<h3>5.5 训练目标及副作用</h3><p>自回归 next-token 目标统一多任务监督，并对规划轨迹采用多样采样与候选选择。。这些目标直接约束对应监督输出，却不会自动保证真实闭环安全、跨域鲁棒性或因果可解释性。</p>
+<h3>5.6 训练阶段与数据风险</h3><p>EMMA 采用多模态大模型作为骨干，将图像帧编码为视觉上下文，把导航命令和 ego 状态写入文本 prompt。规划时，模型生成候选未来 waypoint 序列，并可同时生成 CoT rationale 与 critical object grounding；generalist 设置中，task prompt 决定输出格式，例如 planner trajectory、3D object、road graph element。训练目标是自回归文本预测，输出再由解析器转回轨迹或结构化对象。多任务 co-training 让视觉表征共享规划、检测、道路拓扑约束。推理时可采样多条轨迹，论文 Fig.3 显示候选数量增加能改善 ADE@5s，但超过约 12 条收益递减。</p>
+<h3>5.7 推理与部署流程</h3><p>论文聚焦大规模离线数据与 Waymo Open Dataset 指标；从轨迹到真实控制仍需要下游控制器。</p>
+</section>
+
+<section id="figures"><h2>6. 原论文图解：逐图拆解证据含义</h2><h3>7.1 Figure 1：\model\ overview diagram. It takes 3 inputs (left): 1) a hig</h3><figure><img src="figures/source/fig01_efm_e2e_compact.png" alt="原论文图 1"><figcaption><strong>原论文 Figure 1：</strong>\model\ overview diagram. It takes 3 inputs (left): 1) a high-level command from the router, 2) historical status of the ego vehicle, and 3) surround-view camera videos. The model then predicts ego future trajectories (right) for motion planning that will be transformed into vehicle driving control signals. Further, we can ask the model to explain its rationale (top) before predicting trajectories, which enhances both the performance and explainability of the model through chain-of-thought reasoning. Notably, we incorporate visual grounding into the rationale so that the model also predicts the accurate 3D/BEV location for critical objects. In addition to end-to-end planning, we highlight three additional perception capabilities of our model (bottom).</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>环视视频、高层命令和 ego 历史共同进入 EMMA，输出未来轨迹；旁支任务让同一模型生成检测和道路图。该图说明共享多任务接口，不证明多任务一定互相促进，梯度冲突需要靠实验消融判断。</div>
+<h3>7.2 Figure 2：Illustration of \model\ Generalist. Starting with a task pro</h3><figure><img src="figures/source/fig02_generalist_compact.png" alt="原论文图 2"><figcaption><strong>原论文 Figure 2：</strong>Illustration of \model\ Generalist. Starting with a task prompt (left), \model\ generates a corresponding textual prediction (middle right), which can then be decoded into a target output format, visualized and overlaid with the input image (right). \model\ Generalist is highly versatile, capable of performing a wide range of driving-related tasks, such as end-to-end motion planning, object detection, road graph estimation, and scene understanding Q\&amp;A. In the answer text, italicized words represent placeholders that will be dynamically substituted with actual values during task execution.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>同一个 EMMA Generalist 通过不同 task prompt 输出轨迹、检测或道路图，再解码成目标格式叠加回图像。它说明任务接口统一到生成空间；不同输出共享 token 并不意味着它们拥有同等几何精度。</div>
+<h3>7.3 Figure 3：Ablation study on the number of sampled trajectories. As mor</h3><figure><img src="figures/source/fig03_sampling_ablation.png" alt="原论文图 3"><figcaption><strong>原论文 Figure 3：</strong>Ablation study on the number of sampled trajectories. As more trajectories are sampled, the quality measured by ADE@5s also improves, but the benefits diminish after 12+ samples.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>候选轨迹采样数增加时 ADE@5s 下降，但超过约 12 条后收益变缓。该消融说明多样候选能缓解单一生成的规划误差，同时指出推理成本与边际收益之间存在明确折中。</div>
+<h3>7.4 Figure 4：\model\ data scaling experiments on our mega-scale internal </h3><figure><img src="figures/source/fig04_data_scaling.png" alt="原论文图 4"><figcaption><strong>原论文 Figure 4：</strong>\model\ data scaling experiments on our mega-scale internal dataset. Each curve represents the eval perplexity for end-to-end motion planning as training proceeds with more steps. The x-axis is training compute, measured by floating-point operations (FLOPs) in log scale. The same \model\ model is trained on four sizes of datasets that are sampled with different percentages from 3% to 100% (denoted by different colors). In general, \model\ tends to achieve better quality until overfitting when given more training compute, but it overfits quickly on smaller datasets. We observe the driving quality has not saturated when using the full large-scale dataset.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>四种数据规模的规划 perplexity 随训练计算量下降，较大数据曲线在相同计算区域更低。它支持大数据改善生成建模，但 perplexity scaling 不能直接转换为真实闭环碰撞率 scaling。</div>
+<h3>7.5 Figure 6：Ablation study on road graph estimation. To evaluate the inf</h3><figure><img src="figures/source/fig06_roadgraph.png" alt="原论文图 6"><figcaption><strong>原论文 Figure 6：</strong>Ablation study on road graph estimation. To evaluate the influence of different components in our road graph estimation model, we ablate each configuration and measure the corresponding impact on quality. Dynamic sampling (leftmost) of road graph polylines based on lane curvature and length proves to be the most significant factor, leading to a substantial 70% to 90% change in lane-level precision and recall. In contrast, aligning the model with a language-like representation, \ie, semantic punctuation (rightmost), has a more modest effect, contributing to only &lt;10% change in precision and recall of any metric.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>道路图消融分别移除动态采样等组件，左侧变化最大，显示按车道曲率和长度选择 polyline 对质量最关键。该结果定位了道路表示瓶颈；它没有证明道路图改进必然提升最终规划。</div>
+<h3>7.6 Figure 12：Failure examples of \model\ prediction. Each row contains a </h3><figure><img src="figures/source/fig12_1095t.jpeg" alt="原论文图 12"><img src="figures/source/fig12_1095d.jpeg" alt="原论文图 12"><img src="figures/source/fig12_1095r.jpeg" alt="原论文图 12"><img src="figures/source/fig12_935t.jpeg" alt="原论文图 12"><figcaption><strong>原论文 Figure 12：</strong>Failure examples of \model\ prediction. Each row contains a scenario where \model&#x27;s predictions were partially flawed: end-to-end planning trajectory (left), 3D object detection (middle), and road graph estimation (right).</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>每行分别展示规划、3D 检测和道路图中的部分错误，使失败可定位到不同输出接口。它说明统一模型的错误并非单一来源；但这些案例没有量化错误在闭环中造成的实际风险。</div></section>
+
+<section id="experiments"><h2>7. 实验与结果：把证据链拆开</h2>
+<h3>7.1 数据集、任务与划分</h3><p>实验围绕该论文的技术定位组织：以统一多模态生成模型同时承担端到端运动规划、3D 检测和道路图估计，研究通用模型是否能覆盖自动驾驶多种输出接口。。需要特别区分离线预测、生成质量、开环规划与真实/仿真闭环，因为它们使用不同成功标准；本论文主要证据为：数据 scaling 曲线、采样数量消融、3D 检测与道路图结果、多任务定性预测和明确失败案例。</p>
+<h3>7.2 Baseline 为什么重要</h3><p>论文的比较应围绕其技术定位理解：以统一多模态生成模型同时承担端到端运动规划、3D 检测和道路图估计，研究通用模型是否能覆盖自动驾驶多种输出接口。。强 baseline 用来判断收益来自新增信息流、模型容量还是评估协议；仅与较弱旧方法比较不足以证明论文主张。</p>
+<h3>7.3 指标如何对应论文主张</h3><p>本文实验所依赖的证据为：数据 scaling 曲线、采样数量消融、3D 检测与道路图结果、多任务定性预测和明确失败案例。。离线预测误差、生成质量、规划指标或闭环分数各自只衡量部分能力，不能互相替代。</p>
+<h3>7.4 主结果与机制是否一致</h3><p>实验覆盖内部规划 benchmark、nuScenes、WOMD 和 WOD。论文 Table 2 中 MotionLM* 在 5s L2 为 0.696、Wayformer* 为 0.628；EMMA+ w/ CoT 被报告在 5s horizon 相对之前 SOTA 有 13.5% 提升。关键消融包括基础 MLLM、是否使用 CoT、是否使用大规模内部数据、采样轨迹数量和多任务 co-training。定性图展示模型能把 cyclist/vehicle 等 critical objects 写进 rationale 并输出未来 waypoint。证据缺口是内部数据和 Gemini 权重不可完全复现，开源社区很难确认同等规模下的训练收益。</p>
+</section>
+
+<section id="failures"><h2>8. 消融、失败案例与证据缺口</h2>
+<h3>8.1 消融实验应回答什么</h3><p>最关键的消融需要隔离该论文的核心信息流：数据 scaling 曲线、采样数量消融、3D 检测与道路图结果、多任务定性预测和明确失败案例。。如果去掉核心模块后只在部分指标下降，需要进一步判断收益是否集中于特定场景。</p>
+<h3>8.2 失败案例与证据缺口</h3><p>内部大规模数据不可完整复现；检测/道路图与规划共享模型的收益未等同于闭环安全收益。</p>
+<h3>8.3 论文没有证明什么</h3><p>现有结果不能直接推出：内部大规模数据不可完整复现；检测/道路图与规划共享模型的收益未等同于闭环安全收益。</p>
+</section>
+
+<section id="repro"><h2>9. 复现要点：真正动手会遇到什么</h2>
+<h3>9.1 最小可行复现路线</h3><p>最小可行复现应退化为 open-source MLLM 版本：用 PaLI/LLaVA/Qwen-VL 类模型，构造 camera + ego state prompt，将轨迹离散/文本化，训练生成未来 waypoints；再增加 object/road graph prompt 做多任务 co-training。需要 nuScenes/WOMD/WOD 数据、图像帧抽取、轨迹字符串解析和候选轨迹采样器。硬件门槛较高，瓶颈是长上下文视频帧和 MLLM fine-tuning。验收标准是规划 L2/ADE、检测 AP、road graph 结构指标分别能体现 co-training 正增益。</p>
+<h3>9.2 数据、模型、硬件与阻塞点</h3><p>数据与接口重点：环视相机视频、高层路线命令和 ego 历史状态；不同任务通过文本 prompt 指定。。模型重点：多模态大模型把视觉与状态编码到共享 token 空间，各任务的几何对象、道路图与轨迹均文本化或序列化。。部署重点：论文聚焦大规模离线数据与 Waymo Open Dataset 指标；从轨迹到真实控制仍需要下游控制器。。论文未明确披露的硬件与训练成本不在此推测。</p>
+<h3>9.3 验收标准</h3><p>复现成功不应只以脚本运行结束为标准，而应至少复现论文核心趋势：数据 scaling 曲线、采样数量消融、3D 检测与道路图结果、多任务定性预测和明确失败案例。；同时检查输出是否在论文声称的边界外快速退化。</p>
+</section>
+
+<section id="analysis"><h2>10. 分析、局限与边界：作者没说完的部分</h2>
+<h3>10.1 最有价值贡献</h3><p>EMMA 最重要的贡献是把“驾驶输出也是语言”做成统一接口，这让 planner、detector、map head 能共享 MLLM 推理空间。证据支持 MLLM generalist 在开环任务上的潜力，但不能说明模型可直接上车：帧数、传感器缺失、延迟和内部数据依赖都是硬边界。下一步可以研究轻量蒸馏、低延迟解码、VLA-style action head，以及用可验证安全层约束文本轨迹。</p>
+<h3>10.2 主张—证据—充分性</h3><table><tbody><tr><th>论文主张</th><td>以统一多模态生成模型同时承担端到端运动规划、3D 检测和道路图估计，研究通用模型是否能覆盖自动驾驶多种输出接口。</td></tr><tr><th>支撑证据</th><td>数据 scaling 曲线、采样数量消融、3D 检测与道路图结果、多任务定性预测和明确失败案例。</td></tr><tr><th>充分性判断</th><td>对论文评测范围内的机制结论较有支持；对真实闭环、跨域或安全泛化仍不足。</td></tr><tr><th>原因</th><td>内部大规模数据不可完整复现；检测/道路图与规划共享模型的收益未等同于闭环安全收益。</td></tr></tbody></table>
+<h3>10.3 可行改进方向</h3><p>测试任务梯度冲突；加入闭环安全 critic；比较文本几何 token 与 BEV/occupancy 连续 latent。</p>
+<h3>10.4 后续实验建议</h3><table><tbody><tr><th>核心模块去除/替换</th><td>隔离论文主张，观察核心指标是否按预期下降</td></tr><tr><th>跨域或扰动测试</th><td>检查方法是否依赖训练分布和干净输入</td></tr><tr><th>闭环 rollout</th><td>观察误差累积、碰撞与恢复</td></tr><tr><th>不确定性/安全验证</th><td>识别高风险预测并建立 fallback</td></tr></tbody></table>
+</section>
+
+<section id="qa"><h2>11. 组会问答准备</h2><p>Q: EMMA 为什么把轨迹写成文本？<br>A: 这样可以让 MLLM 用同一自回归语言目标生成轨迹、对象和道路图，避免为每个任务设计独立输出头。<br>Q: CoT 在 EMMA 中的作用是什么？<br>A: 它让模型先写出 critical objects 和 driving rationale，再生成轨迹，提升解释性并改善长时域规划质量。<br>Q: EMMA 和 MotionLM/Wayformer 的输入差异？<br>A: MotionLM/Wayformer使用 agent history、road graph、traffic lights 等强结构输入；EMMA 强调 camera + ego history 和 MLLM 预训练。<br>Q: 为什么难复现？<br>A: 核心 Gemini 权重和 mega-scale 内部数据不可得，完整结果只能通过论文报告验证。<br>Q: 最大部署瓶颈？<br>A: 大模型推理延迟、少帧输入、没有 LiDAR/radar 精确深度，以及安全验证缺失。</p></section>
+<section id="notes"><h2>12. 我的阅读笔记：转成自己的研究素材</h2>
+<h3>12.1 最值得借鉴的点</h3><p>EMMA 是“自动驾驶 generalist MLLM”的关键对照。可作为 OpenEMMA/OpenDriveVLA 的上游思想来源：文本化输出能统一任务，但复现应优先用开源 MLLM + 小数据验证机制，而不是追求论文绝对数值。</p>
+<h3>12.2 与同目录论文的比较钩子</h3><p>可从“语言是否直接影响动作、是否显式预测未来世界、是否真实闭环、是否保留 3D 几何、是否使用 agent/tool/memory”五条轴与同目录论文比较。本文的定位为：以统一多模态生成模型同时承担端到端运动规划、3D 检测和道路图估计，研究通用模型是否能覆盖自动驾驶多种输出接口。</p>
+<h3>12.3 可行动创新点</h3><p>测试任务梯度冲突；加入闭环安全 critic；比较文本几何 token 与 BEV/occupancy 连续 latent。</p>
+</section>
+<section id="appendix"><h2>13. 附录图解与证据索引</h2><p>本文使用的原始图件均来自 arXiv 源码，图注保留或准确转述。其他附录图未被机械堆入页面；只有能够解释方法、结果、消融或失败的图件才被选择。</p></section>
+<section id="refs"><h2>14. 参考资料与链接</h2><p><a href="https://arxiv.org/abs/2410.23262">arXiv</a> · <a href="https://arxiv.org/abs/2410.23262">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/emma/">当前 Blog</a></p></section>
+</main></body></html>

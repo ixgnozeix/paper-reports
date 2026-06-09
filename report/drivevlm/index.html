@@ -1,15 +1,624 @@
-<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>DriveVLM: The Convergence of Autonomous Driving and Large Vision-Language Models</title><link rel='stylesheet' href='../../assets/style.css'></head><body>
-    <div class='toc'><div class='wrap'><a href='../../index.html'>← 首页</a><a href='#quick'>论文速览</a><a href='#motivation'>动机</a><a href='#method'>方法</a><a href='#exp'>实验</a><a href='#repro'>复现</a><a href='#qa'>Q&A</a><a href='#figs'>图解</a></div></div>
-    <main class='wrap'><section class='hero'><div class='eyebrow'>Paper Report · VLM reasoning + dual-system planning</div><h1>DriveVLM: The Convergence of Autonomous Driving and Large Vision-Language Models</h1><div class='meta'>Xiaoyu Tian, Junru Gu, Bailin Li, Yicheng Liu, Yang Wang, Zhiyong Zhao, Kun Zhan, Peng Jia, Xianpeng Lang, Hang Zhao · CoRL 2024 / PMLR 2025 · arXiv: 2402.12289</div><div class='grid'><div class='card'><b>一句话贡献</b><br>DriveVLM 用 VLM 进行场景描述、场景分析和层级规划，并提出 DriveVLM-Dual 将 VLM 语义推理与传统 3D 感知/规划管线融合，在复杂场景理解和 nuScenes 规划上提升安全性。</div><div class='card'><b>关键词</b><br>Vision-Language Model、Chain-of-Thought、SUP-AD、DriveVLM-Dual、hierarchical planning、scene analysis、nuScenes、production vehicle</div><div class='card'><b>技术定位</b><br>VLM reasoning + dual-system planning</div><div class='card'><b>是否开源</b><br>部分：论文与项目材料公开，完整生产系统不可复现</div><div class='card'><b>适合程度</b><br>高：适合作为 VLM 参与场景理解/层级规划的代表</div></div><p><a href='https://ixgnozeix.github.io/paper-reports/report/drivevlm/'>计划公网链接：https://ixgnozeix.github.io/paper-reports/report/drivevlm/</a></p></section>
-    <section id='quick'><h2>1. 论文速览</h2><p>DriveVLM 的定位是“慢思考语义系统 + 快速几何管线”。纯 VLM 可以从图像生成场景描述、对象级分析、meta-action 和决策解释，但 VLM 的空间定位和推理时延不足以独立承担低层规划；因此作者提出 DriveVLM-Dual，把 VLM 的长尾理解能力接到传统 3D 感知与规划输出上。论文在 SUP-AD 上报告 DriveVLM w/ Qwen 的 scene description 得分 0.71、meta-actions 得分 0.37，优于 Lynx/CogVLM/GPT-4V 设置；在 nuScenes 规划中，DriveVLM-Dual† 达到 Avg. L2=0.31m、Avg. Collision=0.10%，优于 VAD-Base 的 0.37m/0.14%。</p><div><span class='tag'>Vision-Language Model</span><span class='tag'>Chain-of-Thought</span><span class='tag'>SUP-AD</span><span class='tag'>DriveVLM-Dual</span><span class='tag'>hierarchical planning</span><span class='tag'>scene analysis</span><span class='tag'>nuScenes</span><span class='tag'>production vehicle</span></div></section>
-    <section id='motivation'><h2>2. 研究问题与动机</h2><p>城市自动驾驶的难点并不只在检测常见车辆，而在复杂路况、警察手势、稀有物体、施工和人类意图。传统 pipeline 擅长几何定位，但很难自然描述“为什么要让行”；VLM 擅长语义和常识，却不擅长精确 3D 空间和实时控制。DriveVLM 选择 dual-system，是因为直接让大 VLM 输出低层轨迹会带来时延和空间误差，而把它作为高层语义推理器可以补齐长尾理解。</p></section>
-    <section id='related'><h2>3. 相关工作脉络</h2><p>相关工作包括自动驾驶场景描述/QA、VLM CoT 推理、传统 BEV 3D 感知与 VAD/UniAD 规划。DriveVLM 相对 GPT-Driver 的差异是输入从结构化文本/预测结果扩展到图像理解；相对 LMDrive 的差异是它更强调 VLM 的场景解释和层级规划，并用 dual-system 保留传统模块的实时与空间优势。</p></section>
-    <section id='method'><h2>4. 方法详解</h2><p>DriveVLM pipeline 包含三层语言化输出：scene description 描述道路、对象和环境；scene analysis 分析关键对象及风险；hierarchical planning 生成 meta-action 与可解释决策。DriveVLM-Dual 在此基础上接入传统 3D perception 和 trajectory planning，把 VLM 的语义判断作为高层约束或决策辅助，而非完全替代 planner。SUP-AD 数据集通过数据挖掘和自动/人工标注构造复杂场景问答与规划样例，训练时还与 Talk2Car、BDDX、Drama、SUTD、LLaVA 等数据 co-tuning，降低 VLM 灾难性遗忘。</p></section>
-    <section id='exp'><h2>5. 实验与结果</h2><p>实验包括 SUP-AD 场景理解和 nuScenes 开环规划。SUP-AD Table 1 显示 DriveVLM w/ Qwen 在 scene description 和 meta-actions 上分别为 0.71 和 0.37；GPT-4V in-context 只有 0.38 和 0.19，说明专门驾驶数据调优明显重要。nuScenes Table 2 中 DriveVLM-Dual† 的 Avg. L2=0.31m、Avg. Collision=0.10%，优于 VAD-Base 和单独 DriveVLM。定性图展示骑行者、交警手势等长尾场景解释。证据缺口是 dual-system 部分依赖传统管线，难以说明 VLM 本身能完成全部低层控制。</p></section>
-    <section id='repro'><h2>6. 复现要点</h2><p>复现应先复刻 SUP-AD 风格数据：给每个场景生成图像、对象描述、meta-action 和决策说明；随后用 Qwen/LLaVA 类 VLM 做 instruction tuning，再接入已有 3D planner 形成 Dual。计算资源主要取决于 VLM fine-tuning 和 nuScenes 数据预处理。没有生产车系统代码时，复现验收应聚焦两个指标：SUP-AD 语义分数能接近论文趋势，DriveVLM-Dual 在同一 planner 上能降低 L2/Collision。</p></section>
-    <section id='analysis'><h2>7. 分析、局限与边界</h2><p>DriveVLM 的价值在于承认 VLM 与几何 planner 各有短板，用双系统把语义泛化和几何安全结合。论文证据支持“VLM 语义推理能改善长尾规划”，但不能证明端到端 VLM 可独立实时驾驶。后续可以尝试把 VLM 输出约束转成可微 reward 或形式化 safety predicate，而不是只作为自然语言决策。</p></section>
-    <section id='qa'><h2>8. 组会问答准备</h2><div class='qa'><b>Q：为什么需要 DriveVLM-Dual？</b><br>A：因为 VLM 的空间推理和推理时延不足以直接承担实时低层规划，Dual 保留传统 3D 管线的几何精度，同时引入语义推理。</div><div class='qa'><b>Q：SUP-AD 解决了什么问题？</b><br>A：它提供复杂场景的描述、分析、meta-action 和决策标注，用于训练 VLM 理解驾驶长尾语义。</div><div class='qa'><b>Q：DriveVLM 和 GPT-Driver 的本质区别？</b><br>A：GPT-Driver 主要把结构化感知/预测结果转成语言做轨迹生成；DriveVLM 从图像/VLM 出发做场景理解，并通过 Dual 接几何 planner。</div><div class='qa'><b>Q：实验最能支撑哪条结论？</b><br>A：DriveVLM-Dual 在 nuScenes Avg. L2 和 Collision 上优于 VAD-Base，说明语义高层信号能改进已有 planner。</div><div class='qa'><b>Q：复现最难是什么？</b><br>A：SUP-AD 标注和 Dual 系统接口，尤其是如何把 VLM 语义输出稳定转成 planner 可用约束。</div></section>
-    <section id='figs'><h2>9. 补充图解与附录证据</h2><div class='figure'><img src='figures/figure1.png' alt='Figure 1. DriveVLM / DriveVLM-Dual pipeline。'><div class='caption'>Figure 1. DriveVLM / DriveVLM-Dual pipeline。</div><div class='interp'><b>本文解读：</b>左侧纯 VLM 通过 CoT 输出场景描述、分析和层级规划；Dual 分支加入传统 3D perception 和 trajectory planner。图支撑“VLM 不直接替代全部几何模块”的设计选择，但不能证明真实车部署的安全边界。</div></div><div class='figure'><img src='figures/figure2.png' alt='Figure 2. SUP-AD 标注样例。'><div class='caption'>Figure 2. SUP-AD 标注样例。</div><div class='interp'><b>本文解读：</b>样例把图像场景拆成描述、分析、meta-action 和决策文字，连接到监督数据构造。它说明训练目标比普通 caption 更贴近驾驶决策，但不能代表所有长尾场景。</div></div><div class='figure'><img src='figures/figure3.png' alt='Figure 3. SUP-AD 数据挖掘与标注流程。'><div class='caption'>Figure 3. SUP-AD 数据挖掘与标注流程。</div><div class='interp'><b>本文解读：</b>图中从大规模数据筛选复杂场景，再生成/校验语言标注。它支撑数据集多样性来源，但数据质量仍取决于标注器和筛选策略。</div></div></section>
-    <section><h2>我的阅读笔记</h2><p>适合作为“慢思考 VLM + 快速 planner”的代表。组会可重点比较 LMDrive 的闭环语言控制和 DriveVLM 的 dual-system 语义辅助，两者不是同一层次的端到端。</p></section>
-    <div class='footer'>Generated as a static OpenMOSS/WAM-style local report. Source PDF/images are stored under this report folder when available.</div>
-    </main></body></html>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DriveVLM: The Convergence of Autonomous Driving and Large Vision-Language Models · 深度解读</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style></head><body><main>
+<header><div class="title-wrap"><h1>DriveVLM: The Convergence of Autonomous Driving and Large Vision-Language Models</h1>
+<p class="subtitle">Zotero「自驾」分类 · 按新版论文深度解读大纲重构</p>
+<p class="lead"><strong>一句话贡献：</strong>DriveVLM 用 VLM 进行场景描述、场景分析和层级规划，并提出 DriveVLM-Dual 将 VLM 语义推理与传统 3D 感知/规划管线融合，在复杂场景理解和 nuScenes 规划上提升安全性。</p>
+<div class="meta"><span class="pill">VLM reasoning + dual-system planning</span><span class="pill">arXiv:2402.12289</span><span class="pill">部分：论文与项目材料公开，完整生产系统不可复现</span></div>
+<p><a href="https://arxiv.org/abs/2402.12289">arXiv</a> · <a href="https://proceedings.mlr.press/v270/tian25c.html">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/drivevlm/">当前 Blog</a></p></div></header>
+
+<nav class="toc">
+<a href="#identity">0. 论文身份卡片</a><a href="#quick">1. 论文速览</a><a href="#motivation">2. 研究问题与动机</a>
+<a href="#lineage">3. 相关工作脉络</a><a href="#overview-fig">4. 方法总览图</a><a href="#method">5. 方法详解</a>
+<a href="#figures">6. 原论文图解</a><a href="#experiments">7. 实验与结果</a><a href="#failures">8. 消融、失败与证据缺口</a>
+<a href="#repro">9. 复现要点</a><a href="#analysis">10. 分析、局限与边界</a><a href="#qa">11. 组会问答</a>
+<a href="#notes">12. 我的阅读笔记</a><a href="#appendix">13. 附录证据</a><a href="#refs">14. 参考资料</a>
+</nav>
+<section id="identity"><h2>0. 页面头部：论文身份卡片</h2>
+<table><tbody><tr><th>论文</th><td>DriveVLM: The Convergence of Autonomous Driving and Large Vision-Language Models</td></tr><tr><th>作者</th><td>Tian, Xiaoyu；Gu, Junru；Li, Bailin；Liu, Yicheng；Wang, Yang；Zhao, Zhiyong；Zhan, Kun；Jia, Peng；Lang, Xianpeng；Zhao, Hang</td></tr><tr><th>时间</th><td>2024/02/19</td></tr><tr><th>方向</th><td>VLM reasoning + dual-system planning</td></tr><tr><th>核心贡献</th><td>DriveVLM 用 VLM 进行场景描述、场景分析和层级规划，并提出 DriveVLM-Dual 将 VLM 语义推理与传统 3D 感知/规划管线融合，在复杂场景理解和 nuScenes 规划上提升安全性。</td></tr><tr><th>模型类型</th><td>以 VLM 进行场景描述、场景分析与分层规划，并用 DriveVLM-Dual 将语言推理与传统 3D 感知/规划管线融合。</td></tr><tr><th>输入</th><td>多相机图像；Dual 版本额外接收传统 3D 感知、轨迹与结构化几何信息。</td></tr><tr><th>中间表示</th><td>Chain-of-Thought 依次形成场景描述、关键对象/风险分析、meta-action 与 waypoint；Dual 路线将语义规划与数值规划结果融合。</td></tr><tr><th>输出</th><td>层级驾驶决策、meta-action 与未来轨迹，而不是直接低层车辆执行器控制。</td></tr><tr><th>训练目标</th><td>在 SUP-AD 指令/分析/规划标注上进行多任务生成训练，并以轨迹误差和规划指标监督数值输出。</td></tr><tr><th>代码与复现状态</th><td>部分：论文与项目材料公开，完整生产系统不可复现；高：适合作为 VLM 参与场景理解/层级规划的代表</td></tr></tbody></table>
+</section>
+
+<section id="quick"><h2>1. 论文速览：用一页讲清楚价值</h2>
+<h3>1.1 一句话贡献</h3><p>DriveVLM 用 VLM 进行场景描述、场景分析和层级规划，并提出 DriveVLM-Dual 将 VLM 语义推理与传统 3D 感知/规划管线融合，在复杂场景理解和 nuScenes 规划上提升安全性。</p>
+<h3>1.2 论文专属关键词</h3><p>Vision-Language Model、Chain-of-Thought、SUP-AD、DriveVLM-Dual、hierarchical planning、scene analysis、nuScenes、production vehicle</p>
+<h3>1.3 技术定位</h3><p>以 VLM 进行场景描述、场景分析与分层规划，并用 DriveVLM-Dual 将语言推理与传统 3D 感知/规划管线融合。</p>
+<h3>1.4 论文构建了什么</h3><table><tbody><tr><th>输入</th><td>多相机图像；Dual 版本额外接收传统 3D 感知、轨迹与结构化几何信息。</td></tr><tr><th>编码与融合</th><td>Chain-of-Thought 依次形成场景描述、关键对象/风险分析、meta-action 与 waypoint；Dual 路线将语义规划与数值规划结果融合。</td></tr><tr><th>输出</th><td>层级驾驶决策、meta-action 与未来轨迹，而不是直接低层车辆执行器控制。</td></tr><tr><th>训练目标</th><td>在 SUP-AD 指令/分析/规划标注上进行多任务生成训练，并以轨迹误差和规划指标监督数值输出。</td></tr></tbody></table>
+<h3>1.5 核心结论与证据链</h3><p>DriveVLM 的定位是“慢思考语义系统 + 快速几何管线”。纯 VLM 可以从图像生成场景描述、对象级分析、meta-action 和决策解释，但 VLM 的空间定位和推理时延不足以独立承担低层规划；因此作者提出 DriveVLM-Dual，把 VLM 的长尾理解能力接到传统 3D 感知与规划输出上。论文在 SUP-AD 上报告 DriveVLM w/ Qwen 的 scene description 得分 0.71、meta-actions 得分 0.37，优于 Lynx/CogVLM/GPT-4V 设置；在 nuScenes 规划中，DriveVLM-Dual† 达到 Avg. L2=0.31m、Avg. Collision=0.10%，优于 VAD-Base 的 0.37m/0.14%。</p><p>核心证据来自：SUP-AD 主结果、DriveVLM 与 DriveVLM-Dual 对比、模型规模/CoT/3D 信息消融和非常规场景定性案例。。证据边界是：精致语言解释不等于决策真正依赖该解释；离线轨迹指标也不能替代长时间闭环碰撞率。</p>
+</section>
+
+<section id="motivation"><h2>2. 研究问题与动机：为什么需要这篇论文</h2>
+<h3>2.1 核心问题与成功标准</h3><p>城市自动驾驶的难点并不只在检测常见车辆，而在复杂路况、警察手势、稀有物体、施工和人类意图。传统 pipeline 擅长几何定位，但很难自然描述“为什么要让行”；VLM 擅长语义和常识，却不擅长精确 3D 空间和实时控制。DriveVLM 选择 dual-system，是因为直接让大 VLM 输出低层轨迹会带来时延和空间误差，而把它作为高层语义推理器可以补齐长尾理解。</p>
+<h3>2.2 现有方法的具体不足</h3><p>该论文针对的瓶颈不是笼统的“泛化不足”，而是：纯 VLM 推理缺乏精确 3D 几何；纯传统规划难利用开放词汇语义与非常规场景知识，因此论文保留双系统。</p>
+<h3>2.3 为什么不走显而易见的替代路线</h3><p>纯 VLM 推理缺乏精确 3D 几何；纯传统规划难利用开放词汇语义与非常规场景知识，因此论文保留双系统。</p>
+</section>
+
+<section id="lineage"><h2>3. 相关工作脉络：这篇论文从哪里来</h2>
+<h3>3.1 技术家族与直接前作</h3><p>相关工作包括自动驾驶场景描述/QA、VLM CoT 推理、传统 BEV 3D 感知与 VAD/UniAD 规划。DriveVLM 相对 GPT-Driver 的差异是输入从结构化文本/预测结果扩展到图像理解；相对 LMDrive 的差异是它更强调 VLM 的场景解释和层级规划，并用 dual-system 保留传统模块的实时与空间优势。</p>
+<h3>3.2 本文新意属于表示、架构、训练还是评估</h3><p>从技术地图看，本文的主要新意可概括为：以 VLM 进行场景描述、场景分析与分层规划，并用 DriveVLM-Dual 将语言推理与传统 3D 感知/规划管线融合。。它并非简单替换 backbone，而是围绕输入表示、中间信息流或评价方式重新定义了论文的核心问题。</p>
+</section>
+
+<section id="overview-fig"><h2>4. 方法总览图：先看完整信息流</h2>
+<h3>4.1 主框架图与机制</h3><figure><img src="figures/source/fig02_dataset-pipeline.png" alt="原论文图 2"><figcaption><strong>原论文 Figure 2：</strong>The proposed data mining and annotation pipeline for constructing the scene understanding and planning dataset. Scenario examples randomly sampled from the dataset (below) demonstrate the diversity and complexity of the dataset.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>上半部从原始驾驶片段筛选复杂场景并生成描述、分析与规划标注，下半部展示非常规车辆、障碍和交互样例。该流程支撑 SUP-AD 为 CoT 提供分层监督；自动标注质量和场景筛选偏差仍可能进入模型。</div>
+<h3>4.2 信息流一句话串联</h3><p>输入：多相机图像；Dual 版本额外接收传统 3D 感知、轨迹与结构化几何信息。；中间处理：Chain-of-Thought 依次形成场景描述、关键对象/风险分析、meta-action 与 waypoint；Dual 路线将语义规划与数值规划结果融合。；最终输出：层级驾驶决策、meta-action 与未来轨迹，而不是直接低层车辆执行器控制。；训练约束：在 SUP-AD 指令/分析/规划标注上进行多任务生成训练，并以轨迹误差和规划指标监督数值输出。</p>
+</section>
+
+<section id="method"><h2>5. 方法详解：输入、表示、融合、解码、训练与部署</h2>
+<h3>5.1 输入表示</h3><p>多相机图像；Dual 版本额外接收传统 3D 感知、轨迹与结构化几何信息。。复现时首先要确保各模态的时间同步、坐标系、可见范围与训练时一致；任何一个上游输入偏移都可能被后续大模型放大。</p>
+<h3>5.2 编码器与融合设计</h3><p>Chain-of-Thought 依次形成场景描述、关键对象/风险分析、meta-action 与 waypoint；Dual 路线将语义规划与数值规划结果融合。</p>
+<h3>5.3 中间表示为何重要</h3><p>中间表示决定模型保留何种几何、语义和时间信息。该论文的关键中间链路是：Chain-of-Thought 依次形成场景描述、关键对象/风险分析、meta-action 与 waypoint；Dual 路线将语义规划与数值规划结果融合。。它让最终输出能够利用这些信息，但也把上游表示误差带入规划或预测。</p>
+<h3>5.4 解码、动作生成或未来预测</h3><p>层级驾驶决策、meta-action 与未来轨迹，而不是直接低层车辆执行器控制。</p>
+<h3>5.5 训练目标及副作用</h3><p>在 SUP-AD 指令/分析/规划标注上进行多任务生成训练，并以轨迹误差和规划指标监督数值输出。。这些目标直接约束对应监督输出，却不会自动保证真实闭环安全、跨域鲁棒性或因果可解释性。</p>
+<h3>5.6 训练阶段与数据风险</h3><p>DriveVLM pipeline 包含三层语言化输出：scene description 描述道路、对象和环境；scene analysis 分析关键对象及风险；hierarchical planning 生成 meta-action 与可解释决策。DriveVLM-Dual 在此基础上接入传统 3D perception 和 trajectory planning，把 VLM 的语义判断作为高层约束或决策辅助，而非完全替代 planner。SUP-AD 数据集通过数据挖掘和自动/人工标注构造复杂场景问答与规划样例，训练时还与 Talk2Car、BDDX、Drama、SUTD、LLaVA 等数据 co-tuning，降低 VLM 灾难性遗忘。</p>
+<h3>5.7 推理与部署流程</h3><p>属于离线规划验证与系统融合研究；真实闭环时仍需要稳定感知、控制器和安全规则。</p>
+</section>
+
+<section id="figures"><h2>6. 原论文图解：逐图拆解证据含义</h2><h3>7.1 Figure 2：The proposed data mining and annotation pipeline for constru</h3><figure><img src="figures/source/fig02_dataset-pipeline.png" alt="原论文图 2"><figcaption><strong>原论文 Figure 2：</strong>The proposed data mining and annotation pipeline for constructing the scene understanding and planning dataset. Scenario examples randomly sampled from the dataset (below) demonstrate the diversity and complexity of the dataset.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>上半部从原始驾驶片段筛选复杂场景并生成描述、分析与规划标注，下半部展示非常规车辆、障碍和交互样例。该流程支撑 SUP-AD 为 CoT 提供分层监督；自动标注质量和场景筛选偏差仍可能进入模型。</div>
+<h3>7.2 Figure 6：DriveVLM and DriveVLM-Dual model pipelines. DriveVLM takes i</h3><figure><img src="figures/source/fig06_pipeline.png" alt="原论文图 6"><figcaption><strong>原论文 Figure 6：</strong>DriveVLM and DriveVLM-Dual model pipelines. DriveVLM takes images as input and, through a Chain-of-Thought (CoT) mechanism, outputs scene description, scene analysis, and hierarchical planning results. DriveVLM-Dual further incorporates traditional 3D perception and trajectory planning modules to achieve spatial reasoning capability and real-time trajectory planning.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>上路由展示纯 DriveVLM 按场景描述、分析、层级规划输出轨迹；下路由的 Dual 系统注入 3D 感知与传统规划结果，补足语言模型薄弱的空间精度。它解释了双系统设计，但不能仅凭流程图判断融合后哪个模块主导最终决策。</div>
+<h3>7.3 Figure 5：Qualitative results of DriveVLM. The orange curves represent</h3><figure><img src="figures/source/fig05_vis1.png" alt="原论文图 5"><img src="figures/source/fig05_vis2.png" alt="原论文图 5"><figcaption><strong>原论文 Figure 5：</strong>Qualitative results of DriveVLM. The orange curves represent the model&#x27;s planned future trajectories for the next 3 seconds.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>橙色三秒轨迹覆盖多种复杂道路画面，轨迹方向与画面中的道路结构和障碍相协调。它显示模型输出具有场景适应性，但未呈现同场景强 baseline 或失败轨迹，不能独立证明优越性。</div>
+<h3>7.4 Figure 10：An example of overturned bicycles and motorcycles in the SUP</h3><figure><img src="figures/source/fig10_example2.png" alt="原论文图 10"><figcaption><strong>原论文 Figure 10：</strong>An example of overturned bicycles and motorcycles in the SUP-AD dataset. A bicycle has fallen in front of the ego vehicle, requiring the ego vehicle to change lanes.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>倒地自行车位于 ego 前方并占据可行驶区域，要求模型从非常规姿态识别风险并换道。该样例说明 SUP-AD 不只含标准车辆行人；单个倒地物体案例不能衡量开放词汇长尾识别率。</div>
+<h3>7.5 Figure 12：An example of collapsed trees in the SUP-AD dataset. A tree </h3><figure><img src="figures/source/fig12_example4.png" alt="原论文图 12"><figcaption><strong>原论文 Figure 12：</strong>An example of collapsed trees in the SUP-AD dataset. A tree suddenly falls towards the ego vehicle, requiring the ego vehicle to decelerate immediately.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>树木突然倒向 ego 车道，正确策略需要立即减速而不是仅绕行静态障碍。它体现数据集包含动态突发风险；图像本身没有展示模型在该场景中的反应时延和闭环制动距离。</div>
+<h3>7.6 Figure 18：Visualization of DriveVLM&#x27;s output. DriveVLM precisely detec</h3><figure><img src="figures/source/fig18_vis-3.png" alt="原论文图 18"><figcaption><strong>原论文 Figure 18：</strong>Visualization of DriveVLM&#x27;s output. DriveVLM precisely detect the fallen tree and its position, subsequently planning an appropriate detour trajectory.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>模型识别倒下树木及其空间位置，并生成绕行轨迹；视觉证据、语言分析和轨迹方向在同一案例中一致。它支持非常规障碍理解，但仍是筛选的成功案例，无法给出该类长尾场景的统计可靠性。</div></section>
+
+<section id="experiments"><h2>7. 实验与结果：把证据链拆开</h2>
+<h3>7.1 数据集、任务与划分</h3><p>实验围绕该论文的技术定位组织：以 VLM 进行场景描述、场景分析与分层规划，并用 DriveVLM-Dual 将语言推理与传统 3D 感知/规划管线融合。。需要特别区分离线预测、生成质量、开环规划与真实/仿真闭环，因为它们使用不同成功标准；本论文主要证据为：SUP-AD 主结果、DriveVLM 与 DriveVLM-Dual 对比、模型规模/CoT/3D 信息消融和非常规场景定性案例。</p>
+<h3>7.2 Baseline 为什么重要</h3><p>论文的比较应围绕其技术定位理解：以 VLM 进行场景描述、场景分析与分层规划，并用 DriveVLM-Dual 将语言推理与传统 3D 感知/规划管线融合。。强 baseline 用来判断收益来自新增信息流、模型容量还是评估协议；仅与较弱旧方法比较不足以证明论文主张。</p>
+<h3>7.3 指标如何对应论文主张</h3><p>本文实验所依赖的证据为：SUP-AD 主结果、DriveVLM 与 DriveVLM-Dual 对比、模型规模/CoT/3D 信息消融和非常规场景定性案例。。离线预测误差、生成质量、规划指标或闭环分数各自只衡量部分能力，不能互相替代。</p>
+<h3>7.4 主结果与机制是否一致</h3><p>实验包括 SUP-AD 场景理解和 nuScenes 开环规划。SUP-AD Table 1 显示 DriveVLM w/ Qwen 在 scene description 和 meta-actions 上分别为 0.71 和 0.37；GPT-4V in-context 只有 0.38 和 0.19，说明专门驾驶数据调优明显重要。nuScenes Table 2 中 DriveVLM-Dual† 的 Avg. L2=0.31m、Avg. Collision=0.10%，优于 VAD-Base 和单独 DriveVLM。定性图展示骑行者、交警手势等长尾场景解释。证据缺口是 dual-system 部分依赖传统管线，难以说明 VLM 本身能完成全部低层控制。</p>
+</section>
+
+<section id="failures"><h2>8. 消融、失败案例与证据缺口</h2>
+<h3>8.1 消融实验应回答什么</h3><p>最关键的消融需要隔离该论文的核心信息流：SUP-AD 主结果、DriveVLM 与 DriveVLM-Dual 对比、模型规模/CoT/3D 信息消融和非常规场景定性案例。。如果去掉核心模块后只在部分指标下降，需要进一步判断收益是否集中于特定场景。</p>
+<h3>8.2 失败案例与证据缺口</h3><p>精致语言解释不等于决策真正依赖该解释；离线轨迹指标也不能替代长时间闭环碰撞率。</p>
+<h3>8.3 论文没有证明什么</h3><p>现有结果不能直接推出：精致语言解释不等于决策真正依赖该解释；离线轨迹指标也不能替代长时间闭环碰撞率。</p>
+</section>
+
+<section id="repro"><h2>9. 复现要点：真正动手会遇到什么</h2>
+<h3>9.1 最小可行复现路线</h3><p>复现应先复刻 SUP-AD 风格数据：给每个场景生成图像、对象描述、meta-action 和决策说明；随后用 Qwen/LLaVA 类 VLM 做 instruction tuning，再接入已有 3D planner 形成 Dual。计算资源主要取决于 VLM fine-tuning 和 nuScenes 数据预处理。没有生产车系统代码时，复现验收应聚焦两个指标：SUP-AD 语义分数能接近论文趋势，DriveVLM-Dual 在同一 planner 上能降低 L2/Collision。</p>
+<h3>9.2 数据、模型、硬件与阻塞点</h3><p>数据与接口重点：多相机图像；Dual 版本额外接收传统 3D 感知、轨迹与结构化几何信息。。模型重点：Chain-of-Thought 依次形成场景描述、关键对象/风险分析、meta-action 与 waypoint；Dual 路线将语义规划与数值规划结果融合。。部署重点：属于离线规划验证与系统融合研究；真实闭环时仍需要稳定感知、控制器和安全规则。。论文未明确披露的硬件与训练成本不在此推测。</p>
+<h3>9.3 验收标准</h3><p>复现成功不应只以脚本运行结束为标准，而应至少复现论文核心趋势：SUP-AD 主结果、DriveVLM 与 DriveVLM-Dual 对比、模型规模/CoT/3D 信息消融和非常规场景定性案例。；同时检查输出是否在论文声称的边界外快速退化。</p>
+</section>
+
+<section id="analysis"><h2>10. 分析、局限与边界：作者没说完的部分</h2>
+<h3>10.1 最有价值贡献</h3><p>DriveVLM 的价值在于承认 VLM 与几何 planner 各有短板，用双系统把语义泛化和几何安全结合。论文证据支持“VLM 语义推理能改善长尾规划”，但不能证明端到端 VLM 可独立实时驾驶。后续可以尝试把 VLM 输出约束转成可微 reward 或形式化 safety predicate，而不是只作为自然语言决策。</p>
+<h3>10.2 主张—证据—充分性</h3><table><tbody><tr><th>论文主张</th><td>以 VLM 进行场景描述、场景分析与分层规划，并用 DriveVLM-Dual 将语言推理与传统 3D 感知/规划管线融合。</td></tr><tr><th>支撑证据</th><td>SUP-AD 主结果、DriveVLM 与 DriveVLM-Dual 对比、模型规模/CoT/3D 信息消融和非常规场景定性案例。</td></tr><tr><th>充分性判断</th><td>对论文评测范围内的机制结论较有支持；对真实闭环、跨域或安全泛化仍不足。</td></tr><tr><th>原因</th><td>精致语言解释不等于决策真正依赖该解释；离线轨迹指标也不能替代长时间闭环碰撞率。</td></tr></tbody></table>
+<h3>10.3 可行改进方向</h3><p>对 CoT 做因果干预；将语言分析转成可验证规划约束；在闭环仿真中测试推理错误累积。</p>
+<h3>10.4 后续实验建议</h3><table><tbody><tr><th>核心模块去除/替换</th><td>隔离论文主张，观察核心指标是否按预期下降</td></tr><tr><th>跨域或扰动测试</th><td>检查方法是否依赖训练分布和干净输入</td></tr><tr><th>闭环 rollout</th><td>观察误差累积、碰撞与恢复</td></tr><tr><th>不确定性/安全验证</th><td>识别高风险预测并建立 fallback</td></tr></tbody></table>
+</section>
+
+<section id="qa"><h2>11. 组会问答准备</h2><p>Q: 为什么需要 DriveVLM-Dual？<br>A: 因为 VLM 的空间推理和推理时延不足以直接承担实时低层规划，Dual 保留传统 3D 管线的几何精度，同时引入语义推理。<br>Q: SUP-AD 解决了什么问题？<br>A: 它提供复杂场景的描述、分析、meta-action 和决策标注，用于训练 VLM 理解驾驶长尾语义。<br>Q: DriveVLM 和 GPT-Driver 的本质区别？<br>A: GPT-Driver 主要把结构化感知/预测结果转成语言做轨迹生成；DriveVLM 从图像/VLM 出发做场景理解，并通过 Dual 接几何 planner。<br>Q: 实验最能支撑哪条结论？<br>A: DriveVLM-Dual 在 nuScenes Avg. L2 和 Collision 上优于 VAD-Base，说明语义高层信号能改进已有 planner。<br>Q: 复现最难是什么？<br>A: SUP-AD 标注和 Dual 系统接口，尤其是如何把 VLM 语义输出稳定转成 planner 可用约束。</p></section>
+<section id="notes"><h2>12. 我的阅读笔记：转成自己的研究素材</h2>
+<h3>12.1 最值得借鉴的点</h3><p>适合作为“慢思考 VLM + 快速 planner”的代表。组会可重点比较 LMDrive 的闭环语言控制和 DriveVLM 的 dual-system 语义辅助，两者不是同一层次的端到端。</p>
+<h3>12.2 与同目录论文的比较钩子</h3><p>可从“语言是否直接影响动作、是否显式预测未来世界、是否真实闭环、是否保留 3D 几何、是否使用 agent/tool/memory”五条轴与同目录论文比较。本文的定位为：以 VLM 进行场景描述、场景分析与分层规划，并用 DriveVLM-Dual 将语言推理与传统 3D 感知/规划管线融合。</p>
+<h3>12.3 可行动创新点</h3><p>对 CoT 做因果干预；将语言分析转成可验证规划约束；在闭环仿真中测试推理错误累积。</p>
+</section>
+<section id="appendix"><h2>13. 附录图解与证据索引</h2><p>本文使用的原始图件均来自 arXiv 源码，图注保留或准确转述。其他附录图未被机械堆入页面；只有能够解释方法、结果、消融或失败的图件才被选择。</p></section>
+<section id="refs"><h2>14. 参考资料与链接</h2><p><a href="https://arxiv.org/abs/2402.12289">arXiv</a> · <a href="https://proceedings.mlr.press/v270/tian25c.html">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/drivevlm/">当前 Blog</a></p></section>
+</main></body></html>

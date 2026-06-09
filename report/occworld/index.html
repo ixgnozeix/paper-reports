@@ -1,15 +1,620 @@
-<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>OccWorld: Learning a 3D Occupancy World Model for Autonomous Driving</title><link rel='stylesheet' href='../../assets/style.css'></head><body>
-    <div class='toc'><div class='wrap'><a href='../../index.html'>← 首页</a><a href='#quick'>论文速览</a><a href='#motivation'>动机</a><a href='#method'>方法</a><a href='#exp'>实验</a><a href='#repro'>复现</a><a href='#qa'>Q&A</a><a href='#figs'>图解</a></div></div>
-    <main class='wrap'><section class='hero'><div class='eyebrow'>Paper Report · 3D occupancy world model / GPT-like generative transformer</div><h1>OccWorld: Learning a 3D Occupancy World Model for Autonomous Driving</h1><div class='meta'>Wenzhao Zheng, Weiliang Chen, Yuanhui Huang, Borui Zhang, Yueqi Duan, Jiwen Lu · ECCV 2024 / arXiv 2023 · arXiv: 2311.16038</div><div class='grid'><div class='card'><b>一句话贡献</b><br>OccWorld 将 3D occupancy 量化为离散 scene tokens，并用 GPT-like spatial-temporal generative transformer 自回归预测未来占据和 ego trajectory，实现细粒度 3D 场景演化建模。</div><div class='card'><b>关键词</b><br>3D occupancy、scene tokenizer、vector quantization、GPT-like transformer、spatial-temporal generation、4D occupancy forecasting、motion planning、nuScenes</div><div class='card'><b>技术定位</b><br>3D occupancy world model / GPT-like generative transformer</div><div class='card'><b>是否开源</b><br>是，代码、可视化、训练日志和预训练模型公开</div><div class='card'><b>适合程度</b><br>很高：3D occupancy 表示世界模型代表</div></div><p><a href='https://ixgnozeix.github.io/paper-reports/report/occworld/'>计划公网链接：https://ixgnozeix.github.io/paper-reports/report/occworld/</a></p></section>
-    <section id='quick'><h2>1. 论文速览</h2><p>OccWorld 的核心选择是不用 3D boxes 或像素视频表示世界，而用 3D occupancy：它能表达细粒度结构，标注成本相对低，也兼容 vision/LiDAR。方法先训练 reconstruction-based scene tokenizer，把 3D occupancy 压成离散 tokens；再用 GPT-like spatial-temporal transformer 预测后续 scene tokens 和 ego tokens；最后解码未来 occupancy 并输出 ego trajectory。论文在 nuScenes 上展示 4D occupancy forecasting 和 motion planning，且在 Figure 1 中明确给出失败边界：对输入视野之外新进入的车辆预测困难。</p><div><span class='tag'>3D occupancy</span><span class='tag'>scene tokenizer</span><span class='tag'>vector quantization</span><span class='tag'>GPT-like transformer</span><span class='tag'>spatial-temporal generation</span><span class='tag'>4D occupancy forecasting</span><span class='tag'>motion planning</span><span class='tag'>nuScenes</span></div></section>
-    <section id='motivation'><h2>2. 研究问题与动机</h2><p>预测 3D box 只能描述已知对象中心和尺寸，无法刻画道路边界、可行驶区域、遮挡结构和细粒度障碍；像素世界模型又难以验证几何安全。OccWorld 选择 occupancy 是为了在可计算的 3D 网格中同时表达动态场景和 ego 运动，让世界模型输出更接近规划需要的空间约束。</p></section>
-    <section id='related'><h2>3. 相关工作脉络</h2><p>OccWorld 与 occupancy perception（OccNet/OpenOccupancy/SurroundOcc）、world model、GPT-style sequence modeling 相连。相对 Drive-WM/DriveDreamer 的像素/视频 diffusion，它更偏结构化 3D 表示；相对 UniAD/VAD 等端到端 planner，它不依赖 box/map/motion 多种辅助监督，而是用 occupancy evolution 学世界动态。</p></section>
-    <section id='method'><h2>4. 方法详解</h2><p>Scene tokenizer 使用 CNN 将 3D occupancy 转成 BEV-like latent，再通过 vector quantization 得到离散 scene tokens，并用 decoder 重建 occupancy。World model 部分采用 spatial-temporal generative transformer：空间维关注同一时刻的 occupancy token 关系，时间维自回归建模过去到未来的场景演化，同时预测 ego movement tokens。规划模块利用未来 occupancy 和 ego trajectory 计算 motion planning 输出。训练包括 tokenizer 重建和 transformer 未来 token 预测。</p></section>
-    <section id='exp'><h2>5. 实验与结果</h2><p>实验包括 4D occupancy forecasting 和 motion planning。Table 2 与 IL/NMP/FF/EO/ST-P3/UniAD/VAD 等比较 L2 和 Collision Rate；论文强调 OccWorld 在不使用 instance/map supervision 的情况下取得有竞争力规划结果。Figure 1 定性展示模型能预测动态 agents、drivable area 等未来结构，甚至在部分区域生成比 GT 更合理的可行驶区域；同时也承认无法预测输入中不存在的新车进入视野。证据缺口是 occupancy 标签质量和空间分辨率会限制上限。</p></section>
-    <section id='repro'><h2>6. 复现要点</h2><p>复现路径：准备 nuScenes occupancy 标签，训练 tokenizer 重建当前 occupancy，再训练 spatial-temporal transformer 预测未来 tokens，最后跑 planning metric。官方仓库提供 visualization、training log 和 pretrained model，可先运行 visualize_demo.py。硬件需求中等偏高，取决于 occupancy grid 分辨率和 token 数。阻塞点是 occupancy 数据准备、VQ codebook collapse、长 horizon 自回归误差。验收标准是 4D occupancy mIoU/VPQ 等预测指标和 L2/Collision 规划指标趋势。</p></section>
-    <section id='analysis'><h2>7. 分析、局限与边界</h2><p>OccWorld 的价值是把世界模型放到规划友好的 3D occupancy 空间，使预测结果比像素视频更容易用于安全约束。它的局限也明确：不可见对象、label 噪声、grid 分辨率和自回归误差会限制未来预测。后续可与相机 raw video world model 融合：像素模型补语义细节，occupancy 模型负责几何验证。</p></section>
-    <section id='qa'><h2>8. 组会问答准备</h2><div class='qa'><b>Q：为什么不用 3D box？</b><br>A：box 只能描述实例，不能表达自由空间、道路边界和细粒度占据结构。</div><div class='qa'><b>Q：scene tokenizer 的作用？</b><br>A：把高维 3D occupancy 压成离散 token，使 GPT-like transformer 可以高效自回归预测未来。</div><div class='qa'><b>Q：OccWorld 和 Drive-WM 的区别？</b><br>A：Drive-WM 预测多视角像素视频；OccWorld 预测 3D occupancy，几何更可验证但视觉细节少。</div><div class='qa'><b>Q：论文主动承认的失败是什么？</b><br>A：难以预测输入中不存在、未来才进入视野的新车。</div><div class='qa'><b>Q：复现先跑什么？</b><br>A：先用官方 pretrained model 跑 visualization，确认 occupancy 数据链路，再训练 tokenizer 和 transformer。</div></section>
-    <section id='figs'><h2>9. 补充图解与附录证据</h2><div class='figure'><img src='figures/figure1.png' alt='Figure 1. OccWorld 预测未来 occupancy 和 ego motion。'><div class='caption'>Figure 1. OccWorld 预测未来 occupancy 和 ego motion。</div><div class='interp'><b>本文解读：</b>图中从过去 3D occupancy 预测未来场景与 ego 运动，并展示成功和失败案例。它支撑 occupancy world model 的动机，也明确不能预测未观测新进入车辆。</div></div><div class='figure'><img src='figures/figure2.png' alt='Figure 2. OccWorld framework。'><div class='caption'>Figure 2. OccWorld framework。</div><div class='interp'><b>本文解读：</b>scene tokenizer 先离散化 occupancy，GPT-like transformer 再预测未来 scene/ego tokens，最后 decoder/planner 输出未来占据与轨迹。图连接到复现模块。</div></div><div class='figure'><img src='figures/figure3.png' alt='Figure 3. 3D occupancy scene tokenizer。'><div class='caption'>Figure 3. 3D occupancy scene tokenizer。</div><div class='interp'><b>本文解读：</b>CNN 编码、VQ 离散化和 decoder 重建构成 tokenizer。它支撑“高维 occupancy → 离散 token”的关键设计，但 codebook 质量会影响后续预测。</div></div></section>
-    <section><h2>我的阅读笔记</h2><p>适合作为“结构化 3D WM”代表。可与 Drive-WM/GAIA-1 共同构成像素-多视角-occupancy 三类世界模型路线图。</p></section>
-    <div class='footer'>Generated as a static OpenMOSS/WAM-style local report. Source PDF/images are stored under this report folder when available.</div>
-    </main></body></html>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OccWorld: Learning a 3D Occupancy World Model for Autonomous Driving · 深度解读</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style></head><body><main>
+<header><div class="title-wrap"><h1>OccWorld: Learning a 3D Occupancy World Model for Autonomous Driving</h1>
+<p class="subtitle">Zotero「自驾」分类 · 按新版论文深度解读大纲重构</p>
+<p class="lead"><strong>一句话贡献：</strong>OccWorld 将 3D occupancy 量化为离散 scene tokens，并用 GPT-like spatial-temporal generative transformer 自回归预测未来占据和 ego trajectory，实现细粒度 3D 场景演化建模。</p>
+<div class="meta"><span class="pill">3D occupancy world model / GPT-like generative transformer</span><span class="pill">arXiv:2311.16038</span><span class="pill">是，代码、可视化、训练日志和预训练模型公开</span></div>
+<p><a href="https://arxiv.org/abs/2311.16038">arXiv</a> · <a href="https://wzzheng.net/OccWorld/">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/occworld/">当前 Blog</a></p></div></header>
+
+<nav class="toc">
+<a href="#identity">0. 论文身份卡片</a><a href="#quick">1. 论文速览</a><a href="#motivation">2. 研究问题与动机</a>
+<a href="#lineage">3. 相关工作脉络</a><a href="#overview-fig">4. 方法总览图</a><a href="#method">5. 方法详解</a>
+<a href="#figures">6. 原论文图解</a><a href="#experiments">7. 实验与结果</a><a href="#failures">8. 消融、失败与证据缺口</a>
+<a href="#repro">9. 复现要点</a><a href="#analysis">10. 分析、局限与边界</a><a href="#qa">11. 组会问答</a>
+<a href="#notes">12. 我的阅读笔记</a><a href="#appendix">13. 附录证据</a><a href="#refs">14. 参考资料</a>
+</nav>
+<section id="identity"><h2>0. 页面头部：论文身份卡片</h2>
+<table><tbody><tr><th>论文</th><td>OccWorld: Learning a 3D Occupancy World Model for Autonomous Driving</td></tr><tr><th>作者</th><td>Zheng, Wenzhao；Chen, Weiliang；Huang, Yuanhui；Zhang, Borui；Duan, Yueqi；Lu, Jiwen</td></tr><tr><th>时间</th><td>2023/11/27</td></tr><tr><th>方向</th><td>3D occupancy world model / GPT-like generative transformer</td></tr><tr><th>核心贡献</th><td>OccWorld 将 3D occupancy 量化为离散 scene tokens，并用 GPT-like spatial-temporal generative transformer 自回归预测未来占据和 ego trajectory，实现细粒度 3D 场景演化建模。</td></tr><tr><th>模型类型</th><td>以离散 3D semantic occupancy token 为世界状态的自回归世界模型，同时预测未来占据和 ego 运动。</td></tr><tr><th>输入</th><td>历史 3D semantic occupancy、ego motion 与可选动作/轨迹条件。</td></tr><tr><th>中间表示</th><td>scene tokenizer 用 CNN 和向量量化把 3D occupancy 压缩为离散 world token；时空生成 Transformer 预测下一场景 token。</td></tr><tr><th>输出</th><td>未来 3D semantic occupancy 与 ego trajectory。</td></tr><tr><th>训练目标</th><td>tokenizer 重建与 VQ 目标、world token next-token prediction、语义 occupancy 与规划监督。</td></tr><tr><th>代码与复现状态</th><td>是，代码、可视化、训练日志和预训练模型公开；很高：3D occupancy 表示世界模型代表</td></tr></tbody></table>
+</section>
+
+<section id="quick"><h2>1. 论文速览：用一页讲清楚价值</h2>
+<h3>1.1 一句话贡献</h3><p>OccWorld 将 3D occupancy 量化为离散 scene tokens，并用 GPT-like spatial-temporal generative transformer 自回归预测未来占据和 ego trajectory，实现细粒度 3D 场景演化建模。</p>
+<h3>1.2 论文专属关键词</h3><p>3D occupancy、scene tokenizer、vector quantization、GPT-like transformer、spatial-temporal generation、4D occupancy forecasting、motion planning、nuScenes</p>
+<h3>1.3 技术定位</h3><p>以离散 3D semantic occupancy token 为世界状态的自回归世界模型，同时预测未来占据和 ego 运动。</p>
+<h3>1.4 论文构建了什么</h3><table><tbody><tr><th>输入</th><td>历史 3D semantic occupancy、ego motion 与可选动作/轨迹条件。</td></tr><tr><th>编码与融合</th><td>scene tokenizer 用 CNN 和向量量化把 3D occupancy 压缩为离散 world token；时空生成 Transformer 预测下一场景 token。</td></tr><tr><th>输出</th><td>未来 3D semantic occupancy 与 ego trajectory。</td></tr><tr><th>训练目标</th><td>tokenizer 重建与 VQ 目标、world token next-token prediction、语义 occupancy 与规划监督。</td></tr></tbody></table>
+<h3>1.5 核心结论与证据链</h3><p>OccWorld 的核心选择是不用 3D boxes 或像素视频表示世界，而用 3D occupancy：它能表达细粒度结构，标注成本相对低，也兼容 vision/LiDAR。方法先训练 reconstruction-based scene tokenizer，把 3D occupancy 压成离散 tokens；再用 GPT-like spatial-temporal transformer 预测后续 scene tokens 和 ego tokens；最后解码未来 occupancy 并输出 ego trajectory。论文在 nuScenes 上展示 4D occupancy forecasting 和 motion planning，且在 Figure 1 中明确给出失败边界：对输入视野之外新进入的车辆预测困难。</p><p>核心证据来自：Occupancy forecasting、规划指标、tokenizer/Transformer 消融与三种 OccWorld 变体可视化。。证据边界是：占据预测准确不等于交互式 agent 行为正确；离散 codebook 可能抹去细小障碍和动态细节。</p>
+</section>
+
+<section id="motivation"><h2>2. 研究问题与动机：为什么需要这篇论文</h2>
+<h3>2.1 核心问题与成功标准</h3><p>预测 3D box 只能描述已知对象中心和尺寸，无法刻画道路边界、可行驶区域、遮挡结构和细粒度障碍；像素世界模型又难以验证几何安全。OccWorld 选择 occupancy 是为了在可计算的 3D 网格中同时表达动态场景和 ego 运动，让世界模型输出更接近规划需要的空间约束。</p>
+<h3>2.2 现有方法的具体不足</h3><p>该论文针对的瓶颈不是笼统的“泛化不足”，而是：视频世界模型视觉丰富但几何难验证；BEV 2D 状态丢失高度，3D occupancy 更适合碰撞与规划，但牺牲纹理语义。</p>
+<h3>2.3 为什么不走显而易见的替代路线</h3><p>视频世界模型视觉丰富但几何难验证；BEV 2D 状态丢失高度，3D occupancy 更适合碰撞与规划，但牺牲纹理语义。</p>
+</section>
+
+<section id="lineage"><h2>3. 相关工作脉络：这篇论文从哪里来</h2>
+<h3>3.1 技术家族与直接前作</h3><p>OccWorld 与 occupancy perception（OccNet/OpenOccupancy/SurroundOcc）、world model、GPT-style sequence modeling 相连。相对 Drive-WM/DriveDreamer 的像素/视频 diffusion，它更偏结构化 3D 表示；相对 UniAD/VAD 等端到端 planner，它不依赖 box/map/motion 多种辅助监督，而是用 occupancy evolution 学世界动态。</p>
+<h3>3.2 本文新意属于表示、架构、训练还是评估</h3><p>从技术地图看，本文的主要新意可概括为：以离散 3D semantic occupancy token 为世界状态的自回归世界模型，同时预测未来占据和 ego 运动。。它并非简单替换 backbone，而是围绕输入表示、中间信息流或评价方式重新定义了论文的核心问题。</p>
+</section>
+
+<section id="overview-fig"><h2>4. 方法总览图：先看完整信息流</h2>
+<h3>4.1 主框架图与机制</h3><figure><img src="figures/source/fig02_framework.png" alt="原论文图 2"><figcaption><strong>原论文 Figure 2：</strong>Framework of our OccWorld for 3D semantic occupancy forecast and motion planning. We adopt a GPT-like generative architecture to predict the next scene from previous scenes in an autoregressive manner. We adapt GPT~brown2020language to the autonomous driving scenario with two key designs: 1) We train a 3D occupancy scene tokenizer to produce discrete high-level representations of the 3D scene; 2) We perform spatial mixing before and after spatial-wise temporal causal self-attention to efficiently produce globally consistent scene predictions. We use ground-truth and predicted scene tokens as inputs for future generations for training and inference, respectively.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>历史 occupancy 经离散 scene tokenizer 变成 world token，GPT 式模型自回归预测未来场景并输出 ego motion。该图说明规划建立在可预测 3D 世界状态之上；token 预测准确仍不自动保证控制安全。</div>
+<h3>4.2 信息流一句话串联</h3><p>输入：历史 3D semantic occupancy、ego motion 与可选动作/轨迹条件。；中间处理：scene tokenizer 用 CNN 和向量量化把 3D occupancy 压缩为离散 world token；时空生成 Transformer 预测下一场景 token。；最终输出：未来 3D semantic occupancy 与 ego trajectory。；训练约束：tokenizer 重建与 VQ 目标、world token next-token prediction、语义 occupancy 与规划监督。</p>
+</section>
+
+<section id="method"><h2>5. 方法详解：输入、表示、融合、解码、训练与部署</h2>
+<h3>5.1 输入表示</h3><p>历史 3D semantic occupancy、ego motion 与可选动作/轨迹条件。。复现时首先要确保各模态的时间同步、坐标系、可见范围与训练时一致；任何一个上游输入偏移都可能被后续大模型放大。</p>
+<h3>5.2 编码器与融合设计</h3><p>scene tokenizer 用 CNN 和向量量化把 3D occupancy 压缩为离散 world token；时空生成 Transformer 预测下一场景 token。</p>
+<h3>5.3 中间表示为何重要</h3><p>中间表示决定模型保留何种几何、语义和时间信息。该论文的关键中间链路是：scene tokenizer 用 CNN 和向量量化把 3D occupancy 压缩为离散 world token；时空生成 Transformer 预测下一场景 token。。它让最终输出能够利用这些信息，但也把上游表示误差带入规划或预测。</p>
+<h3>5.4 解码、动作生成或未来预测</h3><p>未来 3D semantic occupancy 与 ego trajectory。</p>
+<h3>5.5 训练目标及副作用</h3><p>tokenizer 重建与 VQ 目标、world token next-token prediction、语义 occupancy 与规划监督。。这些目标直接约束对应监督输出，却不会自动保证真实闭环安全、跨域鲁棒性或因果可解释性。</p>
+<h3>5.6 训练阶段与数据风险</h3><p>Scene tokenizer 使用 CNN 将 3D occupancy 转成 BEV-like latent，再通过 vector quantization 得到离散 scene tokens，并用 decoder 重建 occupancy。World model 部分采用 spatial-temporal generative transformer：空间维关注同一时刻的 occupancy token 关系，时间维自回归建模过去到未来的场景演化，同时预测 ego movement tokens。规划模块利用未来 occupancy 和 ego trajectory 计算 motion planning 输出。训练包括 tokenizer 重建和 transformer 未来 token 预测。</p>
+<h3>5.7 推理与部署流程</h3><p>目前主要在离线 occupancy forecasting 与 motion planning benchmark；完整闭环仍需要感知前端和控制器。</p>
+</section>
+
+<section id="figures"><h2>6. 原论文图解：逐图拆解证据含义</h2><h3>7.1 Figure 2：Framework of our OccWorld for 3D semantic occupancy forecast</h3><figure><img src="figures/source/fig02_framework.png" alt="原论文图 2"><figcaption><strong>原论文 Figure 2：</strong>Framework of our OccWorld for 3D semantic occupancy forecast and motion planning. We adopt a GPT-like generative architecture to predict the next scene from previous scenes in an autoregressive manner. We adapt GPT~brown2020language to the autonomous driving scenario with two key designs: 1) We train a 3D occupancy scene tokenizer to produce discrete high-level representations of the 3D scene; 2) We perform spatial mixing before and after spatial-wise temporal causal self-attention to efficiently produce globally consistent scene predictions. We use ground-truth and predicted scene tokens as inputs for future generations for training and inference, respectively.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>历史 occupancy 经离散 scene tokenizer 变成 world token，GPT 式模型自回归预测未来场景并输出 ego motion。该图说明规划建立在可预测 3D 世界状态之上；token 预测准确仍不自动保证控制安全。</div>
+<h3>7.2 Figure 3：Illustration of the proposed 3D occupancy scene tokenizer. W</h3><figure><img src="figures/source/fig03_tokenizer.png" alt="原论文图 3"><figcaption><strong>原论文 Figure 3：</strong>Illustration of the proposed 3D occupancy scene tokenizer. We use CNNs to encode the 3D occupancy and perform vector quantization to obtain discrete tokens using a learnable codebook~oord2017neural. We then employ a decoder to reconstruct the input 3D occupancy using the quantized tokens and use a reconstruction objective to train the autoencoder and codebook simultaneously.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>3D occupancy 先经 CNN 压缩，再通过可学习 codebook 向量量化为离散 scene token，解码器负责重建。该接口使 GPT 式生成可行；量化重建误差可能优先损失细小、稀有但安全关键的占据结构。</div>
+<h3>7.3 Figure 4：Illustration of the proposed spatial-temporal generative tra</h3><figure><img src="figures/source/fig04_transformer.png" alt="原论文图 4"><figcaption><strong>原论文 Figure 4：</strong>Illustration of the proposed spatial-temporal generative transformer. As each scene is composed of numerous world tokens, we adopt spatial mixing modules to model their intrinsic dependencies and obtain multi-scale world tokens to capture multi-level information. We then perform spatial-wise temporal causal self-attention at each level to forecast the next scene. We employ a U-net structure to aggregate the multi-scale predictions.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>空间 mixing 先建模同一场景内大量 world token 的多尺度依赖，时间因果注意力再预测场景演化。分解降低全时空注意力成本；空间和时间分步建模可能弱化快速交互对象的联合动态。</div>
+<h3>7.4 Figure 5：Visualizations of the forecasting and planning results of Oc</h3><figure><img src="figures/source/fig05_vis_96.png" alt="原论文图 5"><figcaption><strong>原论文 Figure 5：</strong>Visualizations of the forecasting and planning results of OccWorld-O, OccWorld-D, and OccWorld-T.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>三种 OccWorld 变体的未来占据和规划可视化允许比较场景预测与轨迹是否一致。图像能揭示空间漂移和语义错误，但选取的样例不能替代全数据集 IoU、规划误差与闭环指标。</div></section>
+
+<section id="experiments"><h2>7. 实验与结果：把证据链拆开</h2>
+<h3>7.1 数据集、任务与划分</h3><p>实验围绕该论文的技术定位组织：以离散 3D semantic occupancy token 为世界状态的自回归世界模型，同时预测未来占据和 ego 运动。。需要特别区分离线预测、生成质量、开环规划与真实/仿真闭环，因为它们使用不同成功标准；本论文主要证据为：Occupancy forecasting、规划指标、tokenizer/Transformer 消融与三种 OccWorld 变体可视化。</p>
+<h3>7.2 Baseline 为什么重要</h3><p>论文的比较应围绕其技术定位理解：以离散 3D semantic occupancy token 为世界状态的自回归世界模型，同时预测未来占据和 ego 运动。。强 baseline 用来判断收益来自新增信息流、模型容量还是评估协议；仅与较弱旧方法比较不足以证明论文主张。</p>
+<h3>7.3 指标如何对应论文主张</h3><p>本文实验所依赖的证据为：Occupancy forecasting、规划指标、tokenizer/Transformer 消融与三种 OccWorld 变体可视化。。离线预测误差、生成质量、规划指标或闭环分数各自只衡量部分能力，不能互相替代。</p>
+<h3>7.4 主结果与机制是否一致</h3><p>实验包括 4D occupancy forecasting 和 motion planning。Table 2 与 IL/NMP/FF/EO/ST-P3/UniAD/VAD 等比较 L2 和 Collision Rate；论文强调 OccWorld 在不使用 instance/map supervision 的情况下取得有竞争力规划结果。Figure 1 定性展示模型能预测动态 agents、drivable area 等未来结构，甚至在部分区域生成比 GT 更合理的可行驶区域；同时也承认无法预测输入中不存在的新车进入视野。证据缺口是 occupancy 标签质量和空间分辨率会限制上限。</p>
+</section>
+
+<section id="failures"><h2>8. 消融、失败案例与证据缺口</h2>
+<h3>8.1 消融实验应回答什么</h3><p>最关键的消融需要隔离该论文的核心信息流：Occupancy forecasting、规划指标、tokenizer/Transformer 消融与三种 OccWorld 变体可视化。。如果去掉核心模块后只在部分指标下降，需要进一步判断收益是否集中于特定场景。</p>
+<h3>8.2 失败案例与证据缺口</h3><p>占据预测准确不等于交互式 agent 行为正确；离散 codebook 可能抹去细小障碍和动态细节。</p>
+<h3>8.3 论文没有证明什么</h3><p>现有结果不能直接推出：占据预测准确不等于交互式 agent 行为正确；离散 codebook 可能抹去细小障碍和动态细节。</p>
+</section>
+
+<section id="repro"><h2>9. 复现要点：真正动手会遇到什么</h2>
+<h3>9.1 最小可行复现路线</h3><p>复现路径：准备 nuScenes occupancy 标签，训练 tokenizer 重建当前 occupancy，再训练 spatial-temporal transformer 预测未来 tokens，最后跑 planning metric。官方仓库提供 visualization、training log 和 pretrained model，可先运行 visualize_demo.py。硬件需求中等偏高，取决于 occupancy grid 分辨率和 token 数。阻塞点是 occupancy 数据准备、VQ codebook collapse、长 horizon 自回归误差。验收标准是 4D occupancy mIoU/VPQ 等预测指标和 L2/Collision 规划指标趋势。</p>
+<h3>9.2 数据、模型、硬件与阻塞点</h3><p>数据与接口重点：历史 3D semantic occupancy、ego motion 与可选动作/轨迹条件。。模型重点：scene tokenizer 用 CNN 和向量量化把 3D occupancy 压缩为离散 world token；时空生成 Transformer 预测下一场景 token。。部署重点：目前主要在离线 occupancy forecasting 与 motion planning benchmark；完整闭环仍需要感知前端和控制器。。论文未明确披露的硬件与训练成本不在此推测。</p>
+<h3>9.3 验收标准</h3><p>复现成功不应只以脚本运行结束为标准，而应至少复现论文核心趋势：Occupancy forecasting、规划指标、tokenizer/Transformer 消融与三种 OccWorld 变体可视化。；同时检查输出是否在论文声称的边界外快速退化。</p>
+</section>
+
+<section id="analysis"><h2>10. 分析、局限与边界：作者没说完的部分</h2>
+<h3>10.1 最有价值贡献</h3><p>OccWorld 的价值是把世界模型放到规划友好的 3D occupancy 空间，使预测结果比像素视频更容易用于安全约束。它的局限也明确：不可见对象、label 噪声、grid 分辨率和自回归误差会限制未来预测。后续可与相机 raw video world model 融合：像素模型补语义细节，occupancy 模型负责几何验证。</p>
+<h3>10.2 主张—证据—充分性</h3><table><tbody><tr><th>论文主张</th><td>以离散 3D semantic occupancy token 为世界状态的自回归世界模型，同时预测未来占据和 ego 运动。</td></tr><tr><th>支撑证据</th><td>Occupancy forecasting、规划指标、tokenizer/Transformer 消融与三种 OccWorld 变体可视化。</td></tr><tr><th>充分性判断</th><td>对论文评测范围内的机制结论较有支持；对真实闭环、跨域或安全泛化仍不足。</td></tr><tr><th>原因</th><td>占据预测准确不等于交互式 agent 行为正确；离散 codebook 可能抹去细小障碍和动态细节。</td></tr></tbody></table>
+<h3>10.3 可行改进方向</h3><p>加入动作条件反事实 rollout；对 rare obstacle 使用多尺度 codebook；在闭环仿真中评价累计漂移。</p>
+<h3>10.4 后续实验建议</h3><table><tbody><tr><th>核心模块去除/替换</th><td>隔离论文主张，观察核心指标是否按预期下降</td></tr><tr><th>跨域或扰动测试</th><td>检查方法是否依赖训练分布和干净输入</td></tr><tr><th>闭环 rollout</th><td>观察误差累积、碰撞与恢复</td></tr><tr><th>不确定性/安全验证</th><td>识别高风险预测并建立 fallback</td></tr></tbody></table>
+</section>
+
+<section id="qa"><h2>11. 组会问答准备</h2><p>Q: 为什么不用 3D box？<br>A: box 只能描述实例，不能表达自由空间、道路边界和细粒度占据结构。<br>Q: scene tokenizer 的作用？<br>A: 把高维 3D occupancy 压成离散 token，使 GPT-like transformer 可以高效自回归预测未来。<br>Q: OccWorld 和 Drive-WM 的区别？<br>A: Drive-WM 预测多视角像素视频；OccWorld 预测 3D occupancy，几何更可验证但视觉细节少。<br>Q: 论文主动承认的失败是什么？<br>A: 难以预测输入中不存在、未来才进入视野的新车。<br>Q: 复现先跑什么？<br>A: 先用官方 pretrained model 跑 visualization，确认 occupancy 数据链路，再训练 tokenizer 和 transformer。</p></section>
+<section id="notes"><h2>12. 我的阅读笔记：转成自己的研究素材</h2>
+<h3>12.1 最值得借鉴的点</h3><p>适合作为“结构化 3D WM”代表。可与 Drive-WM/GAIA-1 共同构成像素-多视角-occupancy 三类世界模型路线图。</p>
+<h3>12.2 与同目录论文的比较钩子</h3><p>可从“语言是否直接影响动作、是否显式预测未来世界、是否真实闭环、是否保留 3D 几何、是否使用 agent/tool/memory”五条轴与同目录论文比较。本文的定位为：以离散 3D semantic occupancy token 为世界状态的自回归世界模型，同时预测未来占据和 ego 运动。</p>
+<h3>12.3 可行动创新点</h3><p>加入动作条件反事实 rollout；对 rare obstacle 使用多尺度 codebook；在闭环仿真中评价累计漂移。</p>
+</section>
+<section id="appendix"><h2>13. 附录图解与证据索引</h2><p>本文使用的原始图件均来自 arXiv 源码，图注保留或准确转述。其他附录图未被机械堆入页面；只有能够解释方法、结果、消融或失败的图件才被选择。</p></section>
+<section id="refs"><h2>14. 参考资料与链接</h2><p><a href="https://arxiv.org/abs/2311.16038">arXiv</a> · <a href="https://wzzheng.net/OccWorld/">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/occworld/">当前 Blog</a></p></section>
+</main></body></html>

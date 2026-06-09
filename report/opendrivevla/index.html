@@ -1,15 +1,624 @@
-<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>OpenDriveVLA: Towards End-to-End Autonomous Driving with Large Vision-Language Action Model</title><link rel='stylesheet' href='../../assets/style.css'></head><body>
-    <div class='toc'><div class='wrap'><a href='../../index.html'>← 首页</a><a href='#quick'>论文速览</a><a href='#motivation'>动机</a><a href='#method'>方法</a><a href='#exp'>实验</a><a href='#repro'>复现</a><a href='#qa'>Q&A</a><a href='#figs'>图解</a></div></div>
-    <main class='wrap'><section class='hero'><div class='eyebrow'>Paper Report · Open-source 3D VLA / autoregressive trajectory planning</div><h1>OpenDriveVLA: Towards End-to-End Autonomous Driving with Large Vision-Language Action Model</h1><div class='meta'>Xingcheng Zhou, Xuyuan Han, Feng Yang, Yunpu Ma, Volker Tresp, Alois C. Knoll · AAAI 2026 / arXiv 2025 · arXiv: 2503.23463</div><div class='grid'><div class='card'><b>一句话贡献</b><br>OpenDriveVLA 基于开源 VLM/LLM，把 2D/3D instance-aware scene、agent、map tokens 层级对齐到语言空间，并通过 agent-env-ego 交互任务和轨迹规划微调自回归生成驾驶轨迹。</div><div class='card'><b>关键词</b><br>Vision-Language-Action、3D spatial grounding、hierarchical alignment、agent-env-ego interaction、Qwen2.5、nuScenes-QA、open-loop planning、autoregressive waypoints</div><div class='card'><b>技术定位</b><br>Open-source 3D VLA / autoregressive trajectory planning</div><div class='card'><b>是否开源</b><br>是，仓库公开；项目页显示模型/推理/环境逐步发布</div><div class='card'><b>适合程度</b><br>很高：最贴近“自动驾驶 VLA”定义的开源工作之一</div></div><p><a href='https://ixgnozeix.github.io/paper-reports/report/opendrivevla/'>计划公网链接：https://ixgnozeix.github.io/paper-reports/report/opendrivevla/</a></p></section>
-    <section id='quick'><h2>1. 论文速览</h2><p>OpenDriveVLA 把 VLA 从机器人操作迁移到自动驾驶：输入包括多视角视觉、3D 环境表征、ego state 和高层 command；输出是可解析的未来 waypoints。与只给 VLM 加 QA/caption head 的方法不同，它显式构造 scene token、agent token 和 map token，并通过层级视觉-语言对齐、驾驶 instruction tuning、agent-env-ego interaction、trajectory planning tuning 四阶段训练，让 LLM 内部学到空间和交互先验。项目页结果表显示 OpenDriveVLA-0.5B/3B/7B 在 ST-P3 和 UniAD 指标下与 GPT-Driver、DriveVLM、EMMA 等 autoregressive 方法比较，OpenDriveVLA-7B 在 UniAD metrics Avg. L2/Collision 上达到 0.66/0.25。</p><div><span class='tag'>Vision-Language-Action</span><span class='tag'>3D spatial grounding</span><span class='tag'>hierarchical alignment</span><span class='tag'>agent-env-ego interaction</span><span class='tag'>Qwen2.5</span><span class='tag'>nuScenes-QA</span><span class='tag'>open-loop planning</span><span class='tag'>autoregressive waypoints</span></div></section>
-    <section id='motivation'><h2>2. 研究问题与动机</h2><p>原生 VLM 多用于 2D 图像问答，缺少 3D 空间、实例身份和多智能体互动的 inductive bias，直接输出驾驶动作会出现 hallucination 和物理不可行轨迹。OpenDriveVLA 的关键问题是：如何让开源 VLM 既保留语言推理能力，又能生成空间可靠的驾驶动作？显而易见的替代方案是把 VLM 作为 slow planner 或解释头，但这会保留模块间断裂；作者选择让 3D structured tokens 进入 LLM，并把 agent motion forecasting 作为辅助任务嵌入自回归训练。</p></section>
-    <section id='related'><h2>3. 相关工作脉络</h2><p>OpenDriveVLA 横跨端到端 driving、VLM/VLA、LLM-based driving。它与 LMDrive 一样追求语言条件动作，但 LMDrive 在 CARLA 闭环，而 OpenDriveVLA 在 nuScenes open-loop 中强调 3D tokens 和开源 LLM。它与 EMMA 一样将输出文本化/自回归化，但更关注开源模型和 3D instance-aware 结构；与 DriveVLM-Dual 相比，它不是把 VLM 外接到传统 planner，而是让 VLA 模型直接生成轨迹。</p></section>
-    <section id='method'><h2>4. 方法详解</h2><p>视觉端先从多视角图像抽取 multi-scale 2D features，并 lift/aggregate 成 BEV features。随后三个 query 模块产生 scene token、agent tokens 和 map tokens：scene 负责全局语义，agent 负责动态目标，map 负责车道/可行驶区域等静态结构。层级对齐阶段冻结视觉编码器和 LLM，只训练投影器，将不同 token 对齐到 caption/QA 文本空间；instruction tuning 注入驾驶问答知识；agent-env-ego interaction 阶段让 LLM 基于 scene/map/ego 预测各 agent future motion；最后 trajectory planning tuning 将 ego waypoints 离散为 token，进行自回归生成。推理时生成 tokenized trajectory，再解码成数值 waypoints。</p></section>
-    <section id='exp'><h2>5. 实验与结果</h2><p>实验主要在 nuScenes open-loop planning 和 driving-related QA 上。项目页主表把非自回归方法、GPT-Driver/DriveVLM/EMMA/RDA-Driver 等自回归方法和 OpenDriveVLA-0.5B/3B/7B 放在同一表中，指标包括 ST-P3 L2/Collision 和 UniAD L2/Collision。OpenDriveVLA-7B 在 UniAD metrics Avg. L2=0.66、Avg. Collision=0.25；OpenDriveVLA-3B 在 ST-P3 metrics Avg. L2=0.33、Avg. Collision=0.10。消融重点应读四阶段训练、3D tokens 和 agent-env-ego interaction 的贡献。证据缺口是 open-loop 不能替代闭环安全，且数据集中的 GT/感知输入依赖需要仔细确认。</p></section>
-    <section id='repro'><h2>6. 复现要点</h2><p>复现优先按官方仓库：环境安装、nuScenes 数据准备、checkpoint 下载、inference/evaluation。硬件取决于 0.5B/3B/7B 模型尺寸，先跑 0.5B 验证数据链路，再跑 3B/7B 对齐论文指标。阻塞点包括 mmdet3d/mmcv 与 PyTorch 版本、nuScenes caption/QA 数据、UniAD/ST-P3 metrics 的实现差异。验收标准是主表中的 Avg. L2/Collision 和 QA 指标趋势，而不是单个场景可视化。</p></section>
-    <section id='analysis'><h2>7. 分析、局限与边界</h2><p>OpenDriveVLA 的价值在于把“3D driving inductive bias”放进 VLA，而不是天真用 2D VLM 输出动作。证据支持结构化 token 与 interaction auxiliary task 能改善开环规划，但仍不能证明闭环稳定和安全。后续可以把 OpenDriveVLA 接到 LMDrive/CARLA 或 nuPlan closed-loop，或者用 Drive-WM/OccWorld 做 rollout verifier。</p></section>
-    <section id='qa'><h2>8. 组会问答准备</h2><div class='qa'><b>Q：OpenDriveVLA 为什么强调 3D instance-aware tokens？</b><br>A：因为原生 2D VLM 容易混淆实例、缺少深度和交互结构，3D agent/map tokens 能降低幻觉并提供规划所需空间先验。</div><div class='qa'><b>Q：四阶段训练分别解决什么？</b><br>A：对齐解决模态差异，instruction tuning 注入驾驶知识，agent-env-ego interaction 学动态关系，planning tuning 学 ego 轨迹生成。</div><div class='qa'><b>Q：它和 EMMA 的差异？</b><br>A：EMMA 更偏 Gemini generalist，多任务文本输出；OpenDriveVLA 更偏开源 3D VLA 和 nuScenes open-loop 轨迹规划。</div><div class='qa'><b>Q：为什么 open-loop 结果不等价于真实驾驶？</b><br>A：open-loop 只比较预测轨迹与专家轨迹，不能覆盖闭环偏离、传感器延迟和长期安全反馈。</div><div class='qa'><b>Q：复现最先验证哪张表？</b><br>A：先复现主表中的 ST-P3/UniAD Avg. L2 和 Collision，再做训练阶段消融。</div></section>
-    <section id='figs'><h2>9. 补充图解与附录证据</h2><div class='figure'><img src='figures/figure1.jpg' alt='OpenDriveVLA Model Architecture。'><div class='caption'>OpenDriveVLA Model Architecture。</div><div class='interp'><b>本文解读：</b>图中视觉端输出 scene/agent/map tokens，投影到 LLM 语义空间后生成驾驶动作。它说明方法不是简单 caption head，而是把空间结构接入 action generation；但不能证明闭环安全。</div></div><div class='figure'><img src='figures/figure2.jpg' alt='OpenDriveVLA Training Pipeline。'><div class='caption'>OpenDriveVLA Training Pipeline。</div><div class='interp'><b>本文解读：</b>从 hierarchical feature alignment 到 instruction tuning、agent-env-ego interaction、trajectory planning tuning，火焰标识哪些模块参与训练。图支撑多阶段训练假设，但每阶段贡献仍需看消融。</div></div><div class='figure'><img src='figures/figure3.png' alt='Open-loop planning performance 表。'><div class='caption'>Open-loop planning performance 表。</div><div class='interp'><b>本文解读：</b>表中同时列出 ST-P3 与 UniAD metrics，对比非自回归和自回归方法。它支撑 OpenDriveVLA 的开环竞争力，但不能替代 closed-loop 驾驶评价。</div></div></section>
-    <section><h2>我的阅读笔记</h2><p>这是十篇里最适合放在 VLA 主线的开源工作。下一步可以和 LMDrive 组合：OpenDriveVLA 做 3D VLA planner，LMDrive/LangAuto 做闭环语言指令评测。</p></section>
-    <div class='footer'>Generated as a static OpenMOSS/WAM-style local report. Source PDF/images are stored under this report folder when available.</div>
-    </main></body></html>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenDriveVLA: Towards End-to-End Autonomous Driving with Large Vision-Language Action Model · 深度解读</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style></head><body><main>
+<header><div class="title-wrap"><h1>OpenDriveVLA: Towards End-to-End Autonomous Driving with Large Vision-Language Action Model</h1>
+<p class="subtitle">Zotero「自驾」分类 · 按新版论文深度解读大纲重构</p>
+<p class="lead"><strong>一句话贡献：</strong>OpenDriveVLA 基于开源 VLM/LLM，把 2D/3D instance-aware scene、agent、map tokens 层级对齐到语言空间，并通过 agent-env-ego 交互任务和轨迹规划微调自回归生成驾驶轨迹。</p>
+<div class="meta"><span class="pill">Open-source 3D VLA / autoregressive trajectory planning</span><span class="pill">arXiv:2503.23463</span><span class="pill">是，仓库公开；项目页显示模型/推理/环境逐步发布</span></div>
+<p><a href="https://arxiv.org/abs/2503.23463">arXiv</a> · <a href="https://drivevla.github.io/">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/opendrivevla/">当前 Blog</a></p></div></header>
+
+<nav class="toc">
+<a href="#identity">0. 论文身份卡片</a><a href="#quick">1. 论文速览</a><a href="#motivation">2. 研究问题与动机</a>
+<a href="#lineage">3. 相关工作脉络</a><a href="#overview-fig">4. 方法总览图</a><a href="#method">5. 方法详解</a>
+<a href="#figures">6. 原论文图解</a><a href="#experiments">7. 实验与结果</a><a href="#failures">8. 消融、失败与证据缺口</a>
+<a href="#repro">9. 复现要点</a><a href="#analysis">10. 分析、局限与边界</a><a href="#qa">11. 组会问答</a>
+<a href="#notes">12. 我的阅读笔记</a><a href="#appendix">13. 附录证据</a><a href="#refs">14. 参考资料</a>
+</nav>
+<section id="identity"><h2>0. 页面头部：论文身份卡片</h2>
+<table><tbody><tr><th>论文</th><td>OpenDriveVLA: Towards End-to-End Autonomous Driving with Large Vision-Language Action Model</td></tr><tr><th>作者</th><td>Zhou, Xingcheng；Han, Xuyuan；Yang, Feng；Ma, Yunpu；Tresp, Volker；Knoll, Alois</td></tr><tr><th>时间</th><td>2025/03/30</td></tr><tr><th>方向</th><td>Open-source 3D VLA / autoregressive trajectory planning</td></tr><tr><th>核心贡献</th><td>OpenDriveVLA 基于开源 VLM/LLM，把 2D/3D instance-aware scene、agent、map tokens 层级对齐到语言空间，并通过 agent-env-ego 交互任务和轨迹规划微调自回归生成驾驶轨迹。</td></tr><tr><th>模型类型</th><td>开源 3D Vision-Language-Action 驾驶模型，通过 scene、agent、map token 的分层对齐，把视觉语言理解推进到指令条件轨迹规划。</td></tr><tr><th>输入</th><td>多相机图像、3D 感知特征、地图与 agent 信息，以及自然语言驾驶指令。</td></tr><tr><th>中间表示</th><td>视觉预训练产生 scene/agent/map token；随后进行视觉语言对齐、agent-environment-ego 交互建模和规划微调。</td></tr><tr><th>输出</th><td>问答/描述、agent 运动预测与 ego 未来轨迹。</td></tr><tr><th>训练目标</th><td>3D 检测/跟踪/BEV 分割预训练，视觉语言任务 next-token 训练，交互预测和轨迹规划监督。</td></tr><tr><th>代码与复现状态</th><td>是，仓库公开；项目页显示模型/推理/环境逐步发布；很高：最贴近“自动驾驶 VLA”定义的开源工作之一</td></tr></tbody></table>
+</section>
+
+<section id="quick"><h2>1. 论文速览：用一页讲清楚价值</h2>
+<h3>1.1 一句话贡献</h3><p>OpenDriveVLA 基于开源 VLM/LLM，把 2D/3D instance-aware scene、agent、map tokens 层级对齐到语言空间，并通过 agent-env-ego 交互任务和轨迹规划微调自回归生成驾驶轨迹。</p>
+<h3>1.2 论文专属关键词</h3><p>Vision-Language-Action、3D spatial grounding、hierarchical alignment、agent-env-ego interaction、Qwen2.5、nuScenes-QA、open-loop planning、autoregressive waypoints</p>
+<h3>1.3 技术定位</h3><p>开源 3D Vision-Language-Action 驾驶模型，通过 scene、agent、map token 的分层对齐，把视觉语言理解推进到指令条件轨迹规划。</p>
+<h3>1.4 论文构建了什么</h3><table><tbody><tr><th>输入</th><td>多相机图像、3D 感知特征、地图与 agent 信息，以及自然语言驾驶指令。</td></tr><tr><th>编码与融合</th><td>视觉预训练产生 scene/agent/map token；随后进行视觉语言对齐、agent-environment-ego 交互建模和规划微调。</td></tr><tr><th>输出</th><td>问答/描述、agent 运动预测与 ego 未来轨迹。</td></tr><tr><th>训练目标</th><td>3D 检测/跟踪/BEV 分割预训练，视觉语言任务 next-token 训练，交互预测和轨迹规划监督。</td></tr></tbody></table>
+<h3>1.5 核心结论与证据链</h3><p>OpenDriveVLA 把 VLA 从机器人操作迁移到自动驾驶：输入包括多视角视觉、3D 环境表征、ego state 和高层 command；输出是可解析的未来 waypoints。与只给 VLM 加 QA/caption head 的方法不同，它显式构造 scene token、agent token 和 map token，并通过层级视觉-语言对齐、驾驶 instruction tuning、agent-env-ego interaction、trajectory planning tuning 四阶段训练，让 LLM 内部学到空间和交互先验。项目页结果表显示 OpenDriveVLA-0.5B/3B/7B 在 ST-P3 和 UniAD 指标下与 GPT-Driver、DriveVLM、EMMA 等 autoregressive 方法比较，OpenDriveVLA-7B 在 UniAD metrics Avg. L2/Collision 上达到 0.66/0.25。</p><p>核心证据来自：多阶段训练消融、nuScenes QA/Caption/nuX、agent 预测与规划结果，以及修改语言指令后轨迹随之变化的案例。。证据边界是：指令改变轨迹证明条件敏感性，但不能证明轨迹安全；开环规划指标无法覆盖闭环反应。</p>
+</section>
+
+<section id="motivation"><h2>2. 研究问题与动机：为什么需要这篇论文</h2>
+<h3>2.1 核心问题与成功标准</h3><p>原生 VLM 多用于 2D 图像问答，缺少 3D 空间、实例身份和多智能体互动的 inductive bias，直接输出驾驶动作会出现 hallucination 和物理不可行轨迹。OpenDriveVLA 的关键问题是：如何让开源 VLM 既保留语言推理能力，又能生成空间可靠的驾驶动作？显而易见的替代方案是把 VLM 作为 slow planner 或解释头，但这会保留模块间断裂；作者选择让 3D structured tokens 进入 LLM，并把 agent motion forecasting 作为辅助任务嵌入自回归训练。</p>
+<h3>2.2 现有方法的具体不足</h3><p>该论文针对的瓶颈不是笼统的“泛化不足”，而是：仅把图像接到 LLM 会忽略 3D 空间；仅用 UniAD 类结构又难遵循开放语言指令，因此论文显式构造 3D token 层级。</p>
+<h3>2.3 为什么不走显而易见的替代路线</h3><p>仅把图像接到 LLM 会忽略 3D 空间；仅用 UniAD 类结构又难遵循开放语言指令，因此论文显式构造 3D token 层级。</p>
+</section>
+
+<section id="lineage"><h2>3. 相关工作脉络：这篇论文从哪里来</h2>
+<h3>3.1 技术家族与直接前作</h3><p>OpenDriveVLA 横跨端到端 driving、VLM/VLA、LLM-based driving。它与 LMDrive 一样追求语言条件动作，但 LMDrive 在 CARLA 闭环，而 OpenDriveVLA 在 nuScenes open-loop 中强调 3D tokens 和开源 LLM。它与 EMMA 一样将输出文本化/自回归化，但更关注开源模型和 3D instance-aware 结构；与 DriveVLM-Dual 相比，它不是把 VLM 外接到传统 planner，而是让 VLA 模型直接生成轨迹。</p>
+<h3>3.2 本文新意属于表示、架构、训练还是评估</h3><p>从技术地图看，本文的主要新意可概括为：开源 3D Vision-Language-Action 驾驶模型，通过 scene、agent、map token 的分层对齐，把视觉语言理解推进到指令条件轨迹规划。。它并非简单替换 backbone，而是围绕输入表示、中间信息流或评价方式重新定义了论文的核心问题。</p>
+</section>
+
+<section id="overview-fig"><h2>4. 方法总览图：先看完整信息流</h2>
+<h3>4.1 主框架图与机制</h3><figure><img src="figures/source/fig02_drivevla-Training.jpg" alt="原论文图 2"><figcaption><strong>原论文 Figure 2：</strong>原论文 Figure 2</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>训练流程从 3D 视觉预训练、视觉语言对齐、agent-environment-ego 交互建模推进到指令条件规划，逐级把几何 token 接到语言动作空间。它支撑分阶段对齐思路，但不能证明每阶段都是不可替代的，需结合消融。</div>
+<h3>4.2 信息流一句话串联</h3><p>输入：多相机图像、3D 感知特征、地图与 agent 信息，以及自然语言驾驶指令。；中间处理：视觉预训练产生 scene/agent/map token；随后进行视觉语言对齐、agent-environment-ego 交互建模和规划微调。；最终输出：问答/描述、agent 运动预测与 ego 未来轨迹。；训练约束：3D 检测/跟踪/BEV 分割预训练，视觉语言任务 next-token 训练，交互预测和轨迹规划监督。</p>
+</section>
+
+<section id="method"><h2>5. 方法详解：输入、表示、融合、解码、训练与部署</h2>
+<h3>5.1 输入表示</h3><p>多相机图像、3D 感知特征、地图与 agent 信息，以及自然语言驾驶指令。。复现时首先要确保各模态的时间同步、坐标系、可见范围与训练时一致；任何一个上游输入偏移都可能被后续大模型放大。</p>
+<h3>5.2 编码器与融合设计</h3><p>视觉预训练产生 scene/agent/map token；随后进行视觉语言对齐、agent-environment-ego 交互建模和规划微调。</p>
+<h3>5.3 中间表示为何重要</h3><p>中间表示决定模型保留何种几何、语义和时间信息。该论文的关键中间链路是：视觉预训练产生 scene/agent/map token；随后进行视觉语言对齐、agent-environment-ego 交互建模和规划微调。。它让最终输出能够利用这些信息，但也把上游表示误差带入规划或预测。</p>
+<h3>5.4 解码、动作生成或未来预测</h3><p>问答/描述、agent 运动预测与 ego 未来轨迹。</p>
+<h3>5.5 训练目标及副作用</h3><p>3D 检测/跟踪/BEV 分割预训练，视觉语言任务 next-token 训练，交互预测和轨迹规划监督。。这些目标直接约束对应监督输出，却不会自动保证真实闭环安全、跨域鲁棒性或因果可解释性。</p>
+<h3>5.6 训练阶段与数据风险</h3><p>视觉端先从多视角图像抽取 multi-scale 2D features，并 lift/aggregate 成 BEV features。随后三个 query 模块产生 scene token、agent tokens 和 map tokens：scene 负责全局语义，agent 负责动态目标，map 负责车道/可行驶区域等静态结构。层级对齐阶段冻结视觉编码器和 LLM，只训练投影器，将不同 token 对齐到 caption/QA 文本空间；instruction tuning 注入驾驶问答知识；agent-env-ego interaction 阶段让 LLM 基于 scene/map/ego 预测各 agent future motion；最后 trajectory planning tuning 将 ego waypoints 离散为 token，进行自回归生成。推理时生成 tokenized trajectory，再解码成数值 waypoints。</p>
+<h3>5.7 推理与部署流程</h3><p>主要在 nuScenes 开环评估；模型输出轨迹，尚未证明实时真实车闭环和异常情况下的 fallback。</p>
+</section>
+
+<section id="figures"><h2>6. 原论文图解：逐图拆解证据含义</h2><h3>7.1 Figure 2：原论文图解</h3><figure><img src="figures/source/fig02_drivevla-Training.jpg" alt="原论文图 2"><figcaption><strong>原论文 Figure 2：</strong>原论文 Figure 2</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>训练流程从 3D 视觉预训练、视觉语言对齐、agent-environment-ego 交互建模推进到指令条件规划，逐级把几何 token 接到语言动作空间。它支撑分阶段对齐思路，但不能证明每阶段都是不可替代的，需结合消融。</div>
+<h3>7.2 Figure 4：Overview of the visual encoder pretraining stage. The 3D vis</h3><figure><img src="figures/source/fig04_drivevla-Training_vision_pretraining.jpg" alt="原论文图 4"><figcaption><strong>原论文 Figure 4：</strong>Overview of the visual encoder pretraining stage. The 3D vision-centric pretraining tasks include 3D object detection, tracking, and BEV panoptic segmentation. The extracted features are projected into scene, agent, and map tokens for downstream vision-language alignment and planning.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>多相机特征先接受 3D 检测、跟踪和 BEV 全景分割预训练，再被投影为 scene、agent、map token。该图说明语言对齐前先建立显式三维结构；预训练任务之间的互补程度仍需单项消融。</div>
+<h3>7.3 Figure 3：Visualization of OpenDriveVLA-7B planning actions under orig</h3><figure><img src="figures/source/fig03_drivevla-result_vis.jpg" alt="原论文图 3"><figcaption><strong>原论文 Figure 3：</strong>Visualization of OpenDriveVLA-7B planning actions under original dataset instruction to keep forward (left) and modified instruction to turn right (right). The QA prediction showcases (middle) are from results reported in Table tab:nuqa_nucap and Table tab:nux. The agent motion prediction results are visualized after the agent-env-ego interaction stage.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>左、右使用原始与修改后的指令，规划动作随“保持前进/右转”变化；中部同时展示问答输出。它把语言理解与动作敏感性放在同一场景中，但仍未验证修改后的轨迹是否满足交通规则和动态避碰。</div>
+<h3>7.4 Figure 9：Example 1 of agent motion prediction result of stage 2.5 Age</h3><figure><img src="figures/source/fig09_agent-env-ego-vis2.jpg" alt="原论文图 9"><figcaption><strong>原论文 Figure 9：</strong>Example 1 of agent motion prediction result of stage 2.5 Agent-Environment-Ego interaction modeling on nuScenes validation set Sample 8587.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>可视化同时画出周围 agent 的未来运动和 ego 交互结果，体现 stage 2.5 不只预测单车轨迹，而是建模 agent-environment-ego 关系。预测轨迹的视觉合理性不等同于交互概率校准。</div>
+<h3>7.5 Figure 11：Qualitative comparison of open-loop planning. Top: Planning </h3><figure><img src="figures/source/fig11_vis_6813_uniad.jpg" alt="原论文图 11"><img src="figures/source/fig11_vis_6813_DriveVLA.jpg" alt="原论文图 11"><figcaption><strong>原论文 Figure 11：</strong>Qualitative comparison of open-loop planning. Top: Planning results of UniAD hu2023_uniad. Bottom: Planning results of OpenDriveVLA-7B (Ours). The agent motion prediction results are visualized after the agent-environment-ego interaction stage.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>同一场景上方为 UniAD、下方为 OpenDriveVLA，轨迹和周围 agent 预测可直接对照。它用于展示语言动作模型与强 3D 规划基线的差异；定性对照无法排除样例选择偏差。</div>
+<h3>7.6 Figure 12：Example 1 of trajectory planning results of OpenDriveVLA aft</h3><figure><img src="figures/source/fig12_17940_opendrivevla_change_to_turn_left.jpg" alt="原论文图 12"><img src="figures/source/fig12_17940_origin_turn_right_gt.jpg" alt="原论文图 12"><img src="figures/source/fig12_17940_opendrivevla_change_to_turn_right.jpg" alt="原论文图 12"><figcaption><strong>原论文 Figure 12：</strong>Example 1 of trajectory planning results of OpenDriveVLA after stage 3 with different driving instructions.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>相同场景在不同语言指令下产生左转或右转轨迹，直接显示语言能够改变动作输出。它证明条件敏感性，不证明任何语言指令都会生成交通规则允许且无碰撞的轨迹。</div></section>
+
+<section id="experiments"><h2>7. 实验与结果：把证据链拆开</h2>
+<h3>7.1 数据集、任务与划分</h3><p>实验围绕该论文的技术定位组织：开源 3D Vision-Language-Action 驾驶模型，通过 scene、agent、map token 的分层对齐，把视觉语言理解推进到指令条件轨迹规划。。需要特别区分离线预测、生成质量、开环规划与真实/仿真闭环，因为它们使用不同成功标准；本论文主要证据为：多阶段训练消融、nuScenes QA/Caption/nuX、agent 预测与规划结果，以及修改语言指令后轨迹随之变化的案例。</p>
+<h3>7.2 Baseline 为什么重要</h3><p>论文的比较应围绕其技术定位理解：开源 3D Vision-Language-Action 驾驶模型，通过 scene、agent、map token 的分层对齐，把视觉语言理解推进到指令条件轨迹规划。。强 baseline 用来判断收益来自新增信息流、模型容量还是评估协议；仅与较弱旧方法比较不足以证明论文主张。</p>
+<h3>7.3 指标如何对应论文主张</h3><p>本文实验所依赖的证据为：多阶段训练消融、nuScenes QA/Caption/nuX、agent 预测与规划结果，以及修改语言指令后轨迹随之变化的案例。。离线预测误差、生成质量、规划指标或闭环分数各自只衡量部分能力，不能互相替代。</p>
+<h3>7.4 主结果与机制是否一致</h3><p>实验主要在 nuScenes open-loop planning 和 driving-related QA 上。项目页主表把非自回归方法、GPT-Driver/DriveVLM/EMMA/RDA-Driver 等自回归方法和 OpenDriveVLA-0.5B/3B/7B 放在同一表中，指标包括 ST-P3 L2/Collision 和 UniAD L2/Collision。OpenDriveVLA-7B 在 UniAD metrics Avg. L2=0.66、Avg. Collision=0.25；OpenDriveVLA-3B 在 ST-P3 metrics Avg. L2=0.33、Avg. Collision=0.10。消融重点应读四阶段训练、3D tokens 和 agent-env-ego interaction 的贡献。证据缺口是 open-loop 不能替代闭环安全，且数据集中的 GT/感知输入依赖需要仔细确认。</p>
+</section>
+
+<section id="failures"><h2>8. 消融、失败案例与证据缺口</h2>
+<h3>8.1 消融实验应回答什么</h3><p>最关键的消融需要隔离该论文的核心信息流：多阶段训练消融、nuScenes QA/Caption/nuX、agent 预测与规划结果，以及修改语言指令后轨迹随之变化的案例。。如果去掉核心模块后只在部分指标下降，需要进一步判断收益是否集中于特定场景。</p>
+<h3>8.2 失败案例与证据缺口</h3><p>指令改变轨迹证明条件敏感性，但不能证明轨迹安全；开环规划指标无法覆盖闭环反应。</p>
+<h3>8.3 论文没有证明什么</h3><p>现有结果不能直接推出：指令改变轨迹证明条件敏感性，但不能证明轨迹安全；开环规划指标无法覆盖闭环反应。</p>
+</section>
+
+<section id="repro"><h2>9. 复现要点：真正动手会遇到什么</h2>
+<h3>9.1 最小可行复现路线</h3><p>复现优先按官方仓库：环境安装、nuScenes 数据准备、checkpoint 下载、inference/evaluation。硬件取决于 0.5B/3B/7B 模型尺寸，先跑 0.5B 验证数据链路，再跑 3B/7B 对齐论文指标。阻塞点包括 mmdet3d/mmcv 与 PyTorch 版本、nuScenes caption/QA 数据、UniAD/ST-P3 metrics 的实现差异。验收标准是主表中的 Avg. L2/Collision 和 QA 指标趋势，而不是单个场景可视化。</p>
+<h3>9.2 数据、模型、硬件与阻塞点</h3><p>数据与接口重点：多相机图像、3D 感知特征、地图与 agent 信息，以及自然语言驾驶指令。。模型重点：视觉预训练产生 scene/agent/map token；随后进行视觉语言对齐、agent-environment-ego 交互建模和规划微调。。部署重点：主要在 nuScenes 开环评估；模型输出轨迹，尚未证明实时真实车闭环和异常情况下的 fallback。。论文未明确披露的硬件与训练成本不在此推测。</p>
+<h3>9.3 验收标准</h3><p>复现成功不应只以脚本运行结束为标准，而应至少复现论文核心趋势：多阶段训练消融、nuScenes QA/Caption/nuX、agent 预测与规划结果，以及修改语言指令后轨迹随之变化的案例。；同时检查输出是否在论文声称的边界外快速退化。</p>
+</section>
+
+<section id="analysis"><h2>10. 分析、局限与边界：作者没说完的部分</h2>
+<h3>10.1 最有价值贡献</h3><p>OpenDriveVLA 的价值在于把“3D driving inductive bias”放进 VLA，而不是天真用 2D VLM 输出动作。证据支持结构化 token 与 interaction auxiliary task 能改善开环规划，但仍不能证明闭环稳定和安全。后续可以把 OpenDriveVLA 接到 LMDrive/CARLA 或 nuPlan closed-loop，或者用 Drive-WM/OccWorld 做 rollout verifier。</p>
+<h3>10.2 主张—证据—充分性</h3><table><tbody><tr><th>论文主张</th><td>开源 3D Vision-Language-Action 驾驶模型，通过 scene、agent、map token 的分层对齐，把视觉语言理解推进到指令条件轨迹规划。</td></tr><tr><th>支撑证据</th><td>多阶段训练消融、nuScenes QA/Caption/nuX、agent 预测与规划结果，以及修改语言指令后轨迹随之变化的案例。</td></tr><tr><th>充分性判断</th><td>对论文评测范围内的机制结论较有支持；对真实闭环、跨域或安全泛化仍不足。</td></tr><tr><th>原因</th><td>指令改变轨迹证明条件敏感性，但不能证明轨迹安全；开环规划指标无法覆盖闭环反应。</td></tr></tbody></table>
+<h3>10.3 可行改进方向</h3><p>加入可验证语言约束、闭环 CARLA/真实车评测、对不同 3D token 层级进行因果消融。</p>
+<h3>10.4 后续实验建议</h3><table><tbody><tr><th>核心模块去除/替换</th><td>隔离论文主张，观察核心指标是否按预期下降</td></tr><tr><th>跨域或扰动测试</th><td>检查方法是否依赖训练分布和干净输入</td></tr><tr><th>闭环 rollout</th><td>观察误差累积、碰撞与恢复</td></tr><tr><th>不确定性/安全验证</th><td>识别高风险预测并建立 fallback</td></tr></tbody></table>
+</section>
+
+<section id="qa"><h2>11. 组会问答准备</h2><p>Q: OpenDriveVLA 为什么强调 3D instance-aware tokens？<br>A: 因为原生 2D VLM 容易混淆实例、缺少深度和交互结构，3D agent/map tokens 能降低幻觉并提供规划所需空间先验。<br>Q: 四阶段训练分别解决什么？<br>A: 对齐解决模态差异，instruction tuning 注入驾驶知识，agent-env-ego interaction 学动态关系，planning tuning 学 ego 轨迹生成。<br>Q: 它和 EMMA 的差异？<br>A: EMMA 更偏 Gemini generalist，多任务文本输出；OpenDriveVLA 更偏开源 3D VLA 和 nuScenes open-loop 轨迹规划。<br>Q: 为什么 open-loop 结果不等价于真实驾驶？<br>A: open-loop 只比较预测轨迹与专家轨迹，不能覆盖闭环偏离、传感器延迟和长期安全反馈。<br>Q: 复现最先验证哪张表？<br>A: 先复现主表中的 ST-P3/UniAD Avg. L2 和 Collision，再做训练阶段消融。</p></section>
+<section id="notes"><h2>12. 我的阅读笔记：转成自己的研究素材</h2>
+<h3>12.1 最值得借鉴的点</h3><p>这是十篇里最适合放在 VLA 主线的开源工作。下一步可以和 LMDrive 组合：OpenDriveVLA 做 3D VLA planner，LMDrive/LangAuto 做闭环语言指令评测。</p>
+<h3>12.2 与同目录论文的比较钩子</h3><p>可从“语言是否直接影响动作、是否显式预测未来世界、是否真实闭环、是否保留 3D 几何、是否使用 agent/tool/memory”五条轴与同目录论文比较。本文的定位为：开源 3D Vision-Language-Action 驾驶模型，通过 scene、agent、map token 的分层对齐，把视觉语言理解推进到指令条件轨迹规划。</p>
+<h3>12.3 可行动创新点</h3><p>加入可验证语言约束、闭环 CARLA/真实车评测、对不同 3D token 层级进行因果消融。</p>
+</section>
+<section id="appendix"><h2>13. 附录图解与证据索引</h2><p>本文使用的原始图件均来自 arXiv 源码，图注保留或准确转述。其他附录图未被机械堆入页面；只有能够解释方法、结果、消融或失败的图件才被选择。</p></section>
+<section id="refs"><h2>14. 参考资料与链接</h2><p><a href="https://arxiv.org/abs/2503.23463">arXiv</a> · <a href="https://drivevla.github.io/">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/opendrivevla/">当前 Blog</a></p></section>
+</main></body></html>

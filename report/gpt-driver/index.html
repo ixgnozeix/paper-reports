@@ -1,15 +1,620 @@
-<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>GPT-Driver: Learning to Drive with GPT</title><link rel='stylesheet' href='../../assets/style.css'></head><body>
-    <div class='toc'><div class='wrap'><a href='../../index.html'>← 首页</a><a href='#quick'>论文速览</a><a href='#motivation'>动机</a><a href='#method'>方法</a><a href='#exp'>实验</a><a href='#repro'>复现</a><a href='#qa'>Q&A</a><a href='#figs'>图解</a></div></div>
-    <main class='wrap'><section class='hero'><div class='eyebrow'>Paper Report · LLM motion planner / text trajectory</div><h1>GPT-Driver: Learning to Drive with GPT</h1><div class='meta'>Jiageng Mao, Yuxi Qian, Junjie Ye, Hang Zhao, Yue Wang · NeurIPS FMDM 2023 / arXiv 2023 · arXiv: 2310.01415</div><div class='grid'><div class='card'><b>一句话贡献</b><br>GPT-Driver 把自动驾驶 motion planning 重写为语言建模问题，将感知/预测/ego state 组织成 prompt，让 GPT-3.5 输出 CoT 决策过程和数值 waypoint 轨迹。</div><div class='card'><b>关键词</b><br>GPT-3.5、motion planning as language modeling、chain-of-thought、waypoint text、prompting-reasoning-finetuning、nuScenes、few-shot planning</div><div class='card'><b>技术定位</b><br>LLM motion planner / text trajectory</div><div class='card'><b>是否开源</b><br>是，评测代码公开；运行需要 OpenAI API</div><div class='card'><b>适合程度</b><br>中高：适合作为“轨迹语言化”早期基线</div></div><p><a href='https://ixgnozeix.github.io/paper-reports/report/gpt-driver/'>计划公网链接：https://ixgnozeix.github.io/paper-reports/report/gpt-driver/</a></p></section>
-    <section id='quick'><h2>1. 论文速览</h2><p>GPT-Driver 的贡献非常直接：把 planner 的输入输出都语言化。输入 prompt 包含通用驾驶上下文、检测/预测对象、ego state；输出包含自然语言推理和未来 waypoint 坐标，再解析回数值轨迹。论文提出 prompting-reasoning-finetuning 三步，让 GPT 不只写解释，还能输出精确坐标。few-shot 实验中，GPT-Driver fine-tuning 在 Table 2 达到 Avg. L2=0.84m、Avg. Collision=0.44%，明显优于 in-context learning 的 3.17m/5.30%。</p><div><span class='tag'>GPT-3.5</span><span class='tag'>motion planning as language modeling</span><span class='tag'>chain-of-thought</span><span class='tag'>waypoint text</span><span class='tag'>prompting-reasoning-finetuning</span><span class='tag'>nuScenes</span><span class='tag'>few-shot planning</span></div></section>
-    <section id='motivation'><h2>2. 研究问题与动机</h2><p>学习型 planner 常在训练分布外场景退化，且黑盒轨迹缺少解释。LLM 具备语言推理和少样本泛化，能否通过文本界面承担运动规划？GPT-Driver 的假设是：只要把结构化感知和轨迹坐标以合适 token 表示，GPT 的自回归建模能力可以学习驾驶轨迹分布，并通过 CoT 暴露关键对象和决策依据。</p></section>
-    <section id='related'><h2>3. 相关工作脉络</h2><p>它连接传统 motion planning、LLM prompting/CoT、自动驾驶语言化表示。相对 Agent-Driver，GPT-Driver 不做多轮工具调用和记忆检索，而是把一个规划问题封装成 prompt-to-trajectory。相对 EMMA/OpenDriveVLA，它没有直接处理原始多视角图像，更多依赖外部 perception/prediction 模块生成文本。</p></section>
-    <section id='method'><h2>4. 方法详解</h2><p>流程分三步。Prompting：把 perception/prediction 结果、ego velocity、历史轨迹等写成自然语言和坐标列表。Reasoning：要求模型先列出 notable objects、potential effects 和 high-level action，再给出 planned trajectory。Fine-tuning：用 nuScenes 人类驾驶轨迹和自动生成/标注的 reasoning guidance 调 GPT-3.5 fine-tuning API，使输出格式稳定。推理后用 parser 提取坐标，计算 L2 和 collision。</p></section>
-    <section id='exp'><h2>5. 实验与结果</h2><p>实验在 nuScenes open-loop planning。few-shot 设置显示 fine-tuning 比 in-context learning 稳定得多：Table 2 中 fine-tuning Avg. L2=0.84、Avg. Collision=0.44；in-context Avg. L2=3.17、Collision=5.30。论文还展示生成的 CoT 能识别关键对象并解释减速/避让。证据缺口在于输入来自外部感知预测，模型没有直接学习图像；同时 GPT API 版本和随机性会影响复现。</p></section>
-    <section id='repro'><h2>6. 复现要点</h2><p>复现需要 nuScenes、预缓存 perception/prediction/ego state、OpenAI API、fine-tuning 数据生成脚本和评测脚本。最小路径是先跑官方 evaluation code，复现 open-loop L2/collision；再用 10% 训练数据跑 fine-tuning。阻塞点是 API 成本、模型版本漂移、输出坐标解析失败和 prompt 格式不稳定。验收标准是 fine-tuning 明显优于 in-context learning，并能输出可解析 trajectory。</p></section>
-    <section id='analysis'><h2>7. 分析、局限与边界</h2><p>GPT-Driver 价值在于证明“轨迹坐标可作为语言 token 被 LLM 学习”，为 EMMA/OpenDriveVLA 的文本化轨迹输出铺路。它的边界也明显：没有视觉端到端，没有闭环反馈，安全依赖外部模块和 parser。改进可从开源 LLM、本地微调、轨迹 token 离散化和 safety verifier 入手。</p></section>
-    <section id='qa'><h2>8. 组会问答准备</h2><div class='qa'><b>Q：为什么 fine-tuning 比 ICL 好？</b><br>A：因为坐标输出格式和数值精度需要稳定学习，仅靠 few-shot prompt 难以保证可解析和可驾驶。</div><div class='qa'><b>Q：CoT 会直接提升安全么？</b><br>A：CoT 提升解释和可能的推理一致性，但不能自动保证轨迹安全，仍需 collision 检查。</div><div class='qa'><b>Q：输入依赖什么？</b><br>A：依赖外部 perception/prediction 模块输出对象、位置和未来轨迹文本。</div><div class='qa'><b>Q：与 Agent-Driver 的区别？</b><br>A：GPT-Driver 是单次 prompt-to-trajectory planner；Agent-Driver 是多轮工具调用+记忆+反思的 agent 系统。</div><div class='qa'><b>Q：最大复现风险？</b><br>A：OpenAI API 模型版本变化和输出解析不稳定。</div></section>
-    <section id='figs'><h2>9. 补充图解与附录证据</h2><div class='figure'><img src='figures/figure1.png' alt='Figure 1. GPT-Driver overview。'><div class='caption'>Figure 1. GPT-Driver overview。</div><div class='interp'><b>本文解读：</b>图把感知预测和 ego state 转为 language prompt，LLM 输出 reasoning 和 trajectory，再解析成数值轨迹。它支撑“规划即语言建模”的核心表述，但不说明视觉特征如何获得。</div></div><div class='figure'><img src='figures/figure2.png' alt='Figure 2. LLM 输入 prompt 示例。'><div class='caption'>Figure 2. LLM 输入 prompt 示例。</div><div class='interp'><b>本文解读：</b>上方通用上下文约束驾驶规则，下方写入当前帧观测和 ego state。图显示 prompt engineering 对稳定输出很关键，但不能证明模型真正理解物理。</div></div><div class='figure'><img src='figures/figure3.png' alt='Figure 3. LLM 期望输出示例。'><div class='caption'>Figure 3. LLM 期望输出示例。</div><div class='interp'><b>本文解读：</b>红色部分突出 CoT 与 planned trajectory，连接到解释性和坐标生成。它说明输出格式设计，但安全性仍要由评测指标验证。</div></div></section>
-    <section><h2>我的阅读笔记</h2><p>作为“LLM 轨迹语言化”基线非常适合引用。做新工作时可以把 GPT-Driver 的 prompt/CoT 设计替换为开源 VLA action tokens，并加入闭环/世界模型验证。</p></section>
-    <div class='footer'>Generated as a static OpenMOSS/WAM-style local report. Source PDF/images are stored under this report folder when available.</div>
-    </main></body></html>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GPT-Driver: Learning to Drive with GPT · 深度解读</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style></head><body><main>
+<header><div class="title-wrap"><h1>GPT-Driver: Learning to Drive with GPT</h1>
+<p class="subtitle">Zotero「自驾」分类 · 按新版论文深度解读大纲重构</p>
+<p class="lead"><strong>一句话贡献：</strong>GPT-Driver 把自动驾驶 motion planning 重写为语言建模问题，将感知/预测/ego state 组织成 prompt，让 GPT-3.5 输出 CoT 决策过程和数值 waypoint 轨迹。</p>
+<div class="meta"><span class="pill">LLM motion planner / text trajectory</span><span class="pill">arXiv:2310.01415</span><span class="pill">是，评测代码公开；运行需要 OpenAI API</span></div>
+<p><a href="https://arxiv.org/abs/2310.01415">arXiv</a> · <a href="https://github.com/PointsCoder/GPT-Driver">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/gpt-driver/">当前 Blog</a></p></div></header>
+
+<nav class="toc">
+<a href="#identity">0. 论文身份卡片</a><a href="#quick">1. 论文速览</a><a href="#motivation">2. 研究问题与动机</a>
+<a href="#lineage">3. 相关工作脉络</a><a href="#overview-fig">4. 方法总览图</a><a href="#method">5. 方法详解</a>
+<a href="#figures">6. 原论文图解</a><a href="#experiments">7. 实验与结果</a><a href="#failures">8. 消融、失败与证据缺口</a>
+<a href="#repro">9. 复现要点</a><a href="#analysis">10. 分析、局限与边界</a><a href="#qa">11. 组会问答</a>
+<a href="#notes">12. 我的阅读笔记</a><a href="#appendix">13. 附录证据</a><a href="#refs">14. 参考资料</a>
+</nav>
+<section id="identity"><h2>0. 页面头部：论文身份卡片</h2>
+<table><tbody><tr><th>论文</th><td>GPT-Driver: Learning to Drive with GPT</td></tr><tr><th>作者</th><td>Mao, Jiageng；Qian, Yuxi；Ye, Junjie；Zhao, Hang；Wang, Yue</td></tr><tr><th>时间</th><td>2023/10/02</td></tr><tr><th>方向</th><td>LLM motion planner / text trajectory</td></tr><tr><th>核心贡献</th><td>GPT-Driver 把自动驾驶 motion planning 重写为语言建模问题，将感知/预测/ego state 组织成 prompt，让 GPT-3.5 输出 CoT 决策过程和数值 waypoint 轨迹。</td></tr><tr><th>模型类型</th><td>将自动驾驶运动规划重写为语言建模：把结构化感知与 ego 状态转成 prompt，让 GPT 输出推理文本与数值轨迹。</td></tr><tr><th>输入</th><td>检测/跟踪后的结构化对象、地图/车道信息、ego 状态与历史轨迹文本；图像不直接进入模型。</td></tr><tr><th>中间表示</th><td>prompt 中的场景描述进入 GPT，Chain-of-Thought 表达关键对象、风险与驾驶决策。</td></tr><tr><th>输出</th><td>自然语言推理和文本格式的未来 waypoint，解析后恢复为数值轨迹。</td></tr><tr><th>训练目标</th><td>以专家轨迹和人工/自动生成的推理监督做自回归语言建模，并使用轨迹误差评估。</td></tr><tr><th>代码与复现状态</th><td>是，评测代码公开；运行需要 OpenAI API；中高：适合作为“轨迹语言化”早期基线</td></tr></tbody></table>
+</section>
+
+<section id="quick"><h2>1. 论文速览：用一页讲清楚价值</h2>
+<h3>1.1 一句话贡献</h3><p>GPT-Driver 把自动驾驶 motion planning 重写为语言建模问题，将感知/预测/ego state 组织成 prompt，让 GPT-3.5 输出 CoT 决策过程和数值 waypoint 轨迹。</p>
+<h3>1.2 论文专属关键词</h3><p>GPT-3.5、motion planning as language modeling、chain-of-thought、waypoint text、prompting-reasoning-finetuning、nuScenes、few-shot planning</p>
+<h3>1.3 技术定位</h3><p>将自动驾驶运动规划重写为语言建模：把结构化感知与 ego 状态转成 prompt，让 GPT 输出推理文本与数值轨迹。</p>
+<h3>1.4 论文构建了什么</h3><table><tbody><tr><th>输入</th><td>检测/跟踪后的结构化对象、地图/车道信息、ego 状态与历史轨迹文本；图像不直接进入模型。</td></tr><tr><th>编码与融合</th><td>prompt 中的场景描述进入 GPT，Chain-of-Thought 表达关键对象、风险与驾驶决策。</td></tr><tr><th>输出</th><td>自然语言推理和文本格式的未来 waypoint，解析后恢复为数值轨迹。</td></tr><tr><th>训练目标</th><td>以专家轨迹和人工/自动生成的推理监督做自回归语言建模，并使用轨迹误差评估。</td></tr></tbody></table>
+<h3>1.5 核心结论与证据链</h3><p>GPT-Driver 的贡献非常直接：把 planner 的输入输出都语言化。输入 prompt 包含通用驾驶上下文、检测/预测对象、ego state；输出包含自然语言推理和未来 waypoint 坐标，再解析回数值轨迹。论文提出 prompting-reasoning-finetuning 三步，让 GPT 不只写解释，还能输出精确坐标。few-shot 实验中，GPT-Driver fine-tuning 在 Table 2 达到 Avg. L2=0.84m、Avg. Collision=0.44%，明显优于 in-context learning 的 3.17m/5.30%。</p><p>核心证据来自：规划 L2 与碰撞指标、CoT 与 prompt 设计消融，以及模型输出文本与轨迹的可视化。。证据边界是：可读 CoT 不是因果解释；上游感知错误、文本量化和闭环误差没有被完整评估。</p>
+</section>
+
+<section id="motivation"><h2>2. 研究问题与动机：为什么需要这篇论文</h2>
+<h3>2.1 核心问题与成功标准</h3><p>学习型 planner 常在训练分布外场景退化，且黑盒轨迹缺少解释。LLM 具备语言推理和少样本泛化，能否通过文本界面承担运动规划？GPT-Driver 的假设是：只要把结构化感知和轨迹坐标以合适 token 表示，GPT 的自回归建模能力可以学习驾驶轨迹分布，并通过 CoT 暴露关键对象和决策依据。</p>
+<h3>2.2 现有方法的具体不足</h3><p>该论文针对的瓶颈不是笼统的“泛化不足”，而是：直接图像 VLM 训练成本高且几何 grounding 不稳定；结构化文本能利用 LLM 推理，但信息受上游检测器限制。</p>
+<h3>2.3 为什么不走显而易见的替代路线</h3><p>直接图像 VLM 训练成本高且几何 grounding 不稳定；结构化文本能利用 LLM 推理，但信息受上游检测器限制。</p>
+</section>
+
+<section id="lineage"><h2>3. 相关工作脉络：这篇论文从哪里来</h2>
+<h3>3.1 技术家族与直接前作</h3><p>它连接传统 motion planning、LLM prompting/CoT、自动驾驶语言化表示。相对 Agent-Driver，GPT-Driver 不做多轮工具调用和记忆检索，而是把一个规划问题封装成 prompt-to-trajectory。相对 EMMA/OpenDriveVLA，它没有直接处理原始多视角图像，更多依赖外部 perception/prediction 模块生成文本。</p>
+<h3>3.2 本文新意属于表示、架构、训练还是评估</h3><p>从技术地图看，本文的主要新意可概括为：将自动驾驶运动规划重写为语言建模：把结构化感知与 ego 状态转成 prompt，让 GPT 输出推理文本与数值轨迹。。它并非简单替换 backbone，而是围绕输入表示、中间信息流或评价方式重新定义了论文的核心问题。</p>
+</section>
+
+<section id="overview-fig"><h2>4. 方法总览图：先看完整信息流</h2>
+<h3>4.1 主框架图与机制</h3><figure><img src="figures/source/fig01_Arch5.png" alt="原论文图 1"><figcaption><strong>原论文 Figure 1：</strong>Overview of GPT-Driver. We reformulate motion planning as a language modeling problem. We convert observations and ego-states into language prompts, guiding the LLM to produce a planned trajectory alongside its decision-making process in natural language. Subsequently, this planned trajectory is reverted to the numerical format for motion planning.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>结构化场景和 ego 状态先被序列化为语言 prompt，GPT 同时输出推理链和 waypoint 文本，最后解析回数值轨迹。图中明确模型不直接看图像，因此性能上限受外部感知和文本模板约束。</div>
+<h3>4.2 信息流一句话串联</h3><p>输入：检测/跟踪后的结构化对象、地图/车道信息、ego 状态与历史轨迹文本；图像不直接进入模型。；中间处理：prompt 中的场景描述进入 GPT，Chain-of-Thought 表达关键对象、风险与驾驶决策。；最终输出：自然语言推理和文本格式的未来 waypoint，解析后恢复为数值轨迹。；训练约束：以专家轨迹和人工/自动生成的推理监督做自回归语言建模，并使用轨迹误差评估。</p>
+</section>
+
+<section id="method"><h2>5. 方法详解：输入、表示、融合、解码、训练与部署</h2>
+<h3>5.1 输入表示</h3><p>检测/跟踪后的结构化对象、地图/车道信息、ego 状态与历史轨迹文本；图像不直接进入模型。。复现时首先要确保各模态的时间同步、坐标系、可见范围与训练时一致；任何一个上游输入偏移都可能被后续大模型放大。</p>
+<h3>5.2 编码器与融合设计</h3><p>prompt 中的场景描述进入 GPT，Chain-of-Thought 表达关键对象、风险与驾驶决策。</p>
+<h3>5.3 中间表示为何重要</h3><p>中间表示决定模型保留何种几何、语义和时间信息。该论文的关键中间链路是：prompt 中的场景描述进入 GPT，Chain-of-Thought 表达关键对象、风险与驾驶决策。。它让最终输出能够利用这些信息，但也把上游表示误差带入规划或预测。</p>
+<h3>5.4 解码、动作生成或未来预测</h3><p>自然语言推理和文本格式的未来 waypoint，解析后恢复为数值轨迹。</p>
+<h3>5.5 训练目标及副作用</h3><p>以专家轨迹和人工/自动生成的推理监督做自回归语言建模，并使用轨迹误差评估。。这些目标直接约束对应监督输出，却不会自动保证真实闭环安全、跨域鲁棒性或因果可解释性。</p>
+<h3>5.6 训练阶段与数据风险</h3><p>流程分三步。Prompting：把 perception/prediction 结果、ego velocity、历史轨迹等写成自然语言和坐标列表。Reasoning：要求模型先列出 notable objects、potential effects 和 high-level action，再给出 planned trajectory。Fine-tuning：用 nuScenes 人类驾驶轨迹和自动生成/标注的 reasoning guidance 调 GPT-3.5 fine-tuning API，使输出格式稳定。推理后用 parser 提取坐标，计算 L2 和 collision。</p>
+<h3>5.7 推理与部署流程</h3><p>离线 nuScenes 运动规划；依赖外部感知与文本模板，未直接进行实时闭环控制。</p>
+</section>
+
+<section id="figures"><h2>6. 原论文图解：逐图拆解证据含义</h2><h3>7.1 Figure 1：Overview of GPT-Driver. We reformulate motion planning as a </h3><figure><img src="figures/source/fig01_Arch5.png" alt="原论文图 1"><figcaption><strong>原论文 Figure 1：</strong>Overview of GPT-Driver. We reformulate motion planning as a language modeling problem. We convert observations and ego-states into language prompts, guiding the LLM to produce a planned trajectory alongside its decision-making process in natural language. Subsequently, this planned trajectory is reverted to the numerical format for motion planning.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>结构化场景和 ego 状态先被序列化为语言 prompt，GPT 同时输出推理链和 waypoint 文本，最后解析回数值轨迹。图中明确模型不直接看图像，因此性能上限受外部感知和文本模板约束。</div>
+<h3>7.2 Figure 2：An example of input prompts provided to the LLM. The upper t</h3><figure><img src="figures/source/fig02_Prompts_bold.png" alt="原论文图 2"><figcaption><strong>原论文 Figure 2：</strong>An example of input prompts provided to the LLM. The upper text box offers a universal context related to motion planning for every driving scenario. The lower text box provides a language description of the observations and ego-states specific to this particular frame. Parameterized inputs are highlighted in \textbfredred.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>prompt 上半部提供跨场景通用规划规则，下半部把当前 ego 状态和对象参数化为文本，红色标记显示数值如何进入语言上下文。它清楚暴露了模型依赖的信息，也说明未被文本化的视觉细节会永久丢失。</div>
+<h3>7.3 Figure 3：An example of the expected outputs of the LLM. The chain-of-</h3><figure><img src="figures/source/fig03_Outputs_bold.png" alt="原论文图 3"><figcaption><strong>原论文 Figure 3：</strong>An example of the expected outputs of the LLM. The chain-of-thought reasoning and the planned trajectory are highlighted in \textbfredred.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>期望输出把 Chain-of-Thought 与数值 waypoint 放在同一文本序列，模型在训练中同时模仿解释和轨迹。该格式提高可读性，但语言推理正确并不保证随后的坐标满足车辆动力学。</div>
+<h3>7.4 Figure 4：Visualization of the GPT-Driver&#x27;s outputs (text boxes on the</h3><figure><img src="figures/source/fig04_Viz.png" alt="原论文图 4"><figcaption><strong>原论文 Figure 4：</strong>Visualization of the GPT-Driver&#x27;s outputs (text boxes on the right) on the validation set. Planned trajectories and notable objects are highlighted accordingly in \textbfredred on the left images. Please note that the images are only for illustration and are never used in our approach. The visualizations indicate that our method can effectively recognize critical objects and their potential impact from all perception and prediction inputs, and subsequently plan a sensible driving trajectory.</figcaption></figure>
+<div class="note"><strong>图中内容、机制与证据边界：</strong>左侧红色轨迹与关键对象对应右侧的语言推理，展示规划结果可读性。由于图像仅用于展示而未输入模型，这些画面不能证明 GPT 具备视觉理解，也不能证明 CoT 是产生轨迹的真实原因。</div></section>
+
+<section id="experiments"><h2>7. 实验与结果：把证据链拆开</h2>
+<h3>7.1 数据集、任务与划分</h3><p>实验围绕该论文的技术定位组织：将自动驾驶运动规划重写为语言建模：把结构化感知与 ego 状态转成 prompt，让 GPT 输出推理文本与数值轨迹。。需要特别区分离线预测、生成质量、开环规划与真实/仿真闭环，因为它们使用不同成功标准；本论文主要证据为：规划 L2 与碰撞指标、CoT 与 prompt 设计消融，以及模型输出文本与轨迹的可视化。</p>
+<h3>7.2 Baseline 为什么重要</h3><p>论文的比较应围绕其技术定位理解：将自动驾驶运动规划重写为语言建模：把结构化感知与 ego 状态转成 prompt，让 GPT 输出推理文本与数值轨迹。。强 baseline 用来判断收益来自新增信息流、模型容量还是评估协议；仅与较弱旧方法比较不足以证明论文主张。</p>
+<h3>7.3 指标如何对应论文主张</h3><p>本文实验所依赖的证据为：规划 L2 与碰撞指标、CoT 与 prompt 设计消融，以及模型输出文本与轨迹的可视化。。离线预测误差、生成质量、规划指标或闭环分数各自只衡量部分能力，不能互相替代。</p>
+<h3>7.4 主结果与机制是否一致</h3><p>实验在 nuScenes open-loop planning。few-shot 设置显示 fine-tuning 比 in-context learning 稳定得多：Table 2 中 fine-tuning Avg. L2=0.84、Avg. Collision=0.44；in-context Avg. L2=3.17、Collision=5.30。论文还展示生成的 CoT 能识别关键对象并解释减速/避让。证据缺口在于输入来自外部感知预测，模型没有直接学习图像；同时 GPT API 版本和随机性会影响复现。</p>
+</section>
+
+<section id="failures"><h2>8. 消融、失败案例与证据缺口</h2>
+<h3>8.1 消融实验应回答什么</h3><p>最关键的消融需要隔离该论文的核心信息流：规划 L2 与碰撞指标、CoT 与 prompt 设计消融，以及模型输出文本与轨迹的可视化。。如果去掉核心模块后只在部分指标下降，需要进一步判断收益是否集中于特定场景。</p>
+<h3>8.2 失败案例与证据缺口</h3><p>可读 CoT 不是因果解释；上游感知错误、文本量化和闭环误差没有被完整评估。</p>
+<h3>8.3 论文没有证明什么</h3><p>现有结果不能直接推出：可读 CoT 不是因果解释；上游感知错误、文本量化和闭环误差没有被完整评估。</p>
+</section>
+
+<section id="repro"><h2>9. 复现要点：真正动手会遇到什么</h2>
+<h3>9.1 最小可行复现路线</h3><p>复现需要 nuScenes、预缓存 perception/prediction/ego state、OpenAI API、fine-tuning 数据生成脚本和评测脚本。最小路径是先跑官方 evaluation code，复现 open-loop L2/collision；再用 10% 训练数据跑 fine-tuning。阻塞点是 API 成本、模型版本漂移、输出坐标解析失败和 prompt 格式不稳定。验收标准是 fine-tuning 明显优于 in-context learning，并能输出可解析 trajectory。</p>
+<h3>9.2 数据、模型、硬件与阻塞点</h3><p>数据与接口重点：检测/跟踪后的结构化对象、地图/车道信息、ego 状态与历史轨迹文本；图像不直接进入模型。。模型重点：prompt 中的场景描述进入 GPT，Chain-of-Thought 表达关键对象、风险与驾驶决策。。部署重点：离线 nuScenes 运动规划；依赖外部感知与文本模板，未直接进行实时闭环控制。。论文未明确披露的硬件与训练成本不在此推测。</p>
+<h3>9.3 验收标准</h3><p>复现成功不应只以脚本运行结束为标准，而应至少复现论文核心趋势：规划 L2 与碰撞指标、CoT 与 prompt 设计消融，以及模型输出文本与轨迹的可视化。；同时检查输出是否在论文声称的边界外快速退化。</p>
+</section>
+
+<section id="analysis"><h2>10. 分析、局限与边界：作者没说完的部分</h2>
+<h3>10.1 最有价值贡献</h3><p>GPT-Driver 价值在于证明“轨迹坐标可作为语言 token 被 LLM 学习”，为 EMMA/OpenDriveVLA 的文本化轨迹输出铺路。它的边界也明显：没有视觉端到端，没有闭环反馈，安全依赖外部模块和 parser。改进可从开源 LLM、本地微调、轨迹 token 离散化和 safety verifier 入手。</p>
+<h3>10.2 主张—证据—充分性</h3><table><tbody><tr><th>论文主张</th><td>将自动驾驶运动规划重写为语言建模：把结构化感知与 ego 状态转成 prompt，让 GPT 输出推理文本与数值轨迹。</td></tr><tr><th>支撑证据</th><td>规划 L2 与碰撞指标、CoT 与 prompt 设计消融，以及模型输出文本与轨迹的可视化。</td></tr><tr><th>充分性判断</th><td>对论文评测范围内的机制结论较有支持；对真实闭环、跨域或安全泛化仍不足。</td></tr><tr><th>原因</th><td>可读 CoT 不是因果解释；上游感知错误、文本量化和闭环误差没有被完整评估。</td></tr></tbody></table>
+<h3>10.3 可行改进方向</h3><p>干预 CoT 验证因果性；让模型输出候选轨迹与不确定性；用闭环世界模型检验轨迹后果。</p>
+<h3>10.4 后续实验建议</h3><table><tbody><tr><th>核心模块去除/替换</th><td>隔离论文主张，观察核心指标是否按预期下降</td></tr><tr><th>跨域或扰动测试</th><td>检查方法是否依赖训练分布和干净输入</td></tr><tr><th>闭环 rollout</th><td>观察误差累积、碰撞与恢复</td></tr><tr><th>不确定性/安全验证</th><td>识别高风险预测并建立 fallback</td></tr></tbody></table>
+</section>
+
+<section id="qa"><h2>11. 组会问答准备</h2><p>Q: 为什么 fine-tuning 比 ICL 好？<br>A: 因为坐标输出格式和数值精度需要稳定学习，仅靠 few-shot prompt 难以保证可解析和可驾驶。<br>Q: CoT 会直接提升安全么？<br>A: CoT 提升解释和可能的推理一致性，但不能自动保证轨迹安全，仍需 collision 检查。<br>Q: 输入依赖什么？<br>A: 依赖外部 perception/prediction 模块输出对象、位置和未来轨迹文本。<br>Q: 与 Agent-Driver 的区别？<br>A: GPT-Driver 是单次 prompt-to-trajectory planner；Agent-Driver 是多轮工具调用+记忆+反思的 agent 系统。<br>Q: 最大复现风险？<br>A: OpenAI API 模型版本变化和输出解析不稳定。</p></section>
+<section id="notes"><h2>12. 我的阅读笔记：转成自己的研究素材</h2>
+<h3>12.1 最值得借鉴的点</h3><p>作为“LLM 轨迹语言化”基线非常适合引用。做新工作时可以把 GPT-Driver 的 prompt/CoT 设计替换为开源 VLA action tokens，并加入闭环/世界模型验证。</p>
+<h3>12.2 与同目录论文的比较钩子</h3><p>可从“语言是否直接影响动作、是否显式预测未来世界、是否真实闭环、是否保留 3D 几何、是否使用 agent/tool/memory”五条轴与同目录论文比较。本文的定位为：将自动驾驶运动规划重写为语言建模：把结构化感知与 ego 状态转成 prompt，让 GPT 输出推理文本与数值轨迹。</p>
+<h3>12.3 可行动创新点</h3><p>干预 CoT 验证因果性；让模型输出候选轨迹与不确定性；用闭环世界模型检验轨迹后果。</p>
+</section>
+<section id="appendix"><h2>13. 附录图解与证据索引</h2><p>本文使用的原始图件均来自 arXiv 源码，图注保留或准确转述。其他附录图未被机械堆入页面；只有能够解释方法、结果、消融或失败的图件才被选择。</p></section>
+<section id="refs"><h2>14. 参考资料与链接</h2><p><a href="https://arxiv.org/abs/2310.01415">arXiv</a> · <a href="https://github.com/PointsCoder/GPT-Driver">项目/代码页</a> · <a href="https://ixgnozeix.github.io/paper-reports/report/gpt-driver/">当前 Blog</a></p></section>
+</main></body></html>
