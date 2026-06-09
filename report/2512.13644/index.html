@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DexWM 深度精读</title>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DexWM 深度精读</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -522,134 +520,111 @@
       background: var(--ink);
       color: var(--paper);
     }
-</style></head>
-<body><main>
-<header><div class="title-wrap"><h1>World Models Can Leverage Human Videos for Dexterous Manipulation</h1>
-<p class="subtitle">以论文正文、实验、附录与原始图注为证据的参考级中文精读</p>
-<p class="lead"><strong>一句话贡献：</strong>训练灵巧操作 world model，从大量人类/机器人视频学习手-物交互动态，并迁移到真实机器人规划。</p>
-<div class="meta"><span class="pill">arXiv:2512.13644</span><span class="pill">DexWM</span><span class="pill">灵巧手 World Model / WAM 相关</span></div>
-<p><a href="https://arxiv.org/abs/2512.13644">论文原文</a></p>
-<p><strong>关键词：</strong>DexWM; world model; human videos; hand consistency; latent dynamics; dexterous manipulation</p></div></header>
+</style></head><body><main>
+<header><h1>DexWM：用手部关键点动作学习可规划的灵巧交互世界模型</h1>
+<p class="subtitle">World Models for Learning Dexterous Hand-Object Interactions from Human Videos</p>
+<p class="lead"><strong>一句话贡献：</strong>DexWM 把双手 3D 关键点变化与相机运动作为统一动作，在冻结 DINOv2 latent 中预测未来，并用 hand-consistency loss 强制模型保留精细手形；它由 829 小时 EgoDex 与约 100 小时 DROID 预训练，再用约 4 小时无任务 RoboCasa 探索数据适配机器人，最终通过 CEM/MPC 做零样本 reach、grasp 与 place。</p>
+<div class="meta"><span class="pill">arXiv:2512.13644</span><span class="pill">&gt;900 h pretraining</span><span class="pill">829 h EgoDex</span><span class="pill">83% real grasp</span><span class="pill">MPC + CEM</span></div>
+<p><a href="https://arxiv.org/abs/2512.13644">论文原文</a></p></header>
 
-<nav class="toc"><a href="#overview">1. 论文速览与证据链</a><a href="#motivation">2. 研究问题与动机</a><a href="#related">3. 相关工作与技术定位</a><a href="#method">4. 方法、表示与训练流程</a><a href="#experiments">5. 实验设计、结果与消融</a><a href="#repro">6. 复现路线与工程风险</a><a href="#discussion">7. 分析、局限与边界</a><a href="#qa">8. 组会问答与阅读结论</a></nav>
-<section id="overview"><h2>1. 论文速览与证据链</h2><h3>1.0 一句话贡献与关键词</h3><p>训练灵巧操作 world model，从大量人类/机器人视频学习手-物交互动态，并迁移到真实机器人规划。这一定义把 DexWM 的任务对象、核心机制和预期收益放在同一句话中。关键词包括：DexWM; world model; human videos; hand consistency; latent dynamics; dexterous manipulation。这些概念共同界定了该工作位于灵巧操作、动作表示、感知融合或跨具身学习中的具体技术位置。</p><h3>1.1 技术定位与核心贡献</h3><p>DexWM 学习的不是动作策略，而是动作导致的未来视觉 latent。它用人类第一视角视频和非灵巧机器人视频预训练 hand-object interaction dynamics，再用少量灵巧机器人探索数据适配，最后通过 CEM/MPC 搜索能让预测状态接近目标图像的动作。它是这组论文中最贴近 WAM/model-based manipulation 的工作。DexWM 用冻结 DINOv2 表示视觉状态，用手部动作和相机运动作为条件预测未来 latent，再通过 CEM/MPC 搜索能使预测状态接近目标图像的动作。核心贡献是让人类视频中的灵巧运动先验服务真实机器人规划。</p></section><section id="motivation"><h2>2. 研究问题与动机</h2><h3>2.1 论文面对的真实瓶颈</h3><p>灵巧手 world model 需要理解指尖级动作如何改变物体，但真实灵巧机器人视频稀缺。普通视频模型缺乏精细动作条件，直接 policy 又只能解决训练过的任务。DexWM 的动机是利用大规模人类视频学习可迁移的交互动力学，并通过统一 hand keypoint action 跨越人手、平行夹爪和 Allegro 手之间的 embodiment gap。灵巧操作的接触变化难以由静态视觉直接判断，纯行为克隆又受机器人示范规模限制。DexWM 把问题改写为动作条件下的未来状态预测，使规划器能够比较候选动作而不必为每个任务重新训练策略。</p></section><section id="related"><h2>3. 相关工作与技术定位</h2><h3>3.1 直接技术前作</h3><p>它区别于无动作条件的视频生成模型，也区别于直接 observation-to-action 的 Diffusion Policy。状态预测采用视觉 latent world model 路线；动作表示借鉴人体/手部关键点；测试时采用 model predictive control。与 DWM 相比，DexWM 更强调 latent dynamics 可用于真实机器人规划，而不是生成高保真交互视频。它位于视觉 world model、动作迁移和 model predictive control 的交叉处。相较生成高保真视频的 DWM，DexWM 更强调 latent dynamics 是否对动作敏感并可用于搜索；相较 policy，它把决策拆成预测模型和优化器。</p></section><section id="method"><h2>4. 方法、表示与训练流程</h2><h3>4.1 总体方法链路</h3><p>图像由冻结 DINOv2-L 编码成 patch latent；动作由两个时刻之间的手部 3D keypoint 变化和 camera motion 表示。对于 DROID 平行夹爪，作者构造 dummy keypoints 统一动作词汇。Conditional Diffusion Transformer 根据当前 latent 与动作预测未来 latent，并通过 hand consistency loss 监督指尖和腕部 heatmap。测试时 CEM 在机器人关节轨迹空间采样，经运动学映射为 DexWM action，rollout 后以目标 latent/keypoint 代价排序。</p><h3>4.2 核心输入、输出与表示</h3><p>图像经冻结 DINOv2 编码为 patch latent，动作由密集手部运动与相机变化描述，conditional predictor 生成下一状态，并可解码为图像和手部关键点。规划时 CEM 反复采样动作序列，用目标图像定义代价并滚动执行。</p>
-<h3>图解 1：fig:flow</h3>
-<figure>
-  <img src="figures/source/fig01_flow.png" alt="fig:flow">
-  <figcaption><strong>论文原图：</strong>Architecture. Images are encoded into latent states using a frozen DINOv2 DINOv2 encoder. The predictor takes these states, hand actions, and camera motions to predict the next state, which can then be decoded into reconstructed images and hand keypoints.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:flow”这一环；当前证据切片来自 fig01_flow。原图明确展示：Architecture. Images are encoded into latent states using a frozen DINOv2 DINOv2 encoder. The predictor takes these states, hand actions, and camera motions to predict the next state, which can then be decoded into reconstructed images and hand keypoints. 图里呈现的不是单纯网络结构，而是一条从数据到部署的计算链。DexWM 的关键假设被编码在模块连接方式中：可共享的部分被放入主干，具身或任务专属部分被留在适配接口。该图支撑设计逻辑，但不单独支撑泛化结论。</div>
+<nav class="toc"><a href="#overview">1. 论文速览</a><a href="#motivation">2. 问题与动机</a><a href="#related">3. 技术定位</a><a href="#method">4. 方法详解</a><a href="#data">5. 数据与训练</a><a href="#experiments">6. 实验与结果</a><a href="#repro">7. 复现与边界</a><a href="#qa">8. 组会问答</a></nav>
+<section id="overview"><h2>1. 论文速览与证据链</h2>
+<h3>1.1 DexWM 学的是 dynamics，而不是动作策略</h3>
+<p>给定过去若干视觉 latent 和一段候选手部动作，DexWM 预测执行这些动作后未来 latent 会变成什么。部署时它不直接输出机器人动作，而是由 CEM 采样多组关节序列，经 forward kinematics 转成关键点动作，在世界模型中滚动并以目标图像为代价筛选最优序列。它因此承担“可查询的状态转移模型”，而不是 behavior cloning policy。</p>
+<h3>1.2 四条主要结论</h3>
+<table><thead><tr><th>主张</th><th>论文证据</th><th>边界</th></tr></thead><tbody>
+<tr><td>细粒度动作表示优于粗粒度条件</td><td>关键点动作相对文本、导航或全身动作模型更能预测手—物变化</td><td>关键点来自估计器，噪声会进入监督</td></tr>
+<tr><td>只预测视觉 latent 不足以保留手形</td><td>hand-consistency loss 与 λ=100 带来最佳手部预测和下游表现</td><td>辅助热图只监督指尖与腕部，不等价于接触力建模</td></tr>
+<tr><td>人类视频世界模型可迁移到机器人规划</td><td>RoboCasa reach/grasp/place 平均超过 Diffusion Policy 50% 以上</td><td>仍需要约 4 小时机器人探索数据适配 embodiment</td></tr>
+<tr><td>真实机器人可零样本抓取</td><td>Franka + Allegro 上 12 条轨迹、4 个物体，抓取成功率 83%</td><td>样本规模小，真实规划执行两步后不做 receding-horizon 重规划</td></tr></tbody></table>
+<figure><img src="figures/source/fig01_flow.png" alt="图 1 · DexWM 的训练与预测信息流。"><figcaption><strong>图 1 · DexWM 的训练与预测信息流。</strong> 冻结 DINOv2 将图像编码为 latent，predictor 接收历史状态、手部动作和相机运动，输出下一状态，并可解码为图像与关键点。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>图中主损失作用在未来 latent，而像素 decoder 只为可视化单独训练；这避免模型把容量消耗在颜色和纹理重建上。下方 hand keypoint 分支不是额外输入，而是从预测 latent 解出热图并施加监督，迫使未来状态保留手形信息。该图说明 DexWM 为什么既是 latent world model，又能对灵巧动作敏感；它并未显式表示接触力或对象动力学参数。</div>
+</section>
 
-<h3>图解 2：fig:keypoints</h3>
-<figure>
-  <img src="figures/source/fig02_keypoints.png" alt="fig:keypoints">
-  <figcaption><strong>论文原图：</strong>-0.3cm</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:keypoints”这一环；当前证据切片来自 fig02_keypoints。原图明确展示：-0.3cm 该子图用于说明 DexWM 如何把人类或机器人手部运动转成可供 dynamics predictor 使用的关键点动作条件。关键点表示比原始关节索引更容易跨来源共享，并让预测器显式关注手—物交互位置；其边界是关键点不包含接触力和摩擦，几何轨迹正确也可能无法稳定执行。</div>
+<section id="motivation"><h2>2. 研究问题与动机</h2>
+<h3>2.1 为什么现有 world model 的动作太粗</h3>
+<p>文本条件可以描述“抓杯子”，导航动作可以描述相机移动，全身姿态可以描述整体运动，但它们都难以表达某根手指何时收拢、指尖怎样绕过物体边缘。灵巧交互的结果往往由厘米甚至毫米级手形差异决定，因此 world model 若看不到细粒度动作，就无法判断对象会被抓住、滑落还是被推走。</p>
+<h3>2.2 为什么不用纯机器人灵巧数据</h3>
+<p>高自由度灵巧手数据稀缺，而人类第一视角视频数量大、交互丰富。DexWM 的动作表示必须同时适用于人类与机器人，作者选择 3D 手部关键点差分，因为它不依赖具体关节编号。DROID 的平行夹爪也被近似为随开合变化的同心圆 dummy keypoints，从而加入同一预训练空间。</p>
+<h3>2.3 为什么 future latent loss 会忽略手</h3>
+<p>在整幅图像的 patch latent 中，手只占少部分区域；模型即使把手指形状预测模糊，也可能获得较低平均误差。可是在规划中，手形错误会导致模型错误判断接触与抓取。hand-consistency loss 从预测 latent 解码指尖与腕部热图，使这些小区域在训练目标中拥有足够权重。</p>
+</section>
 
-<h3>图解 3：fig:keypoints</h3>
-<figure>
-  <img src="figures/source/fig02_droid_hands.png" alt="fig:keypoints">
-  <figcaption><strong>论文原图：</strong>-0.3cm</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:keypoints”这一环；当前证据切片来自 fig02_droid_hands。原图明确展示：-0.3cm 该子图展示 DROID 机器人数据中的手部与操作观测，用来对照人类视频动作表示和机器人执行数据。它说明 DexWM 的训练来源不仅包含人类灵巧动作，还包含能够连接到真实控制接口的机器人轨迹；但两类数据的视角、手型与动作分布差异仍需要模型自行吸收。</div>
+<section id="related"><h2>3. 技术定位</h2>
+<h3>3.1 相比视频扩散世界模型</h3><p>视频扩散模型能生成逼真未来，但采样成本高，且视觉逼真不保证动作条件精确。DexWM 预测 DINOv2 patch latent，优化目标更接近语义状态变化，便于在 CEM 中并行滚动大量候选动作；代价是像素解码仅用于观察，预测可能缺少细节。</p>
+<h3>3.2 相比 Diffusion Policy</h3><p>Diffusion Policy 从当前观察和目标图像直接模仿动作，依赖训练轨迹覆盖目标行为。DexWM 则学习动作如何改变状态，在测试时通过优化寻找动作，因此可将无任务探索数据用于适配。其优势是目标可更换、规划可重用；代价是每次决策需要昂贵的候选 rollout。</p>
+<h3>3.3 “零样本机器人任务”应准确理解</h3><p>零样本指没有使用 reach、grasp、place 的任务示范或真实机器人训练数据。模型仍在 RoboCasa 中用约 4 小时随机探索序列做 embodiment fine-tuning，并依赖 forward kinematics、目标图像和低层控制器。它证明的是任务级零样本规划，不是完全不接触机器人域。</p>
+</section>
 
-<h3>图解 4：fig:model_size</h3>
-<figure>
-  <img src="figures/source/fig04_model_size_swapped.png" alt="fig:model_size">
-  <figcaption><strong>论文原图：</strong>Scaling With Predictor Size. PCK@20 and Embedding L2 error improve with larger models. Blue circles denote EgoDex+DROID training; red circles denote EgoDex-only training.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:model_size”这一环；当前证据切片来自 fig04_model_size_swapped。原图明确展示：Scaling With Predictor Size. PCK@20 and Embedding L2 error improve with larger models. Blue circles denote EgoDex+DROID training; red circles denote EgoDex-only training. 图里呈现的不是单纯网络结构，而是一条从数据到部署的计算链。DexWM 的关键假设被编码在模块连接方式中：可共享的部分被放入主干，具身或任务专属部分被留在适配接口。该图支撑设计逻辑，但不单独支撑泛化结论。</div>
+<section id="method"><h2>4. 方法详解</h2>
+<h3>4.1 latent state 与时序预测</h3>
+<p>图像经冻结 DINOv2 编码为 patch states sₖ∈R^(P×d)。训练时从一段视频中选择目标帧，并在最多 4 秒窗口内非均匀采样 8 个前序帧，让 predictor 依据历史状态和相邻动作预测下一 latent。非均匀间隔使模型同时学习短时手指变化与较长时环境结果，而不是只拟合固定帧率。</p>
+<h3>4.2 关键点动作：统一手形与自身运动</h3>
+<p>每只人手用 21 个 3D 关键点表示。动作先把后续关键点通过刚体变换表达在前一帧相机坐标中，再计算关键点差分；同时附加相机平移 δt 与欧拉角旋转 δq，以区分“手相对物体运动”和“相机自身移动”。最终动作写成 [(Hₖ₂−Hₖ₁)^T, δt^T, δq^T]^T∈R^(44×3)，覆盖双手 42 个点及两个相机运动项。</p>
+<figure><img src="figures/source/fig02_keypoints.png" alt="图 2 · 人类双手关键点动作表示。"><figcaption><strong>图 2 · 人类双手关键点动作表示。</strong> 动作由相邻帧 3D 关键点变化与相机运动共同组成。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>关键点差分保留每根手指的弯曲和位移，而统一到同一相机坐标消除了视点变化造成的伪动作。图中手部骨架说明该表示比腕位姿更细，但它仍把接触、力和关节扭矩隐含在视觉后果中；两个关键点轨迹相似的动作可能产生不同接触结果。</div>
+<figure><img src="figures/source/fig02_droid_hands.png" alt="图 3 · 将 DROID 平行夹爪近似为 dummy hand keypoints。"><figcaption><strong>图 3 · 将 DROID 平行夹爪近似为 dummy hand keypoints。</strong> 同心圆半径随夹爪开合变化，模拟手指张开程度。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>这是跨 embodiment 数据混合的关键妥协：DROID 没有五指，作者仍生成与人手动作格式兼容的伪关键点，使约 100 小时机器人数据能加入训练。dummy keypoints 能表达末端移动和开合，却不能提供真实多指接触，因此 DROID 主要补充机器人视角与运动域，而不是精细手形监督。</div>
+<h3>4.3 hand-consistency loss</h3>
+<p>预测 latent 经小型 head 解码为指尖与腕部的 12 张热图，ground truth 为以真实关键点为中心、标准差 2 pixels 的 Gaussian heatmaps。总损失 L=L_state+λL_HC，最佳 λ=100。该辅助目标直接惩罚手部位置与形状漂移，使 predictor 不能仅靠对象和背景语义获得低 latent loss。</p>
+<h3>4.4 从世界模型到 CEM/MPC</h3>
+<p>规划变量不是关键点本身，而是机器人 23 个关节角：7 个 Franka arm joints 加 Allegro 每根四指各 4 个 joints。CEM 从高斯分布采样候选关节序列，经 forward kinematics G 转成 DexWM 动作，在模型中 rollout，按终态与目标图像的代价排序，用前 K 个 elite 更新分布。仿真使用 T,N,K,L=3,512,10,10；真实机器人使用 2,256,10,10。</p>
+<figure><img src="figures/source/fig03_planning.png" alt="图 4 · 目标图像条件下的 CEM/MPC 规划。"><figcaption><strong>图 4 · 目标图像条件下的 CEM/MPC 规划。</strong> 候选关节序列被转换为关键点动作，在 DexWM 中预测未来并按目标代价筛选。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>图中同一当前状态会分叉出多条候选未来，规划器不是相信一次动作预测，而是比较哪些终态更接近 goal image。执行首段后重新规划构成 MPC；但论文真实机器人实验为降低风险和成本，优化两步后开放环执行，没有持续 receding horizon，因此真实 83% 抓取率并不等同于完整 MPC 的上限。</div>
+</section>
 
-<h3>图解 5：fig:cosmos</h3>
-<figure>
-  <img src="figures/source/fig07_cosmosv4.png" alt="fig:cosmos">
-  <figcaption><strong>论文原图：</strong>Conditioning on Hand Motion Enables Precise Control. utilizes dense dexterous actions, enabling finer-grained control compared to text conditioned World Models like Cosmos-Predict 2 agarwal2025cosmos.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:cosmos”这一环；当前证据切片来自 fig07_cosmosv4。原图明确展示：Conditioning on Hand Motion Enables Precise Control. utilizes dense dexterous actions, enabling finer-grained control compared to text conditioned World Models like Cosmos-Predict 2 agarwal2025cosmos. 这幅方法图的重点是模块职责：上游负责产生什么条件，中间表示保留什么信息，下游最终预测什么。对 DexWM 而言，这决定了训练数据如何被使用，也决定复现时应在哪些接口分别验收。框架完整不等于每个模块必要，因此还需与去除组件后的结果联合判断。</div>
+<section id="data"><h2>5. 数据、训练与跨具身适配</h2>
+<h3>5.1 超过 900 小时预训练数据的分工</h3>
+<p>EgoDex 提供 829 小时、1080p/30Hz 第一视角视频，覆盖 194 个操作任务和 500 个物体，并提供上半身骨架、每手 25 个关键点、相机内外参与置信度；约 1% 留作测试。DROID 贡献约 100 小时 Franka 平行夹爪多视角数据。前者提供丰富人类灵巧交互，后者缩小人类到机器人的视觉与运动域差异。</p>
+<h3>5.2 训练配置</h3>
+<p>冻结 DINOv2 encoder，优化 predictor 与 hand head；batch size 4096，Adam 初始学习率 1e-4，以 cosine schedule 在 40 epochs 降到 1e-7。decoder 独立使用 5000 万帧训练，只承担可视化。机器人适配阶段使用约 4 小时 RoboCasa 无任务探索数据，训练 50 epochs、batch size 8、学习率 1e-5。</p>
+<figure><img src="figures/source/fig11_exploratory_data.png" alt="图 5 · RoboCasa 无任务探索数据。"><figcaption><strong>图 5 · RoboCasa 无任务探索数据。</strong> 序列由随机手臂运动、带噪 Lift 动作与单独开合夹爪构成。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>作者刻意打乱物体并避免成功抓取，使这 4 小时数据不包含 reach/grasp/place 的任务策略，而只让模型熟悉 Allegro 手、机器人视角和动作后果。图中多种随机接近与开合覆盖 embodiment dynamics；但探索分布仍由 Lift 数据初始化，是否完全无任务偏置需要谨慎理解。</div>
+</section>
 
-<h3>图解 6：fig:atomic_actions</h3>
-<figure>
-  <img src="figures/source/fig08_atomic_actions.png" alt="fig:atomic_actions">
-  <figcaption><strong>论文原图：</strong>Simulating Counterfactual Actions. Starting from the same initial state, predicts future states given different atomic actions. The model reliably follows each action sequence, while capturing environment dynamics (e.g, see third row final frame where the cup moves forward when the hand collides with the cup).</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:atomic_actions”这一环；当前证据切片来自 fig08_atomic_actions。原图明确展示：Simulating Counterfactual Actions. Starting from the same initial state, predicts future states given different atomic actions. The model reliably follows each action sequence, while capturing environment dynamics (e.g, see third row final frame where the cup moves forward when the hand collides with the cup). 图里呈现的不是单纯网络结构，而是一条从数据到部署的计算链。DexWM 的关键假设被编码在模块连接方式中：可共享的部分被放入主干，具身或任务专属部分被留在适配接口。该图支撑设计逻辑，但不单独支撑泛化结论。</div>
+<section id="experiments"><h2>6. 实验与结果</h2>
+<h3>6.1 open-loop rollout 检验的是长期预测稳定性</h3>
+<figure><img src="figures/source/fig12_rollouts.png" alt="图 6 · 开放环未来状态预测。"><figcaption><strong>图 6 · 开放环未来状态预测。</strong> 模型在不给真实后续观测的情况下，连续根据动作滚动未来。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>逐列观察可以看到手和对象位置随动作演化，DexWM 需要同时维持视点、手形与被操作物体。开放环越长，小误差越容易累积，因此这组图主要检验 state drift；视觉上合理仍不能保证接触动力学正确，后续规划成功率和失败分类提供更强证据。</div>
+<h3>6.2 action transfer 检验模型是否真正读取动作</h3>
+<figure><img src="figures/source/fig06_action_transfer.png" alt="图 7 · 将一段动作施加到不同初始场景。"><figcaption><strong>图 7 · 将一段动作施加到不同初始场景。</strong> 相同关键点动作在不同对象或背景下产生对应未来。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>如果模型只生成训练视频的平均未来，换初始状态后仍会复现原场景。图中动作能迁移到不同起点并推动相应状态变化，说明 predictor 同时依赖当前 latent 与动作条件。边界在于关键点动作本身可能脱离新场景的可行接触，模型的预测并不保证物理可执行。</div>
+<h3>6.3 模型规模、encoder 与 hand loss 消融</h3>
+<figure><img src="figures/source/fig04_model_size_swapped.png" alt="图 8 · 模型规模与预测表现。"><figcaption><strong>图 8 · 模型规模与预测表现。</strong> 曲线比较不同 predictor 规模的状态预测质量。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>规模增大带来改善，但曲线并非无限线性上升，说明数据、动作噪声和表征同样限制性能。对复现者而言，先验证动作表示与 HC loss 比盲目扩模型更重要；大模型还会直接放大 CEM 中数百候选 rollout 的推理成本。</div>
+<figure><img src="figures/source/fig05_encoder_ablation.png" alt="图 9 · 视觉 encoder 与 hand-consistency 的消融。"><figcaption><strong>图 9 · 视觉 encoder 与 hand-consistency 的消融。</strong> 比较不同表征及辅助监督对预测质量的影响。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>结果支持冻结 DINOv2 latent 提供较强语义状态，同时 HC loss 补足其对小面积手部细节的不敏感。λ=100 最佳意味着辅助项必须足够强才能影响共享 predictor；若过强，则可能牺牲对象与背景动态。该消融证明“看清手”是下游规划所需，而非仅让重建更漂亮。</div>
+<h3>6.4 RoboCasa 规划与 Diffusion Policy 对比</h3>
+<p>每项 reach、grasp、place 在随机环境和对象位置下测试 50 条轨迹。reach 要求指尖与腕部到目标平均距离低于 15 cm 并维持 10 步；grasp 要求腕—物体距离低于 20 cm 且接触维持 10 步；place 要求对象最终位置距目标低于 10 cm 并维持 10 步。DexWM 平均超过 Diffusion Policy 50% 以上，说明无任务 dynamics + test-time planning 在目标变化时比直接模仿更灵活。</p>
+<figure><img src="figures/source/fig16_sim_experiments.png" alt="图 10 · RoboCasa 中 reach、grasp、place 的规划轨迹。"><figcaption><strong>图 10 · RoboCasa 中 reach、grasp、place 的规划轨迹。</strong> 不同序列展示从当前状态向目标图像靠近的过程。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>reach 主要检验几何定位，grasp 增加接触与保持，place 又增加抓取后对象运动，因此三者逐级增加 dynamics 难度。成功序列说明目标图像代价能够驱动 CEM 找到关节序列；它们没有显示所有失败，尤其 state drift 和最后几厘米误差需结合失败统计阅读。</div>
+<h3>6.5 真实机器人零样本抓取</h3>
+<figure><img src="figures/source/fig15_real_world_experiments.png" alt="图 11 · Franka + Allegro 的真实成功与失败轨迹。"><figcaption><strong>图 11 · Franka + Allegro 的真实成功与失败轨迹。</strong> 黑圈标出目标对象，红/绿图分别表示目标与起始状态。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>前几行显示模型无需真实任务训练即可规划抓取，部分对象在接触后发生轻微移动，仍能被手保持。失败行中倒置碗被手碰开，揭示 latent 预测与真实接触之间的差距。论文在 4 个物体、12 条轨迹上报告 83% 成功；这是有力可行性证据，但样本量不足以刻画对象类别泛化。</div>
+<h3>6.6 失败类型解释了下一步瓶颈</h3>
+<p>作者将失败分为 Contact、Drop、Last cm 与 State Drift。reach 失败主要是 Last cm 24% 和 State Drift 4%；grasp 则有 Contact 4%、Last cm 20%、State Drift 18%。这表明 grasp 的主要新增困难不是掉落，而是预测误差累积与最终接触几厘米的精度。世界模型能给出正确的大方向，却仍缺少高精度接触闭环。</p>
+<figure><img src="figures/source/fig10_planning_time.png" alt="图 12 · CEM 计算量与成功率权衡。"><figcaption><strong>图 12 · CEM 计算量与成功率权衡。</strong> 改变候选数和迭代数后，单 episode 规划时间约 38–168 秒。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>多个配置表现相近，但默认最稳健设置需要约 168 秒，说明 DexWM 当前更像研究型规划器而非实时控制器。减少样本和迭代可降到约 38 秒，仍远慢于交互式手部控制。该图使“规划成功”与“部署可用”之间的工程差距非常明确。</div>
+</section>
 
-<h3>图解 7：fig:supp_atomic_actions</h3>
-<figure>
-  <img src="figures/source/fig13_atomic_actions.png" alt="fig:supp_atomic_actions">
-  <figcaption><strong>论文原图：</strong>Simulating Counterfactual Actions. Starting from the same initial state, predicts future states given different atomic actions for controlling the right hand. The model reliably follows each action sequence while accurately capturing environment dynamics (e.g., pulling the string upward in Move Up in Example 2, and pushing the cup forward in Move Forward in Example 3.)</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:supp_atomic_actions”这一环；当前证据切片来自 fig13_atomic_actions。原图明确展示：Simulating Counterfactual Actions. Starting from the same initial state, predicts future states given different atomic actions for controlling the right hand. The model reliably follows each action sequence while accurately capturing environment dynamics (e.g., pulling the string upward in Move Up in Example 2, and pushing the cup forward in Move Forward in Example 3.) 图里呈现的不是单纯网络结构，而是一条从数据到部署的计算链。DexWM 的关键假设被编码在模块连接方式中：可共享的部分被放入主干，具身或任务专属部分被留在适配接口。该图支撑设计逻辑，但不单独支撑泛化结论。</div>
-</section><section id="experiments"><h2>5. 实验设计、结果与消融</h2><h3>5.1 任务、数据与评估协议</h3><p>EgoDex 约 829 小时人类视频与 DROID 约 100 小时机器人视频构成主要预训练数据。关键消融显示加入 EgoDex 后，RoboCasa open-loop prediction 优于仅用 DROID。反事实 rollout 通过改变手部动作展示未来预测随条件变化。真实 Franka+Allegro 的抓取实验报告约 83% 成功率，并展示 reach/grasp/place 规划，但真实评估规模相对有限。模型规模实验检查 predictor 扩大后 PCK@20 与 embedding error 的变化；action transfer 与 counterfactual action 检查预测是否真正响应动作；真实机器人规划则验证 CEM/MPC 能否把 latent 预测转成零样本执行。</p>
-<h3>图解 1：fig:planning</h3>
-<figure>
-  <img src="figures/source/fig03_planning.png" alt="fig:planning">
-  <figcaption><strong>论文原图：</strong>Goal-Conditioned Planning with . The joint angles _0, , _T-1 are optimized using CEM to get the optimal actions a_0, , a_T-1 to drive the system to the goal.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:planning”这一环；当前证据切片来自 fig03_planning。原图明确展示：Goal-Conditioned Planning with . The joint angles _0, , _T-1 are optimized using CEM to get the optimal actions a_0, , a_T-1 to drive the system to the goal. 连续帧与并列样例显示了动作推进、接触变化或场景保持的具体过程，补充了最终成功率无法表达的中间行为。它能确认 DexWM 在这些案例中完成了哪些阶段，也应与失败样例和全量统计一起判断，避免只由精选结果得出结论。</div>
+<section id="repro"><h2>7. 复现、局限与边界</h2>
+<h3>7.1 最小复现路径</h3>
+<p>先在单一数据集上复现关键点动作与下一 latent 预测，比较有无 HC loss 的手部热图与开放环漂移；再用少量 RoboCasa 随机探索数据适配 Allegro，固定目标图像评估 reach；最后才加入 CEM 和 grasp/place。若直接上真实机器人，无法区分关键点估计、world model、规划代价、forward kinematics 与低层控制器中的问题。</p>
+<h3>7.2 关键复现风险</h3>
+<table><thead><tr><th>风险</th><th>论文依赖</th><th>建议验收</th></tr></thead><tbody>
+<tr><td>关键点噪声</td><td>EgoDex 手部标注、DROID dummy keypoints</td><td>按置信度分桶测预测误差</td></tr>
+<tr><td>算力</td><td>batch 4096；仿真规划并行于 8×H100</td><td>先缩短 horizon 与候选数，记录成功率—耗时曲线</td></tr>
+<tr><td>规划代价</td><td>目标图像 latent 距离</td><td>分别检查 reach、接触与对象位置是否被代价正确反映</td></tr>
+<tr><td>sim-to-real</td><td>真实实验无真实训练数据</td><td>扩大对象与姿态数量，单独统计接触碰撞</td></tr></tbody></table>
+<h3>7.3 结论边界</h3>
+<p>DexWM 的动作空间跨人类、夹爪和 Allegro，却仍需人工规则处理缺失手指：Allegro 四指被复制最后一指关键点填充 pinky，左手动作置零。模型预测 latent 而非显式物理量，接触和摩擦只能从视频统计中间接学习。规划计算昂贵，真实机器人没有执行完整 receding-horizon MPC。最终，83% 真实抓取来自 12 条轨迹，适合作为 proof of concept，而非稳健部署统计。</p>
+</section>
 
-<h3>图解 2：fig:backbone_ablation</h3>
-<figure>
-  <img src="figures/source/fig05_encoder_ablation.png" alt="fig:backbone_ablation">
-  <figcaption><strong>论文原图：</strong>Encoder Ablation. Comparing downstream robotic task success rates on RoboCasa simulation tasks.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:backbone_ablation”这一环；当前证据切片来自 fig05_encoder_ablation。原图明确展示：Encoder Ablation. Comparing downstream robotic task success rates on RoboCasa simulation tasks. 这张结果图把论文主张变成了可比较证据：相同测试条件下，各柱形、曲线或表格单元之间的差异对应具体模块或训练数据的贡献。若提升只集中于少数任务，结论应收缩到对应能力；若多数任务同时改善，才更接近 DexWM 所声称的通用收益。</div>
-
-<h3>图解 3：fig:transfer_plot</h3>
-<figure>
-  <img src="figures/source/fig06_action_transfer.png" alt="fig:transfer_plot">
-  <figcaption><strong>论文原图：</strong>Action Transfer. Transferring actions from a reference sequence to a new environment using and PEVA^*. better captures fine-grained hands states that match those in the reference sequence.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:transfer_plot”这一环；当前证据切片来自 fig06_action_transfer。原图明确展示：Action Transfer. Transferring actions from a reference sequence to a new environment using and PEVA^*. better captures fine-grained hands states that match those in the reference sequence. 图中对象、任务、场景和分布不是背景信息，它们决定了 DexWM 学到的先验以及测试结论能外推到哪里。训练覆盖与评估变化必须逐项对应：只有被明确留出的对象、位置或任务才构成泛化证据，其他样例主要说明数据多样性。</div>
-
-<h3>图解 4：fig:real_robot_planning</h3>
-<figure>
-  <img src="figures/source/fig09_real_world_rollout.png" alt="fig:real_robot_planning">
-  <figcaption><strong>论文原图：</strong>Real Robot Planning Example. Given goal and start images, successfully plans and executes the trajectory by finding the optimal actions using the Cross-Entropy Method. Notably, works zero-shot without any real-world training. (sec:robot_task_exec)</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:real_robot_planning”这一环；当前证据切片来自 fig09_real_world_rollout。原图明确展示：Real Robot Planning Example. Given goal and start images, successfully plans and executes the trajectory by finding the optimal actions using the Cross-Entropy Method. Notably, works zero-shot without any real-world training. (sec:robot_task_exec) 读取重点不是寻找最高数字，而是检查对照是否隔离了变量。图中各方法在同一指标上的差距用于判断 DexWM 的新增设计是否有效，任务间波动则揭示方法更擅长或更薄弱的交互类型。未展示的随机种子、对象变化或长程失败仍是证据边界。</div>
-
-<h3>图解 5：fig:planning_time</h3>
-<figure>
-  <img src="figures/source/fig10_planning_time.png" alt="fig:planning_time">
-  <figcaption><strong>论文原图：</strong>Planning time and success rate as optimizer iterations (with samples=512) and sample count (with optimizer iterations=10) vary.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:planning_time”这一环；当前证据切片来自 fig10_planning_time。原图明确展示：Planning time and success rate as optimizer iterations (with samples=512) and sample count (with optimizer iterations=10) vary. 读取重点不是寻找最高数字，而是检查对照是否隔离了变量。图中各方法在同一指标上的差距用于判断 DexWM 的新增设计是否有效，任务间波动则揭示方法更擅长或更薄弱的交互类型。未展示的随机种子、对象变化或长程失败仍是证据边界。</div>
-
-<h3>图解 6：fig:exploratory_data</h3>
-<figure>
-  <img src="figures/source/fig11_exploratory_data.png" alt="fig:exploratory_data">
-  <figcaption><strong>论文原图：</strong>Exploratory Data Examples. Sequences of the robot performing random movements in the environment were collected to fine-tune for application to robotic simulation and real-world tasks. This exploratory data provides broad, unbiased coverage of the environment, aiming to bridge the embodiment gap between human and robot.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:exploratory_data”这一环；当前证据切片来自 fig11_exploratory_data。原图明确展示：Exploratory Data Examples. Sequences of the robot performing random movements in the environment were collected to fine-tune for application to robotic simulation and real-world tasks. This exploratory data provides broad, unbiased coverage of the environment, aiming to bridge the embodiment gap between human and robot. 这幅图给出了论文能力声明的样本基础。可见的长尾、任务组合或场景变化说明模型需要处理哪些分布差异，同时也暴露高频类别可能主导训练。DexWM 的泛化结论应限制在图中数据生成流程与测试划分能够支持的范围。</div>
-
-<h3>图解 7：fig:supp_rollouts</h3>
-<figure>
-  <img src="figures/source/fig12_rollouts.png" alt="fig:supp_rollouts">
-  <figcaption><strong>论文原图：</strong>Open-Loop Trajectory Rollouts. Given the initial state and an action sequence, predicts future latent states over a 4-second horizon, rolling out 20 frames at 5 Hz. For visualization, predicted frames are subsampled in the figure due to space constraints. Latent states are decoded into images for visualization. The predicted rollout closely follows the ground truth trajectory even in long-horizon complex dexterous tasks.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:supp_rollouts”这一环；当前证据切片来自 fig12_rollouts。原图明确展示：Open-Loop Trajectory Rollouts. Given the initial state and an action sequence, predicts future latent states over a 4-second horizon, rolling out 20 frames at 5 Hz. For visualization, predicted frames are subsampled in the figure due to space constraints. Latent states are decoded into images for visualization. The predicted rollout closely follows the ground truth trajectory even in long-horizon complex dexterous tasks. 任务和数据图把抽象的“多样性”具体化为对象、动作阶段和环境条件。对 DexWM 的实验而言，图中没有出现的动态扰动、材质、接触模式或具身不应被默认已经覆盖；它证明的是评估设计的广度，而非自动证明策略成功。</div>
-
-<h3>图解 8：fig:action_transfer</h3>
-<figure>
-  <img src="figures/source/fig14_action_transfer.png" alt="fig:action_transfer">
-  <figcaption><strong>论文原图：</strong>Action Transfer. Transferring actions from a reference sequence to a new environment using and PEVA^*. better captures fine-grained hands states that match those in the reference sequence.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:action_transfer”这一环；当前证据切片来自 fig14_action_transfer。原图明确展示：Action Transfer. Transferring actions from a reference sequence to a new environment using and PEVA^*. better captures fine-grained hands states that match those in the reference sequence. 这幅图给出了论文能力声明的样本基础。可见的长尾、任务组合或场景变化说明模型需要处理哪些分布差异，同时也暴露高频类别可能主导训练。DexWM 的泛化结论应限制在图中数据生成流程与测试划分能够支持的范围。</div>
-</section><section id="repro"><h2>6. 复现路线与工程风险</h2><h3>6.1 最小可行复现路径</h3><p>复现首先需要处理 EgoDex 的 3D hand keypoints、camera pose 与 DINOv2 latent，并统一 DROID dummy keypoint 表示。训练需要较大 batch 和大量视频；之后还需采集少量目标机器人探索数据。规划端要实现机器人运动学映射、CEM 参数和目标图像代价。建议先验证 open-loop prediction 与 counterfactual action control，再接入真实 MPC。复现必须把预测与规划分开验收：先验证不同 atomic action 会产生可区分的未来 latent，再验证目标代价与 CEM 搜索，最后才上真实机器人。否则失败可能来自预测器、代价函数或优化预算中的任一环。</p></section><section id="discussion"><h2>7. 分析、局限与边界</h2><h3>7.1 最有价值的贡献</h3><p>DexWM 证明人类视频动态先验可以进入机器人规划闭环，但 keypoint action 不包含显式接触力、摩擦或手掌表面几何。视觉 latent 接近目标也不必然代表物理稳定。真实实验对象和轨迹数量较少，而且真实部署未充分展示长时 receding-horizon 纠错，因此更像 proof of transfer，而非成熟通用控制器。DexWM 的边界是 latent 接近目标图像不等于接触力、摩擦和物体稳定性正确；长 horizon rollout 也会累积偏差。人类视频扩大了动作先验，但不能消除机器人具身与真实接触动力学差异。</p>
-<h3>图解 1：fig:real_world_experiments</h3>
-<figure>
-  <img src="figures/source/fig15_real_world_experiments.png" alt="fig:real_world_experiments">
-  <figcaption><strong>论文原图：</strong>Real Robot Task Examples. The robot successfully grasps objects, which are highlighted by black circles in the first image of each sequence for visual clarity, given the goal (red) and start (green) images. Notably, operates in a zero-shot manner, without any real-world training. In some cases, such as examples 2 and 3, the object moves slightly from its original location after being actually grasped by the gripper. We also present a failure trajectory, where a collision between the grippers and an upside-down bowl causes the bowl to move away, resulting in a missed grasp.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:real_world_experiments”这一环；当前证据切片来自 fig15_real_world_experiments。原图明确展示：Real Robot Task Examples. The robot successfully grasps objects, which are highlighted by black circles in the first image of each sequence for visual clarity, given the goal (red) and start (green) images. Notably, operates in a zero-shot manner, without any real-world training. In some cases, such as examples 2 and 3, the object moves slightly from its original location after being actually grasped by the gripper. We also present a failure trajectory, where a collision between the grippers and an upside-down bowl causes the bowl to move away, resulting in a missed grasp. 这里的反例比成功样例更能暴露系统假设。图中错误表明某类观测或表示不足以唯一确定正确动作，使 DexWM 在特定接触或几何条件下产生系统性偏差；这也是后续加入空间锚定、触觉或闭环纠错最直接的依据。</div>
-
-<h3>图解 2：fig:sim_experiments</h3>
-<figure>
-  <img src="figures/source/fig16_sim_experiments.png" alt="fig:sim_experiments">
-  <figcaption><strong>论文原图：</strong>Robot Task Example in Simulation. Given goal (red) and start (green) images, successfully plans the trajectory by finding optimal actions using the Cross-Entropy Method inside an MPC framework. The final reached state (blue) in each task closely resembles the goal frame, demonstrating successful execution. Notably, was not trained on any task-specific robot data.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 DexWM 的证据链中承担的是“fig:sim_experiments”这一环；当前证据切片来自 fig16_sim_experiments。原图明确展示：Robot Task Example in Simulation. Given goal (red) and start (green) images, successfully plans the trajectory by finding optimal actions using the Cross-Entropy Method inside an MPC framework. The final reached state (blue) in each task closely resembles the goal frame, demonstrating successful execution. Notably, was not trained on any task-specific robot data. 图中的横纵轴、任务分组和对比方法共同规定了结论强度。应关注优势是否跨任务稳定、提升发生在成功率还是阶段完成度，以及联合配置是否优于单一组件。它能支持 DexWM 在这些基线与协议下的相对优势，却不能覆盖未参与比较的硬件或任务分布。</div>
-</section><section id="qa"><h2>8. 组会问答与阅读结论</h2><h3>Q1：DexWM 与 Diffusion Policy 的根本区别？</h3><p>前者预测动作后果并在测试时规划，后者直接预测动作。</p><h3>Q2：为何用 hand keypoints？</h3><p>在不同人手和机器人之间提供共享动作描述。</p><h3>Q3：EgoDex 的证据？</h3><p>EgoDex+DROID 的预测指标优于 DROID-only。</p><h3>Q4：hand consistency loss 为何重要？</h3><p>防止视觉 latent 忽略对灵巧操作关键的手部构型。</p><h3>Q5：最大弱点？</h3><p>真实评估小，且动作表示缺少接触力。</p><h3>阅读结论与研究启发</h3><p>这是 WAM 方向首推。复现顺序应是数据预处理→latent prediction→action-conditioned counterfactual rollout→CEM 仿真规划，最后才考虑真实 Allegro。可进一步研究触觉/力觉 action-state 表示。</p></section>
+<section id="qa"><h2>8. 组会问答</h2>
+<h3>Q1：DexWM 与 DWM 的核心差别是什么？</h3><p>DexWM 在 DINOv2 latent 中预测，并以关键点动作和 HC loss强调可规划的细粒度 dynamics；DWM 更偏向场景—动作条件视频扩散与视觉模拟。前者适合大量候选 rollout，后者更强调生成视频质量。</p>
+<h3>Q2：为何关键点动作能跨 embodiment？</h3><p>它描述“手在空间中如何变化”，不依赖具体关节编号；机器人关节通过 forward kinematics 转为关键点。但不同手的力、可达域和接触面并未被统一，因此仍需机器人探索适配。</p>
+<h3>Q3：hand-consistency loss 为什么不是可有可无？</h3><p>手部只占图像小区域，纯 latent 平均损失会容忍手形模糊。规划恰恰依赖指尖位置判断接触，因此辅助热图监督把任务关键细节重新加权。</p>
+<h3>Q4：为什么能超过 Diffusion Policy？</h3><p>Diffusion Policy 学习训练分布中的动作映射；DexWM 学状态转移并在测试时针对新目标优化动作。无任务探索数据足以学习 dynamics，却不需要覆盖每个目标行为。</p>
+<h3>Q5：最需要解决的问题是什么？</h3><p>降低规划时间并提高最后几厘米和接触阶段精度。失败统计显示 state drift 与 last-cm error 占主导，适合引入触觉、短时真实反馈和分层代价。</p>
+<div class="tldr"><strong>阅读结论：</strong>DexWM 的关键不是“用人类视频训练一个更大的视频模型”，而是找到可跨人机的细粒度动作、用 hand-consistency 保住规划所需的手形，并把世界模型嵌入 CEM/MPC。它证明人类视频 dynamics 可迁移到机器人任务，但规划速度、接触精度与真实评估规模仍是明显边界。</div></section>
 </main></body></html>

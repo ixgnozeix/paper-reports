@@ -1,6 +1,5 @@
-<!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>UniDex / UniDex-VLA 深度精读</title>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UniDex 深度精读：统一灵巧手数据、FAAS 与 3D VLA</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -522,120 +521,161 @@
       background: var(--ink);
       color: var(--paper);
     }
-</style></head>
-<body><main>
-<header><div class="title-wrap"><h1>UniDex: A Robot Foundation Suite for Universal Dexterous Hand Control from Egocentric Human Videos</h1>
-<p class="subtitle">以论文正文、实验、附录与原始图注为证据的参考级中文精读</p>
-<p class="lead"><strong>一句话贡献：</strong>构建 UniDex 数据、FAAS 统一动作空间和 UniDex-VLA，面向多种灵巧手实现从人类第一视角视频到机器人控制的通用套件。</p>
-<div class="meta"><span class="pill">arXiv:2603.22264</span><span class="pill">UniDex / UniDex-VLA</span><span class="pill">通用灵巧手 VLA</span></div>
+</style></head><body><main>
+<header><div class="title-wrap">
+<h1>UniDex：从人类第一视角视频到八种灵巧手的统一数据、动作空间与 VLA</h1>
+<p class="subtitle">UniDex: A Robot Foundation Suite for Universal Dexterous Hand Control from Egocentric Human Videos</p>
+<p class="lead"><strong>一句话贡献：</strong>UniDex 将人类第一视角视频转换为机器人中心的灵巧手轨迹，以 FAAS 对齐不同手型中功能相似的执行器，并在统一的彩色点云—语言—动作接口上训练 UniDex-VLA；它同时提供 UniDex-Cap，使人类示范不仅用于预训练，也能以约 2:1 的替代率降低真实机器人后训练成本。</p>
+<div class="meta"><span class="pill">arXiv:2603.22264</span><span class="pill">9M paired frames</span><span class="pill">50K+ trajectories</span><span class="pill">8 dexterous hands</span><span class="pill">FAAS</span><span class="pill">3D VLA</span></div>
 <p><a href="https://arxiv.org/abs/2603.22264">论文原文</a> · <a href="https://unidex-ai.github.io/">项目页</a></p>
-<p><strong>关键词：</strong>UniDex; UniDex-VLA; FAAS; egocentric human video; cross-hand transfer; dexterous manipulation</p></div></header>
+</div></header>
 
-<nav class="toc"><a href="#overview">1. 论文速览与证据链</a><a href="#motivation">2. 研究问题与动机</a><a href="#related">3. 相关工作与技术定位</a><a href="#method">4. 方法、表示与训练流程</a><a href="#experiments">5. 实验设计、结果与消融</a><a href="#repro">6. 复现路线与工程风险</a><a href="#discussion">7. 分析、局限与边界</a><a href="#qa">8. 组会问答与阅读结论</a></nav>
-<section id="overview"><h2>1. 论文速览与证据链</h2><h3>1.0 一句话贡献与关键词</h3><p>构建 UniDex 数据、FAAS 统一动作空间和 UniDex-VLA，面向多种灵巧手实现从人类第一视角视频到机器人控制的通用套件。这一定义把 UniDex / UniDex-VLA 的任务对象、核心机制和预期收益放在同一句话中。关键词包括：UniDex; UniDex-VLA; FAAS; egocentric human video; cross-hand transfer; dexterous manipulation。这些概念共同界定了该工作位于灵巧操作、动作表示、感知融合或跨具身学习中的具体技术位置。</p><h3>1.1 技术定位与核心贡献</h3><p>UniDex 不是单一策略模型，而是一套从人类第一视角视频到多种机器人灵巧手控制的 foundation suite。它包含人手运动恢复与重定向、跨手型统一动作表示 FAAS、数据资产以及 UniDex-VLA 的预训练和微调流程。阅读重点应放在数据与动作接口如何统一不同 embodiment，而不是只比较某个成功率。UniDex 是从人类视频到多灵巧手 VLA 的完整基础设施：UniDex-Cap 捕获人类演示，GUI 与 retargeting 转成机器人可执行轨迹，FAAS 对齐不同手型的功能关节，UniDex-VLA 再在统一动作空间中学习语言条件控制。</p></section><section id="motivation"><h2>2. 研究问题与动机</h2><h3>2.1 论文面对的真实瓶颈</h3><p>灵巧手研究的主要障碍之一是每种手型拥有不同关节拓扑、自由度和控制接口，导致为一只手采集的数据难以迁移到另一只手。同时，真实机器人示范昂贵，而人类第一视角视频数量丰富。UniDex 希望把人类视频转化为可被多种机器人手共同利用的训练信号，并建立统一的预训练、适配和评估管线。每种灵巧手都有不同关节拓扑和控制接口，使数据难以复用。UniDex 选择从规模更大的人类演示出发，通过人机转换和统一动作空间把数据资产跨手型复用，而不是为每种手独立采集完整数据集。</p></section><section id="related"><h2>3. 相关工作与技术定位</h2><h3>3.1 直接技术前作</h3><p>它继承了 human motion recovery、手部 pose estimation 和 motion retargeting 的数据路线，也与跨 embodiment policy、robot foundation model 和 VLA 预训练相关。区别在于，过去工作通常只解决“恢复人手运动”或“为单一机器人重定向”；UniDex 把动作标准化、跨手型迁移、数据生成和 VLA 训练整合成一套套件。它连接人类动作捕获、运动重定向、跨手型动作表示与 VLA。相较只做手部恢复的工作，UniDex 要求转换结果可由机器人执行；相较单手策略，它把跨具身接口与真实工具使用放在核心位置。</p></section><section id="method"><h2>4. 方法、表示与训练流程</h2><h3>4.1 总体方法链路</h3><p>管线首先从 egocentric human video 恢复手部与物体运动，再将人手动作映射到机器人可执行空间。FAAS 作为跨 embodiment 的统一动作接口，描述手部运动而非绑定某一组关节索引；各机器人手通过对应映射器解释该动作。UniDex-VLA 在统一数据上进行预训练，再针对具体手型和任务微调。方法的关键不只是网络，而是坐标系、运动重定向、动作规范化和手型适配器。FAAS 按功能与执行器对齐关节，而非要求关节索引一致；UniDex-VLA 接收彩色点云、语言和 proprioception，输出 FAAS 中的 H-step action chunk。GUI 允许人工调整 IK 与 dummy links，以修正自动重定向无法处理的手型差异。</p>
-<h3>图解 1：fig:faas</h3>
-<figure>
-  <img src="figures/source/fig03_faas.png" alt="fig:faas">
-  <figcaption><strong>论文原图：</strong>Function–Actuator–Aligned Space (FAAS). We show the thumb and ring fingers of Oymotion (11 actuators), Allegro (16), Inspire (12), and Wuji (20), with colors denoting individual joints, curves indicating rotation directions, and dotted lines indicating rotation axes. Indices 0,1,3,5,6 are aligned across all four hands because the corresponding joints share similar functional roles.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:faas”这一环；当前证据切片来自 fig03_faas。原图明确展示：Function–Actuator–Aligned Space (FAAS). We show the thumb and ring fingers of Oymotion (11 actuators), Allegro (16), Inspire (12), and Wuji (20), with colors denoting individual joints, curves indicating rotation directions, and dotted lines indicating rotation axes. Indices 0,1,3,5,6 are aligned across all four hands because the corresponding joints share similar functional roles. 这里可视化的是方法的中间语言。它决定不同数据能否共享、误差会在哪里累积，以及哪些物理信息可能在压缩中丢失。该图能解释 UniDex / UniDex-VLA 的表示设计，却只有真实执行或跨条件对比才能证明表示真正服务了控制。</div>
+<nav class="toc">
+<a href="#overview">1. 论文速览与证据链</a><a href="#motivation">2. 研究问题与动机</a>
+<a href="#related">3. 技术定位</a><a href="#data">4. 人类视频到机器人数据</a>
+<a href="#method">5. FAAS 与 UniDex-VLA</a><a href="#experiments">6. 实验与结果</a>
+<a href="#repro">7. 复现、局限与边界</a><a href="#qa">8. 组会问答</a>
+</nav>
+<section id="overview"><h2>1. 论文速览与证据链</h2>
+<h3>1.1 UniDex 不是单一模型，而是三件相互依赖的基础设施</h3>
+<p>UniDex-Dataset 解决“从哪里获得跨手型的大规模动作监督”：作者将第一视角人类视频中的手—物交互转换成机器人中心轨迹，得到约 900 万对图像—点云—动作帧、超过 5 万条轨迹，覆盖八种灵巧手与 6–24 个主动自由度。FAAS 与 UniDex-VLA 解决“不同手型如何共用同一个策略”：FAAS 不要求关节编号一致，而是把功能相似的执行器放到共享坐标；UniDex-VLA 在这个动作空间中预测 action chunk。UniDex-Cap 则解决“新任务微调仍需要昂贵遥操作”的问题，用 Vision Pro 与 RealSense 采集人类示范并转换为可与机器人数据共同训练的轨迹。</p>
+<h3>1.2 论文最重要的四条结论</h3>
+<table><thead><tr><th>主张</th><th>论文证据</th><th>结论边界</th></tr></thead><tbody>
+<tr><td>统一预训练显著改善真实工具任务</td><td>五项真实任务平均 task progress 为 81%，π₀ 为 38%</td><td>评估集中在两个目标手型与五项工具任务</td></tr>
+<tr><td>FAAS 与多手预训练支持零样本跨手迁移</td><td>Inspire 上训练的 Make Coffee 策略直接迁移到 Oymotion/Wuji，成功率 60%/40%，基线接近 0</td><td>不是迁移到完全未知拓扑；目标手已进入 FAAS 设计与预训练体系</td></tr>
+<tr><td>3D 点云支持空间和对象泛化</td><td>通过点云编辑与 DemoGen 扩展咖啡任务位置；替换颜色、尺寸、把手和壶嘴均不同的紫色水壶</td><td>对象变化仍保持相同功能语义和任务结构</td></tr>
+<tr><td>转换后的人类数据能降低后训练机器人数据成本</td><td>人类—机器人 co-training 中，高性能边界斜率约为 2；人类示范采集速度约快 5.2 倍</td><td>没有机器人数据时成功率仍接近 0，人类数据不能完全替代真实机器人闭环监督</td></tr>
+</tbody></table>
 
-<h3>图解 2：fig:framework</h3>
-<figure>
-  <img src="figures/source/fig04_model.png" alt="fig:framework">
-  <figcaption><strong>论文原图：</strong>Overview of UniDex-VLA. At time t, the model consumes a single-view colored pointcloud P_t, a language instruction _t, and proprioception q_t, and predicts an H-step action chunk A_t = [a_t,,a_t+H-1] expressed in the unified action space FAAS. Uni3D zhou2023uni3d encodes the colored pointcloud; features are fused with text and proprioception in the backbone and decoded into FAAS actions. The policy is pretrained on UniDex-Dataset and optimized with a conditional flow-matching objective.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:framework”这一环；当前证据切片来自 fig04_model。原图明确展示：Overview of UniDex-VLA. At time t, the model consumes a single-view colored pointcloud P_t, a language instruction _t, and proprioception q_t, and predicts an H-step action chunk A_t = [a_t,,a_t+H-1] expressed in the unified action space FAAS. Uni3D zhou2023uni3d encodes the colored pointcloud; features are fused with text and proprioception in the backbone and decoded into FAAS actions. The policy is pretrained on UniDex-Dataset and optimized with a conditional flow-matching objective. 这幅方法图的重点是模块职责：上游负责产生什么条件，中间表示保留什么信息，下游最终预测什么。对 UniDex / UniDex-VLA 而言，这决定了训练数据如何被使用，也决定复现时应在哪些接口分别验收。框架完整不等于每个模块必要，因此还需与去除组件后的结果联合判断。</div>
+<figure><img src="figures/source/fig10_average_task_progress_morandi_wide.png" alt="图 1 · 五项真实工具任务的主结果。">
+<figcaption><strong>图 1 · 五项真实工具任务的主结果。</strong> 每个算法与任务使用 20 次测试，顶部为各任务阶段完成度，底部汇总平均 task progress 与最终成功率。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>这张图必须把“做到多少阶段”和“是否完整成功”分开读。UniDex-VLA 在 Make Coffee、Sweep Objects、Water Flowers、Cut Bags 与 Use Mouse 五项任务上整体领先，论文汇总平均 task progress 达 81%，而 π₀ 为 38%。附录逐阶段结果进一步显示，Make Coffee 的平均进度达到 87.5%，Sweep Objects 为 82.5%，Water Flowers 为 85.0%，Cut Bags 为 60.0%，Use Mouse 为 90.0%。Cut Bags 明显低于其余任务，说明统一预训练并未消除剪刀对齐、持续握持和切割接触的困难。该图支持统一数据与 FAAS 预训练对真实工具使用有显著帮助，但五项任务仍不足以代表所有灵巧技能。</div>
 
-<h3>图解 3：fig:real-world setup</h3>
-<figure>
-  <img src="figures/source/fig05_workstation.png" alt="fig:real-world setup">
-  <figcaption><strong>论文原图：</strong>Real-world experiments setup overview</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:real-world setup”这一环；当前证据切片来自 fig05_workstation。原图明确展示：Real-world experiments setup overview 图里呈现的不是单纯网络结构，而是一条从数据到部署的计算链。UniDex / UniDex-VLA 的关键假设被编码在模块连接方式中：可共享的部分被放入主干，具身或任务专属部分被留在适配接口。该图支撑设计逻辑，但不单独支撑泛化结论。</div>
+</section>
 
-<h3>图解 4：fig:spatial-generalization</h3>
-<figure>
-  <img src="figures/source/fig07_spatial_generalization_new3.png" alt="fig:spatial-generalization">
-  <figcaption><strong>论文原图：</strong>Spatial generalization. Left: the kettle and dripper are placed at out-of-distribution (OOD) positions relative to training demonstrations. Red and green lines circling regions denote the training placement ranges for the kettle and dripper, respectively. Right: average task progress for different methods (10 trials each).</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:spatial-generalization”这一环；当前证据切片来自 fig07_spatial_generalization_new3。原图明确展示：Spatial generalization. Left: the kettle and dripper are placed at out-of-distribution (OOD) positions relative to training demonstrations. Red and green lines circling regions denote the training placement ranges for the kettle and dripper, respectively. Right: average task progress for different methods (10 trials each). 这幅方法图的重点是模块职责：上游负责产生什么条件，中间表示保留什么信息，下游最终预测什么。对 UniDex / UniDex-VLA 而言，这决定了训练数据如何被使用，也决定复现时应在哪些接口分别验收。框架完整不等于每个模块必要，因此还需与去除组件后的结果联合判断。</div>
+<section id="motivation"><h2>2. 研究问题与动机</h2>
+<h3>2.1 三个瓶颈必须同时解决</h3>
+<p>第一，真实机器人遥操作成本高，尤其是高自由度手；第二，每种手的关节数、旋转轴、耦合方式和可达范围不同，使一只手的数据不能直接喂给另一只手；第三，人类视频规模大，却同时存在视觉域差异和运动学差异。只解决其中一个瓶颈并不足以形成 foundation suite：仅有大数据会得到不可执行的人类动作，仅有统一动作向量会缺乏覆盖，仅有 VLA 则仍可能绑定单一硬件。</p>
+<h3>2.2 为什么不用 padding 或 left-aligned action</h3>
+<p>把不同手的关节向量补零到同一维数，只对齐了数组位置，没有对齐功能语义。第 0 维在一只手上可能控制拇指基座，在另一只手上却对应完全不同的旋转；模型必须先记住手型身份，再自行学习每个索引的物理含义。FAAS 的假设是：即使机械结构不同，拇指外展、食指弯曲等功能可以建立近似对应，从而让多手数据在共享坐标中产生正迁移。</p>
+<h3>2.3 为什么把人类视频先转成 robot-centric data</h3>
+<p>一些路线让模型先预测人类手部参数，再在后训练或部署时做 IK 对齐。作者认为这会把高自由度手的逆运动学误差推迟到最脆弱的部署阶段。UniDex 选择提前完成手部遮罩、3D 场景编辑、fingertip-based IK 与人工校正，直接生成目标机器人手可执行的动作监督。代价是数据生产管线复杂且有人参与，收益则是预训练和后训练共享同一种机器人动作接口。</p>
+</section>
 
-<h3>图解 5：fig:obj-generalization</h3>
-<figure>
-  <img src="figures/source/fig08_obj_generalization.png" alt="fig:obj-generalization">
-  <figcaption><strong>论文原图：</strong>Object generalization. Left: we replace the original black kettle with a smaller purple kettle that differs in color, size, and functional parts (handle &amp; spout). Right: average task progress for different methods (10 trials each). -12pt</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:obj-generalization”这一环；当前证据切片来自 fig08_obj_generalization。原图明确展示：Object generalization. Left: we replace the original black kettle with a smaller purple kettle that differs in color, size, and functional parts (handle &amp; spout). Right: average task progress for different methods (10 trials each). -12pt 图里呈现的不是单纯网络结构，而是一条从数据到部署的计算链。UniDex / UniDex-VLA 的关键假设被编码在模块连接方式中：可共享的部分被放入主干，具身或任务专属部分被留在适配接口。该图支撑设计逻辑，但不单独支撑泛化结论。</div>
-</section><section id="experiments"><h2>5. 实验设计、结果与消融</h2><h3>5.1 任务、数据与评估协议</h3><p>实验应分三层阅读：首先验证从人类视频恢复和重定向出的轨迹质量；其次检查同一动作表示是否能在多种灵巧手上执行；最后看 UniDex-VLA 在空间泛化、物体泛化和跨 embodiment transfer 上的表现。原始图中包含 FAAS、工作站、任务集合、空间/物体泛化和 transfer 结果，说明作者试图用完整证据链证明 suite 的通用性。实验分别检验空间 OOD、对象变化、从 Inspire 到 Wuji/Oymotion 的零样本手型迁移、五项真实工具任务，以及人类演示数量与机器人演示数量的协同。每类实验对应统一数据与动作接口的一层主张。</p>
-<h3>图解 1：fig:retarget</h3>
-<figure>
-  <img src="figures/source/fig01_retarget_new.png" alt="fig:retarget">
-  <figcaption><strong>论文原图：</strong>The figure illustrates the complete human–robot transformation pipeline. Starting from the raw scene pointcloud, we first mask out the human hands. We then perform human-in-the-loop retargeting through a user-friendly GUI in which the user only needs to adjust slider bars to modify the dummy base offset. 1 shows the retargeted result without adjustment, whereas 3 shows the final configuration with improved, more plausible hand–object contact. Finally, after kinematic retargeting, we attach the retargeted robot dexterous hands to the scene. -10pt</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:retarget”这一环；当前证据切片来自 fig01_retarget_new。原图明确展示：The figure illustrates the complete human–robot transformation pipeline. Starting from the raw scene pointcloud, we first mask out the human hands. We then perform human-in-the-loop retargeting through a user-friendly GUI in which the user only needs to adjust slider bars to modify the dummy base offset. 1 shows the retargeted result without adjustment, whereas 3 shows the final configuration with improved, more plausible hand–object contact. Finally, after kinematic retargeting, we attach the retargeted robot dexterous hands to the scene. -10pt 读取重点不是寻找最高数字，而是检查对照是否隔离了变量。图中各方法在同一指标上的差距用于判断 UniDex / UniDex-VLA 的新增设计是否有效，任务间波动则揭示方法更擅长或更薄弱的交互类型。未展示的随机种子、对象变化或长程失败仍是证据边界。</div>
+<section id="related"><h2>3. 技术定位</h2>
+<h3>3.1 相比单任务灵巧控制：从 grasping 走向工具使用</h3>
+<p>传统灵巧学习常聚焦旋转、抓取或特定硬件，真实任务中的工具使用却需要功能性握持和多阶段动作。UniDex 的五个基准任务要求水壶倾倒、喷壶按压、扫帚清理、鼠标拖拽和剪刀切袋，动作成功不仅取决于抓住物体，还取决于是否以正确姿态驱动功能部件。因此，论文主张的“通用”更多指统一策略能覆盖多种工具交互，而非只在更多对象上重复抓取。</p>
+<h3>3.2 相比通用 VLA：动作空间是核心矛盾</h3>
+<p>OpenVLA、π₀ 等模型主要建立在夹爪中心的大规模数据上。对于灵巧手，视觉语言 backbone 并不是唯一问题，动作输出维度和语义随手型改变才是跨具身训练的直接障碍。UniDex-VLA 通过 FAAS 把动作接口标准化，并使用显式彩色点云增强空间推理；其创新重点不在更大的语言模型，而在数据转换与动作参数化。</p>
+<h3>3.3 相比其他人类视频学习：把数据用于预训练和后训练</h3>
+<p>很多人类视频方法只利用无动作视频做视觉预训练，或在模型预训练后再进行复杂人机动作对齐。UniDex 一方面用既有第一视角数据构建大规模 robot-centric pretraining dataset，另一方面用 UniDex-Cap 为目标任务采集并转换新的人类示范。后者通过 co-training 实验量化“多少人类示范可以替代多少机器人示范”，使数据成本讨论从定性主张变成可测量问题。</p>
+</section>
 
-<h3>图解 2：fig:unidex-dataset</h3>
-<figure>
-  <img src="figures/source/fig02_new-dataset-5.png" alt="fig:unidex-dataset">
-  <figcaption><strong>论文原图：</strong>UniDex-Dataset visualization. We show a verb–object word cloud and a subset of UniDex-Dataset. Colors denote different hands (arbitrarily assigned; black corresponds to pretraining data). UniDex-Dataset spans diverse everyday tasks across a wide range of dexterous hand embodiments, including using a mobile phone, opening a milk carton, stir-frying with a spatula, lifting a chair, solving a Rubik’s cube, and more.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:unidex-dataset”这一环；当前证据切片来自 fig02_new-dataset-5。原图明确展示：UniDex-Dataset visualization. We show a verb–object word cloud and a subset of UniDex-Dataset. Colors denote different hands (arbitrarily assigned; black corresponds to pretraining data). UniDex-Dataset spans diverse everyday tasks across a wide range of dexterous hand embodiments, including using a mobile phone, opening a milk carton, stir-frying with a spatula, lifting a chair, solving a Rubik’s cube, and more. 任务和数据图把抽象的“多样性”具体化为对象、动作阶段和环境条件。对 UniDex / UniDex-VLA 的实验而言，图中没有出现的动态扰动、材质、接触模式或具身不应被默认已经覆盖；它证明的是评估设计的广度，而非自动证明策略成功。</div>
+<section id="data"><h2>4. 从人类视频到机器人中心数据</h2>
+<h3>4.1 人机转换管线：遮罩、重定向、人工修正与场景重建</h3>
+<p>输入是带 3D 场景点云和人手运动的人类第一视角片段。管线先从点云中移除人手，避免策略把人类外观当作机器人观测的一部分；随后基于指尖轨迹做 inverse kinematics，将人手与物体之间的接触关系映射到目标机器人手。自动 IK 容易因手掌尺度、指长与关节限制产生不合理穿透或悬空，因此作者提供 GUI，让用户调整 dummy base offset 与 IK 参数。最后将重定向后的机器人手附着到场景，形成机器人中心的观测—动作轨迹。</p>
 
-<h3>图解 3：fig:task-description</h3>
-<figure>
-  <img src="figures/source/fig06_task_1114.png" alt="fig:task-description">
-  <figcaption><strong>论文原图：</strong>Our real-robot benchmark comprises 5 challenging tool-use tasks. We visualize the key stages of each task, illustrating the precise dexterous control required to successfully complete them. -12pt</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:task-description”这一环；当前证据切片来自 fig06_task_1114。原图明确展示：Our real-robot benchmark comprises 5 challenging tool-use tasks. We visualize the key stages of each task, illustrating the precise dexterous control required to successfully complete them. -12pt 图中的横纵轴、任务分组和对比方法共同规定了结论强度。应关注优势是否跨任务稳定、提升发生在成功率还是阶段完成度，以及联合配置是否优于单一组件。它能支持 UniDex / UniDex-VLA 在这些基线与协议下的相对优势，却不能覆盖未参与比较的硬件或任务分布。</div>
+<figure><img src="figures/source/fig01_retarget_new.png" alt="图 2 · 完整的人类到机器人转换管线。">
+<figcaption><strong>图 2 · 完整的人类到机器人转换管线。</strong> 原始场景点云经人手遮罩、human-in-the-loop retargeting、运动学重定向后，附加目标机器人手。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>图中编号 1 与 3 是理解人工参与作用的关键：未调整的结果虽然满足自动 IK，却可能出现不自然的手—物接触；滑杆调整 dummy base offset 后，手掌和指尖与物体表面更合理。最后一步不是简单更换手部纹理，而是把已校正的机器人手状态放回去除人手后的 3D 场景。它说明 UniDex-Dataset 的动作监督具有可执行性导向，也暴露其扩展瓶颈：50K 轨迹并非完全自动生成，人工重定向质量与一致性会直接影响预训练。</div>
 
-<h3>图解 4：fig:hand-generalization</h3>
-<figure>
-  <img src="figures/source/fig09_transfer.png" alt="fig:hand-generalization">
-  <figcaption><strong>论文原图：</strong>Hand generalization (zero-shot skill transfer). We transfer a policy trained on the Inspire Hand to Wuji and Oymotion. Table reports task progress ( -15pt</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:hand-generalization”这一环；当前证据切片来自 fig09_transfer。原图明确展示：Hand generalization (zero-shot skill transfer). We transfer a policy trained on the Inspire Hand to Wuji and Oymotion. Table reports task progress ( -15pt 这幅图给出了论文能力声明的样本基础。可见的长尾、任务组合或场景变化说明模型需要处理哪些分布差异，同时也暴露高频类别可能主导训练。UniDex / UniDex-VLA 的泛化结论应限制在图中数据生成流程与测试划分能够支持的范围。</div>
+<h3>4.2 UniDex-Dataset 的覆盖范围</h3>
+<p>数据集包含约 900 万图像—点云—动作配对帧、超过 5 万条轨迹、八种灵巧手，主动自由度从 6 到 24。任务覆盖手机使用、开牛奶盒、用锅铲翻炒、搬椅子、解魔方等日常交互。多样性同时来自 verb-object 组合和手型变化，因此策略不仅要学习“某动作如何完成”，还要学习同一功能动作如何由不同执行器实现。</p>
 
-<h3>图解 5：fig:main-exp-results</h3>
-<figure>
-  <img src="figures/source/fig10_average_task_progress_morandi_wide.png" alt="fig:main-exp-results">
-  <figcaption><strong>论文原图：</strong>Average task progress across five real-world tasks (top), with aggregate averages of average task progress and final success rate (bottom) over 5 tasks. Each task/algorithm uses 20 trials. -15pt</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:main-exp-results”这一环；当前证据切片来自 fig10_average_task_progress_morandi_wide。原图明确展示：Average task progress across five real-world tasks (top), with aggregate averages of average task progress and final success rate (bottom) over 5 tasks. Each task/algorithm uses 20 trials. -15pt 图中的横纵轴、任务分组和对比方法共同规定了结论强度。应关注优势是否跨任务稳定、提升发生在成功率还是阶段完成度，以及联合配置是否优于单一组件。它能支持 UniDex / UniDex-VLA 在这些基线与协议下的相对优势，却不能覆盖未参与比较的硬件或任务分布。</div>
+<figure><img src="figures/source/fig02_new-dataset-5.png" alt="图 3 · UniDex-Dataset 的任务与手型覆盖。">
+<figcaption><strong>图 3 · UniDex-Dataset 的任务与手型覆盖。</strong> 词云展示 verb-object 组合；样例颜色表示不同机器人手，黑色对应预训练数据。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>词云强调数据不是按少数任务均匀复制，而包含大量动作—对象组合；样例中同类日常技能被映射到不同手型，构成 FAAS 能否共享技能的训练基础。手机、牛奶盒、锅铲、椅子和魔方分别要求按压、开合、工具握持、双手搬运和多指重构，难度结构不同。该图证明数据覆盖广，却不能单独证明重定向后的每条轨迹都无碰撞或接触正确；这需要 GUI 校正和真实执行结果补充。</div>
 
-<h3>图解 6：fig:human_data</h3>
-<figure>
-  <img src="figures/source/fig11_unidexcap.png" alt="fig:human_data">
-  <figcaption><strong>论文原图：</strong>(a,b) show the components of UniDex-Cap. (c,d) shows the example captured data and converted robot-executable trajectories.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:human_data”这一环；当前证据切片来自 fig11_unidexcap。原图明确展示：(a,b) show the components of UniDex-Cap. (c,d) shows the example captured data and converted robot-executable trajectories. 真实系统图把论文中的表示和动作输出连接到具体硬件。它让读者能够区分算法贡献与平台能力，也说明哪些传感器和控制通道是结果成立的必要条件。图中未覆盖的新手型、视角或工作空间仍需要重新适配。</div>
+<h3>4.3 UniDex-Cap：把新的人类示范接入同一转换管线</h3>
+<p>UniDex-Cap 使用 Apple Vision Pro 估计手与头部位姿，Intel RealSense L515 记录 RGB-D，并用定制 3D 打印支架固定两者相对位姿。由于 Vision Pro 不向第三方开放 RGB-D 录制，作者必须手动标定固定外参。采集后还会进行视角变换，并将人类动作下采样到典型机器人遥操作速度，再通过与预训练数据相同的人机转换管线生成目标任务训练轨迹。</p>
 
-<h3>图解 7：fig:human-posttraining</h3>
-<figure>
-  <img src="figures/source/fig12_unidex-human-vs-robot.png" alt="fig:human-posttraining">
-  <figcaption><strong>论文原图：</strong>Human-Robot co-training. Average task progress versus the numbers of transformed human demos (h) and robot demos (r). Colors indicate different performance bands (green: comparable to the r=50 robot-only result). Each point averages over 20 trials.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:human-posttraining”这一环；当前证据切片来自 fig12_unidex-human-vs-robot。原图明确展示：Human-Robot co-training. Average task progress versus the numbers of transformed human demos (h) and robot demos (r). Colors indicate different performance bands (green: comparable to the r=50 robot-only result). Each point averages over 20 trials. 这张结果图把论文主张变成了可比较证据：相同测试条件下，各柱形、曲线或表格单元之间的差异对应具体模块或训练数据的贡献。若提升只集中于少数任务，结论应收缩到对应能力；若多数任务同时改善，才更接近 UniDex / UniDex-VLA 所声称的通用收益。</div>
+<figure><img src="figures/source/fig11_unidexcap.png" alt="图 4 · UniDex-Cap 的硬件、观测和转换结果。">
+<figcaption><strong>图 4 · UniDex-Cap 的硬件、观测和转换结果。</strong> (a,b) 展示采集组件，(c,d) 展示人类观测及转换后的机器人可执行轨迹。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>这张图把“便携人类采集”拆成了硬件同步和轨迹转换两部分。Vision Pro 提供手/头运动，L515 提供可被 UniDex-VLA 使用的彩色点云；两者必须在固定外参下对齐，否则重定向后的指尖会在场景中系统性偏移。(c,d) 的意义是同一人类演示已被改写为机器人中心观测与动作，而不只是保留人手视频。它支持低成本采集管线可接入后训练，但仍依赖人工标定和重定向。</div>
 
-<h3>图解 8：fig:web_gui</h3>
-<figure>
-  <img src="figures/source/fig13_web_gui.png" alt="fig:web_gui">
-  <figcaption><strong>论文原图：</strong>Human-friendly web-basedGUI for retargeting human demonstrations to robot executions. Users can adjust the IK parameters, dummy links, and other settings through the GUI to obtain satisfactory retargeted robot trajectories.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:web_gui”这一环；当前证据切片来自 fig13_web_gui。原图明确展示：Human-friendly web-basedGUI for retargeting human demonstrations to robot executions. Users can adjust the IK parameters, dummy links, and other settings through the GUI to obtain satisfactory retargeted robot trajectories. 这张部署图的价值在于揭示工程闭环：数据如何采集、状态如何同步、动作如何下发、结果如何观察。UniDex / UniDex-VLA 已展示在该平台上的可执行性，但不能由此推断任意硬件替换后仍保持同样性能。</div>
-</section><section id="repro"><h2>6. 复现路线与工程风险</h2><h3>6.1 最小可行复现路径</h3><p>复现工作量集中在数据管线。需要下载并处理人类第一视角视频、运行手部/物体运动恢复、统一坐标系、实现 FAAS 与目标手型之间的映射，并准备至少一种真实或仿真灵巧手。应先验证单条轨迹重定向是否合理，再进行 VLA 训练；否则动作标签错误会被模型学习并放大。版本、标定文件和手型 URDF 是关键依赖。复现优先级应放在人机转换轨迹的可视化验收：先校准 Vision Pro、RealSense 与机器人坐标，再检查 GUI retargeting 和 FAAS 映射，最后训练 VLA。若转换轨迹不稳定，策略会把伪标签误差当成动作规律。</p></section><section id="discussion"><h2>7. 分析、局限与边界</h2><h3>7.1 最有价值的贡献</h3><p>UniDex 的价值是降低跨手型研究门槛，但统一动作空间可能掩盖不同手型在接触能力、关节耦合和可达空间上的本质差异。人类视频恢复误差、遮挡和尺度歧义也会进入训练数据。套件展示了 transfer 潜力，但不能保证任何人手动作都能被任意机器人手物理实现。UniDex 的边界主要来自人类到机器人之间的可达性与接触差异。人工 GUI 提升了轨迹质量，也意味着数据转换并非完全自动；FAAS 能对齐功能动作，却不能消除不同手型的力控能力和物理极限。</p>
-<h3>图解 1：fig:detailed_faas</h3>
-<figure>
-  <img src="figures/source/fig14_detailed_faas.png" alt="fig:detailed_faas">
-  <figcaption><strong>论文原图：</strong>Joint mappings of different robotic hands used in FAAS. From left to right are Ability, Allegro, Inspire, Leap, Oymotion, Shadow, Wuji, and Xhand. The two rows show different views of the joint mappings on the right hand.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:detailed_faas”这一环；当前证据切片来自 fig14_detailed_faas。原图明确展示：Joint mappings of different robotic hands used in FAAS. From left to right are Ability, Allegro, Inspire, Leap, Oymotion, Shadow, Wuji, and Xhand. The two rows show different views of the joint mappings on the right hand. 从相机、机械臂、灵巧手或遥操作布局可以判断 UniDex / UniDex-VLA 的结果依赖哪些真实接口。该图证明算法已进入物理执行链，但相机标定、控制频率、动作归一化与安全限制仍可能决定复现成败，换平台时不能视为无关细节。</div>
+<figure><img src="figures/source/fig15_calibration.png" alt="图 5 · Vision Pro 与 RealSense 的外参校准。">
+<figcaption><strong>图 5 · Vision Pro 与 RealSense 的外参校准。</strong> 左侧为校准前的骨架与点云错位，右侧为滑杆调整后两者对齐。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>校准目标是求固定变换 Tᵛᴾ_RS，使 Vision Pro 坐标中的手部姿态能够落入 RealSense 彩色点云坐标。图中校准前骨架与真实手点云明显错位，校准后手指与手掌轮廓重合。这个步骤不是视觉美化，而决定所有后续重定向标签的空间正确性；若外参有厘米级偏差，工具握持与精细接触会被系统性污染。</div>
 
-<h3>图解 2：fig:calibration</h3>
-<figure>
-  <img src="figures/source/fig15_calibration.png" alt="fig:calibration">
-  <figcaption><strong>论文原图：</strong>GUI for UniDex-Cap calibration. (a) shows the initial state before calibration; (b) shows the calibrated result where the hand poses captured by Vision Pro align with the 3D point cloud captured by the RealSense L515 camera.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 UniDex / UniDex-VLA 的证据链中承担的是“fig:calibration”这一环；当前证据切片来自 fig15_calibration。原图明确展示：GUI for UniDex-Cap calibration. (a) shows the initial state before calibration; (b) shows the calibrated result where the hand poses captured by Vision Pro align with the 3D point cloud captured by the RealSense L515 camera. 这张结果图把论文主张变成了可比较证据：相同测试条件下，各柱形、曲线或表格单元之间的差异对应具体模块或训练数据的贡献。若提升只集中于少数任务，结论应收缩到对应能力；若多数任务同时改善，才更接近 UniDex / UniDex-VLA 所声称的通用收益。</div>
-</section><section id="qa"><h2>8. 组会问答与阅读结论</h2><h3>Q1：UniDex 的贡献是模型还是数据基础设施？</h3><p>核心是覆盖数据恢复、FAAS、跨手型适配和 VLA 的完整 suite。</p><h3>Q2：FAAS 解决什么？</h3><p>把动作从具体关节索引中解耦，提供跨手型共享接口。</p><h3>Q3：人类视频为何可用于机器人？</h3><p>先恢复运动，再经过约束重定向与目标手型映射。</p><h3>Q4：最大误差来源？</h3><p>视频恢复与重定向误差，以及不同手型的物理能力差异。</p><h3>Q5：复现第一步？</h3><p>在单手型上可视化 FAAS 重定向轨迹。</p><h3>阅读结论与研究启发</h3><p>它最值得借鉴的是数据和 action interface。若计划长期做多手型灵巧操作，应优先研究 FAAS 与数据处理流程；若只想快速得到单手任务结果，DexGraspVLA 可能更直接。</p></section>
+</section>
+
+<section id="method"><h2>5. FAAS 与 UniDex-VLA</h2>
+<h3>5.1 FAAS：按功能对齐，而不是按关节编号对齐</h3>
+<p>FAAS 为灵巧手预留 32 维：0–4、5–9、10–14、15–19、20–24 分别对应拇指、食指、中指、无名指和小指；25–26 留给 Shadow Hand 的额外腕部关节，27–31 为未来新手预留。具体手型只填入自身拥有且功能可对应的维度。这样，手指数量、执行器数量和耦合方式不同的手仍能在共享向量中表达相近功能动作。</p>
+
+<figure><img src="figures/source/fig03_faas.png" alt="图 6 · 四种手在 FAAS 中的功能执行器对齐。">
+<figcaption><strong>图 6 · 四种手在 FAAS 中的功能执行器对齐。</strong> 颜色表示关节，曲线表示旋转方向，虚线表示旋转轴；相同索引代表跨手共享的功能角色。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>图中 Oymotion、Allegro、Inspire 与 Wuji 的拇指和无名指机械结构不同，执行器数量分别为 11、16、12 和 20，但索引 0、1、3、5、6 等被赋予近似功能。重点不是让关节角数值相同，而是让策略在共享维度上表达“弯曲某根功能手指”或“调整拇指对掌”等动作。FAAS 因而比补零更有物理语义；它的边界是功能相似不等于力矩、可达域和接触能力相同。</div>
+
+<figure><img src="figures/source/fig14_detailed_faas.png" alt="图 7 · 八种机器人手的完整 FAAS 关节映射。">
+<figcaption><strong>图 7 · 八种机器人手的完整 FAAS 关节映射。</strong> 从 Ability、Allegro、Inspire、Leap、Oymotion、Shadow、Wuji 到 Xhand，展示右手两种视角下的映射。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>这张附录图说明 FAAS 不是只为论文实验中的两只目标手临时设计，而对八种训练手逐关节建立映射。对复现者而言，它相当于动作接口规范：如果新手没有对应映射，UniDex-VLA 的共享 action head 无法直接使用。图也揭示扩展新手型仍需人工理解机械功能，而不是自动从 URDF 推断全部语义。</div>
+
+<h3>5.2 UniDex-VLA 的输入输出与 flow-matching 训练</h3>
+<p>时刻 t，模型接收单视角彩色点云 Pₜ、语言指令 ℓₜ 和 proprioception qₜ，输出 FAAS 空间中的 H-step action chunk Aₜ。Uni3D 编码点云，文本与状态特征在 backbone 中融合，action decoder 预测条件速度场。训练采用 conditional flow matching：从真实动作 A 与高斯噪声 ε 之间构造插值 Aᵗ，并让模型预测将噪声流向数据的速度。推理时积分该速度场得到未来动作 chunk。</p>
+
+<figure><img src="figures/source/fig04_model.png" alt="图 8 · UniDex-VLA 的 3D VLA 信息流。">
+<figcaption><strong>图 8 · UniDex-VLA 的 3D VLA 信息流。</strong> 彩色点云、语言与 proprioception 被融合，模型在 FAAS 中输出 H 步动作块。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>彩色点云是这张图区别于普通 RGB VLA 的第一关键：显式 3D 几何允许模型感知水壶、滴滤杯和工具功能部件之间的空间关系，也支持后续通过点云平移做几何数据增强。第二关键是输出不再属于某一只手，而是 FAAS action chunk；具体机器人执行前只需读取自身映射维度。图支持统一接口的完整性，但真正证明 FAAS 带来迁移的是跨手实验。</div>
+
+<h3>5.3 训练配置与控制频率</h3>
+<p>预训练使用 8 张 NVIDIA H800，总 batch size 128，训练 3 epochs、约 30k steps，耗时约 24 小时；优化器为 AdamW，初始学习率 1e-4，第二个 epoch 后乘 0.95，weight decay 1e-10，梯度裁剪范数 1.0。每个任务的后训练使用 2 张 H800、batch size 8、学习率 2.5e-5；普通数据训练 50 epochs、约 3k steps、约 4 小时，DemoGen 数据训练 2 epochs、约 1.8k steps、约 2.5 小时。遥操作以 15 fps 采集，后训练数据下采样到 5 fps，推理同样以 5 fps 控制。</p>
+</section>
+
+<section id="experiments"><h2>6. 实验与结果</h2>
+<h3>6.1 五项任务为何能检验“通用灵巧控制”</h3>
+<p>Make Coffee 需要握持水壶、对准滴滤杯并稳定倾倒；Water Flowers 要抓喷壶并持续按压扳机；Sweep Objects 需要保持扫帚功能性握持并推动散落物；Use Mouse 依赖精细位移和点击/拖拽；Cut Bags 要稳定操纵剪刀并沿袋体切割。前四项已覆盖倾倒、触发、扫动和桌面输入，最后一项进一步引入双部件剪切接触。任务用阶段完成度而非只用最终成功率，是因为失败可能发生在抓取、功能对齐或工具执行的不同阶段。</p>
+
+<figure><img src="figures/source/fig06_task_1114.png" alt="图 9 · 五项真实工具使用任务的关键阶段。">
+<figcaption><strong>图 9 · 五项真实工具使用任务的关键阶段。</strong> 每一行展示任务从接近、握持到功能执行的连续阶段。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>五行任务并不是五种对象抓取：咖啡任务要求壶嘴与滴滤杯空间对齐，喷花任务要求手指持续按压，清扫任务要求工具端与桌面保持有效接触，鼠标任务要求把小位移转成屏幕操作，剪袋任务则依赖剪刀两刃闭合。因而 task progress 能区分“抓到了工具但不会用”和“完成了功能动作”。图中没有覆盖高速动态、强力操作或触觉闭环，这些仍在论文证据之外。</div>
+
+<h3>6.2 主结果与基线含义</h3>
+<p>论文与 Diffusion Policy、DP3、π₀ 以及不做预训练的 UniDex-VLA 进行比较，并让所有基线在验证集上训练至收敛。UniDex-VLA 平均 task progress 达 81%，π₀ 为 38%；附录显示它在使用鼠标上达到 90%，在切袋上仅 60%，其优势跨任务存在，但精细剪切仍是明显瓶颈。与无预训练变体的差距用于证明 UniDex-Dataset 的作用，而与 DP3 的比较则检验“使用 3D”是否足够：结果说明仅有点云输入并不能替代统一预训练与 FAAS。</p>
+<h3>6.3 空间泛化：3D 点云允许几何编辑与 DemoGen 增强</h3>
+
+<figure><img src="figures/source/fig07_spatial_generalization_new3.png" alt="图 10 · Make Coffee 的空间 OOD 泛化。">
+<figcaption><strong>图 10 · Make Coffee 的空间 OOD 泛化。</strong> 左侧红绿区域表示水壶和滴滤杯在训练示范中的放置范围，右侧比较不同方法在 OOD 位置上的平均进度。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>图的左半部分明确区分训练位置范围与测试位置：水壶和滴滤杯被移动到红绿边界之外，模型不能只复现固定桌面轨迹。彩色点云可直接分割并沿桌面 x/y 轴平移，DemoGen 再用 TAMP 对齐机器人状态，形成无需重新遥操作的空间增强。右侧结果显示增强后 UniDex-VLA 能覆盖更广工作区。这个实验支持 3D 表示对空间泛化有价值，但位置变化仍局限于桌面平移，没有测试任意旋转、遮挡或新桌面几何。</div>
+
+<h3>6.4 对象与跨手泛化</h3>
+
+<figure><img src="figures/source/fig08_obj_generalization.png" alt="图 11 · 将训练中的黑色水壶替换为小型紫色水壶。">
+<figcaption><strong>图 11 · 将训练中的黑色水壶替换为小型紫色水壶。</strong> 新水壶在颜色、尺寸、把手和壶嘴等功能部件上均发生变化。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>该实验不是只改变颜色：紫色水壶更小，把手和壶嘴形态也不同，策略必须重新确定功能性握持和倾倒方向。它验证 UniDex-VLA 的彩色点云与预训练能适应同一工具类别内部的结构变化；但目标仍是“用水壶做咖啡”，没有跨到完全不同工具或新的功能语义。</div>
+
+<figure><img src="figures/source/fig09_transfer.png" alt="图 12 · 从 Inspire Hand 到 Oymotion 与 Wuji 的零样本技能迁移。">
+<figcaption><strong>图 12 · 从 Inspire Hand 到 Oymotion 与 Wuji 的零样本技能迁移。</strong> Make Coffee 策略不经微调直接更换机器人手，报告平均任务进度或成功表现。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>Inspire 只有 6 个主动自由度，Wuji 有 20 个，Oymotion 虽同为 6 DoF 却运动学不同，因此该实验直接考验 FAAS 是否把策略动作从具体关节索引中解耦。论文报告 Oymotion 成功率 60%、Wuji 40%，基线接近 0。结果表明多手预训练加 FAAS 能支持跨手执行，但目标手均已参与 FAAS 定义和大规模预训练，因此它不是对从未建模新手型的即插即用证明。</div>
+
+<h3>6.5 Human–Robot co-training：人类数据能替代多少机器人数据</h3>
+
+<figure><img src="figures/source/fig12_unidex-human-vs-robot.png" alt="图 13 · Make Coffee 中人类示范与机器人示范数量的交换关系。">
+<figcaption><strong>图 13 · Make Coffee 中人类示范与机器人示范数量的交换关系。</strong> 横纵轴分别改变转换后人类示范 h 与真实机器人示范 r；绿色区域表示接近 r=50 robot-only 的性能，每个点测试 20 次。</figcaption></figure>
+<div class="note"><strong>逐图分析：</strong>最关键的现象有三个。固定机器人示范数 r 时，增加人类示范 h 会持续提升平均 task progress；但 r=0 时无论加入多少人类示范，最终成功仍接近 0，说明闭环机器人数据不可替代。高性能区域边界的斜率约为 2，作者据此估计两条人类示范约可替代一条机器人示范。由于 UniDex-Cap 人类示范采集速度约快 5.2 倍，综合成本仍显著下降。这个交换率只在 Make Coffee、当前转换质量和测试范围内成立，不应视为跨任务常数。</div>
+
+</section>
+
+<section id="repro"><h2>7. 复现、局限与边界</h2>
+<h3>7.1 最小复现路径应先验证 FAAS 和重定向，而非直接训练 VLA</h3>
+<p>第一阶段选两种机械差异明显的手，对同一人类工具轨迹完成手部遮罩、IK 重定向与 GUI 校正，并在仿真或慢速真实回放中检查接触与关节越界。第二阶段实现 32 维 FAAS 映射，验证同一功能动作在两手上均可执行。第三阶段才训练小规模 3D policy，对比 hand-specific action、补零 action 与 FAAS。若前两阶段不稳定，VLA 训练只会吸收伪动作标签。</p>
+<h3>7.2 完整复现依赖</h3>
+<table><thead><tr><th>环节</th><th>必要资源</th><th>验收标准</th></tr></thead><tbody>
+<tr><td>数据转换</td><td>第一视角 RGB-D/点云、手部姿态、目标手 URDF、IK 与 GUI</td><td>手—物接触合理、动作可回放、无系统性穿透</td></tr>
+<tr><td>FAAS</td><td>每种手的功能关节映射和归一化规则</td><td>共享动作在两手上产生语义一致运动</td></tr>
+<tr><td>预训练</td><td>8×H800 或缩小数据/模型、Uni3D、flow matching</td><td>预训练优于相同后训练配置的 scratch 模型</td></tr>
+<tr><td>真实部署</td><td>彩色点云、proprioception、5 fps 控制与安全约束</td><td>逐阶段 task progress 可重复，并记录失败位置</td></tr>
+</tbody></table>
+<h3>7.3 论文自身与推断出的边界</h3>
+<p>作者明确指出当前管线尚未利用规模更大的 action-free 或弱标注第一视角活动数据。进一步看，human-in-the-loop retargeting 提高了标签质量，却使数据扩展速度受到人工校正限制；FAAS 对齐功能执行器，却不能对齐力矩、触觉、可达范围和机械耦合；3D 点云改善空间推理，但对透明、反光、严重遮挡对象仍可能不稳定。零样本跨手结果证明的是“目标手已纳入统一动作体系后的技能迁移”，并非自动支持任意新硬件。</p>
+</section>
+
+<section id="qa"><h2>8. 组会问答</h2>
+<h3>Q1：UniDex 最核心的创新是数据集、FAAS 还是 VLA？</h3><p>三者不能拆开看。数据集提供多手规模，FAAS 让多手动作具有共享语义，UniDex-VLA 才能利用这些数据训练统一策略。若没有 robot-centric 转换，动作不可执行；没有 FAAS，多手数据仍被动作接口割裂。</p>
+<h3>Q2：为什么人类数据不能完全替代机器人数据？</h3><p>转换后人类轨迹仍没有经历机器人执行误差、控制延迟与真实闭环接触。co-training 实验中 r=0 时成功率接近 0，说明机器人数据承担最终接口校准和闭环稳定性监督。</p>
+<h3>Q3：FAAS 与 DexLatent 的核心差别是什么？</h3><p>FAAS 是人工定义、功能执行器对齐的显式动作空间，优点是可解释、无需解码器后处理；DexLatent 学习共享潜空间，可能捕获更复杂对应，但也可能丢失细粒度接触语义。两者代表显式功能映射与学习式动作对齐两条路线。</p>
+<h3>Q4：81% 平均进度是否等价于 81% 成功率？</h3><p>不等价。平均 task progress 会给完成部分阶段的轨迹计分，适合长程工具任务诊断；最终成功率要求整条任务完成。阅读主结果必须同时看两者，否则可能高估“已经完成任务”的比例。</p>
+<h3>Q5：最值得继续验证什么？</h3><p>应测试 FAAS 对完全未参与设计的新手型是否仍可通过少量映射快速接入，并将触觉与力控制纳入统一动作/状态空间；同时量化 human-in-the-loop 重定向的时间成本和错误率，判断数据规模继续扩大时人工环节是否成为主要瓶颈。</p>
+<div class="tldr"><strong>阅读结论：</strong>UniDex 真正建立的是一条跨手型数据生产与学习链：人类视频被转换为机器人中心轨迹，FAAS 赋予不同关节共享功能语义，3D VLA 在统一空间中学习，而 UniDex-Cap 将同一转换机制延伸到目标任务后训练。最强证据是五项真实工具任务、零样本跨手迁移与人机示范交换率；最大边界是重定向仍需人工、FAAS 仍依赖手工功能映射，且人类数据无法替代机器人闭环监督。</div>
+</section>
 </main></body></html>
