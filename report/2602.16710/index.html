@@ -1,6 +1,14 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EgoScale 深度精读</title><link rel="preconnect" href="https://fonts.googleapis.com">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EgoScale 深度精读：人类第一视角数据的灵巧手 Scaling</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
     :root {
       --paper: #f6f7f3;
       --paper-deep: #e8ede7;
@@ -517,4 +525,249 @@
       background: var(--ink);
       color: var(--paper);
     }
-</style></head><body><main><header><h1>EgoScale: Scaling Dexterous Manipulation with Diverse Egocentric Human Data</h1><p class="subtitle">OpenMOSS/WAM 风格深度精读：EgoScale | 大规模人类第一视角数据 / 灵巧手 VLA</p><p><a href="https://arxiv.org/abs/2602.16710">arXiv:2602.16710</a> · <a href="https://research.nvidia.com/labs/gear/egoscale/">项目/论文链接</a></p></header><section><h2>1. 论文速览</h2><h3>1 一句话贡献；技术定位；关键证据</h3><p>EgoScale 的核心是证明大规模人类第一视角数据可以作为灵巧手机器人学习的可预测监督源。它不是只做视频理解，而是训练 VLA 去预测 wrist motion 和 retargeted hand actions，再通过 aligned human-robot mid-training 把这种人类运动先验落到机器人动作空间。</p><p>它属于 human-to-robot transfer、egocentric video pretraining 和 dexterous VLA scaling。与 UniDex/UniHM 关注动作表示不同，EgoScale 更强调数据规模和 scaling law：人类数据量、validation loss 和真实机器人成功率之间存在相关性。</p><p>摘要报告使用超过 20,854 小时 action-labeled egocentric human video，是 prior efforts 的 20× 以上；最终策略相对 no-pretraining baseline 平均成功率提升 54%，并能迁移到低 DoF 手。这是论文最强的证据链。</p><figure><img src="figures/source/fig01_pull_figure.png" alt="fig:method_overview"><figcaption><strong>fig:method_overview.</strong> \ours: Two-stage human-to-robot learning framework. A flow-based Vision-Language-Action (VLA) policy is first pretrained on 20,854 hours of egocentric human videos using wrist motion and retargeted dexterous hand actions. A lightweight mid-training stage with aligned human robot play data (pairs highlighted with mygreengreen and mygraygray boundaries) adapts the representation to robot sensing and control. The resulting policy is post-trained on downstream tasks, enabling efficient learning of dexterous manipulation and one-shot generalization to unseen skills.\looseness=-1<br><strong>本文解读：</strong>对 EgoScale 而言，这张图需要重点核对 20、854 hours、1 之间的关系。这是一张系统总览图。应顺着箭头确认观测、核心表示、训练目标与执行输出的先后关系，并检查论文的主要创新究竟插入了信息流的哪一段。它支撑的是 EgoScale 的方法结构与模块分工，不直接证明性能提升；性能因果仍需由对应消融和真实任务结果确认。 本图的证据场景限定为：fig:method_overview.。</figcaption></figure><figure><img src="figures/source/fig02_dexterous_manipulation_tasks_v2.png" alt="fig:task_fig"><figcaption><strong>fig:task_fig.</strong> Post-Training Evaluation Tasks. Five dexterous manipulation tasks used to evaluate post-training performance<br><strong>本文解读：</strong>对 EgoScale 而言，这张图对应一个可单独检查的论文证据。这张任务图不是演示拼图，而是评估协议的可视化。连续帧或分栏展示了任务需要经历的关键阶段，可据此判断成功标准依赖粗位移、精密对齐、双手协同还是持续接触。图中任务覆盖决定了 EgoScale 能支撑哪类能力；未出现的动态扰动、对象材质或更长流程仍需额外实验。 本图的证据场景限定为：fig:task_fig.。</figcaption></figure></section><section><h2>2. 研究问题与动机</h2><h3>2 核心问题；scaling 是否成立；为什么需要 mid-training；关键假设</h3><p>机器人遥操作数据昂贵，尤其是高 DoF 灵巧手；而人类每天产生大量第一视角操作视频。问题是这些视频没有机器人 proprioception 和可执行动作，能否变成真正有用的 robot motor prior。</p><p>人类动作和机器人动作存在 embodiment gap。仅靠人类预训练可能学到手部运动先验，但不知道机器人传感器、关节限制和动作接口。aligned human-robot mid-training 用少量配对数据把表示锚定到机器人执行空间。</p></section><section><h2>3. 相关工作脉络</h2><h3>3 人类视频预训练；VLA 与 action expert；跨具身迁移</h3><p>EgoDex 等工作证明第一视角人类数据能提供手部轨迹和任务多样性。EgoScale 将规模推到 20k 小时级别，并重点验证 scaling law 与机器人成功率相关。</p><p>论文使用 flow-based VLA policy，视觉语言 backbone 与 DiT action expert 结合，动作包含 wrist motion 和 dexterous hand actions。相比只做语义理解，它直接面向机器人控制表示。</p><p>通过 embodiment-conditioned adapters，模型可以处理不同机器人状态和手部 action space。G1 低 DoF 手实验用于检验人类运动先验是否只适用于 22-DoF 手。</p></section><section><h2>4. 方法详解</h2><h3>4 两阶段框架；人类动作表示；mid-training 数据；多 embodiment 接口；训练规模</h3><p>第一阶段在 20,854 小时人类 egocentric video 上预训练，监督 wrist motion 和 retargeted hand actions；第二阶段加入 aligned human-robot mid-training，将人类表示对齐到机器人 proprioception 和 action space。</p><p>中间训练包含人类和遥操作机器人数据，用来桥接 embodiment gap。对机器人数据，模型使用 proprioceptive state；对人类数据，缺失 proprioception 时用 learnable placeholder token，让同一架构处理两类数据。</p><figure><img src="figures/source/fig03_success_rate_task_completion_bar_plot.png" alt="fig:main_experimental_results"><figcaption><strong>fig:main_experimental_results.</strong> Main Experimental Results. Comparison of Human Pre-train + Mid-Training, Human Pretraining, and No Pretraining across five dexterous manipulation tasks under two evaluation metrics.<br><strong>本文解读：</strong>对 EgoScale 而言，这张图对应一个可单独检查的论文证据。图中把 Human Pre-train + Mid-Training、仅 Human Pretraining 和 No Pretraining 放在五个灵巧任务上比较。真正关键的是联合方案是否在不同任务和两类指标上稳定领先，而不是只在某一任务取得峰值。若联合方案持续领先，说明少量对齐机器人数据确实把大规模人类视频先验转化成了可执行动作能力。 本图的证据场景限定为：fig:main_experimental_results.。</figcaption></figure><figure><img src="figures/source/fig04_human_data_scaling_combined.png" alt="fig:human_scaling"><figcaption><strong>fig:human_scaling.</strong> Scaling behavior of human pretraining. Left: Human validation loss versus training steps for models pretrained with increasing amounts of egocentric human data (1k–20k hours). Larger datasets yield stable, monotonic improvements, while smaller datasets exhibit early overfitting. Center: Optimal validation loss at convergence as a function of human data scale, revealing a near-perfect log-linear scaling law (R^2=0.9983). Right: Downstream robot performance after post-training, measured by average task completion score, improves consistently with increased human data scale. Together, these results demonstrate predictable scaling of learned action representations and their direct translation to improved dexterous manipulation performance.\looseness=-1 \vspace-0.5em<br><strong>本文解读：</strong>对 EgoScale 而言，这张图需要重点核对 1k、20k、2、0.9983、1、0 之间的关系。左图比较 1k 到 20k 小时数据下的验证损失轨迹，可观察小数据是否提前过拟合；中间与右侧则用于判断最优损失及下游收益是否随数据规模继续改善。这张图支撑 EgoScale 的数据扩展主张，但只证明在论文测试的 20,854 小时范围内仍有收益，不能保证无限扩展仍保持同样斜率。 本图的证据场景限定为：fig:human_scaling.。</figcaption></figure><figure><img src="figures/source/fig05_midtraining_v2.png" alt="fig:midtrain_exp"><figcaption><strong>fig:midtrain_exp.</strong> Aligned mid-training enables emergent one-shot transfer. During post-training, the policy is trained on only a single robot demonstration per task, together with aligned human demonstrations (100 trajectories per object).<br><strong>本文解读：</strong>对 EgoScale 而言，这张图需要重点核对 100 之间的关系。后训练阶段每个任务只给一条机器人示范，同时配入与对象对齐的人类轨迹。应比较有无 mid-training 时单示范学习的差距，从而判断对齐阶段是否真正建立了人类动作与机器人动作之间的桥梁。该图支持的是 one-shot 适配能力，而不是完全无需机器人数据。 本图的证据场景限定为：fig:midtrain_exp.。</figcaption></figure></section><section><h2>5. 实验与结果</h2><h3>5 评估任务；主结果；scaling law；one-shot transfer；跨具身实验</h3><p>论文使用 5 个 dexterous manipulation post-training tasks 检验真实机器人性能，并关注 task completion 和 success rate。任务强调长程、精细和高 DoF 手控制。</p><p>人类 validation loss 随数据规模呈 log-linear 改善，并与真实机器人性能相关。这是论文最重要的科学结论：大规模人类数据可以成为可预测的机器人监督源。</p><figure><img src="figures/source/fig06_g1taskandsuccess_v3.png" alt="fig:g1_exp"><figcaption><strong>fig:g1_exp.</strong> Mid-training enables cross-embodiment generalization to G1 Tasks. Integrating a small amount of G1 play data during mid-training enables strong transfer to a low-DoF tri-finger hand, outperforming mid-training or pre-training only. \vspace-0.5em<br><strong>本文解读：</strong>对 EgoScale 而言，这张图需要重点核对 0、G1 之间的关系。这张对比图应按相同任务和指标逐列读取，而不是只看总体平均。需要区分对手方法、训练数据是否一致，以及提升来自成功率、任务进度还是执行稳定性。图能支持 EgoScale 在所列基线与任务上的相对优势，但没有覆盖的手型、对象或部署条件仍属于外推。 本图的证据场景限定为：fig:g1_exp.。</figcaption></figure><figure><img src="figures/source/fig09_human_video_stat.png" alt="fig:dataset_overview"><figcaption><strong>fig:dataset_overview.</strong> Statistical distributions and qualitative examples of the egocentric human activity dataset, showing long-tailed coverage across categories, environments, tasks, and objects.<br><strong>本文解读：</strong>对 EgoScale 而言，这张图对应一个可单独检查的论文证据。这张图说明训练或评估数据覆盖了哪些对象、任务、场景与具身。判断泛化结论时，应把图中的覆盖范围与测试集逐项比较，尤其关注长尾类别和训练中未出现的组合。它证明的是 EgoScale 数据的覆盖与多样性，而不是单独证明模型已利用这些多样性产生泛化。 本图的证据场景限定为：fig:dataset_overview.。</figcaption></figure></section><section><h2>6. 复现要点</h2><h3>6 最小复现；数据准备；算力要求；风险</h3><p>完整 20k 小时预训练成本很高。更现实路线是使用公开 checkpoint 或较小人类数据子集，复现 scaling 曲线趋势，再用少量 aligned human-robot data 做目标手 mid-training。</p><p>论文披露的 Stage I 训练使用大规模 GPU 集群，因此从零复现不现实。可行验收是检查 validation loss 与 downstream success 的相关性，而不是追求相同数据规模。</p></section><section><h2>7. 分析、局限与边界</h2><h3>7 最大价值；证据为何强；局限；后续方向</h3><p>EgoScale 的最大价值是把灵巧手学习从“收集更多机器人数据”转向“利用人类行为规模”。它提供了一个 scaling 视角，而不只是一个任务模型。</p><p>方法高度依赖大规模数据、手部跟踪和算力。它没有消除 embodiment gap，只是通过 mid-training 缓解；对于强触觉、力控或非人手型任务，迁移仍可能受限。</p></section><section><h2>8. 组会问答准备</h2><h3>Q1 EgoScale 的核心不是数据大吗？；为什么需要 aligned mid-training？；54% 提升说明什么？；最大复现壁垒是什么？；和 UniDex/UniHM 的关系？</h3><p>不只是大。关键是证明数据规模、validation loss 和真实机器人表现之间存在可预测关系。</p><p>说明人类预训练带来的表示能显著改善真实 22-DoF 手任务，但也依赖后续对齐。</p><p>EgoScale 的关键问答不能只围绕数据量。20,854 小时人类视频提供规模，aligned mid-training 提供人机动作接口，单示范后训练验证先验是否能快速落到具体机器人任务。缺少中间对齐阶段时，大规模人类数据未必能直接转成机器人控制收益。</p></section></main></body></html>
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <div class="title-wrap">
+    <h1>EgoScale：大规模第一视角人类视频如何真正变成灵巧手控制先验</h1>
+    <p class="subtitle">Scaling Dexterous Manipulation with Diverse Egocentric Human Data · 深度精读样稿</p>
+    <p class="lead"><strong>一句话贡献：</strong>EgoScale 用 20,854 小时带动作标注的人类第一视角操作视频预训练 flow-based VLA，再以 50 小时对齐人类数据和 4 小时机器人数据完成具身对齐；论文不仅展示了真实灵巧手收益，还给出“人类验证损失随数据规模下降、机器人任务完成度随规模上升”的可测 scaling 证据。</p>
+    <div class="meta">
+      <span class="pill">arXiv:2602.16710</span>
+      <span class="pill">Dexterous Manipulation</span>
+      <span class="pill">Egocentric Human Data</span>
+      <span class="pill">Human-to-Robot Transfer</span>
+      <span class="pill">Flow-based VLA</span>
+    </div>
+    <p><a href="https://arxiv.org/abs/2602.16710">论文原文</a> · <a href="https://research.nvidia.com/labs/gear/egoscale/">项目页</a></p>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#overview">1. 论文速览与证据链</a>
+  <a href="#motivation">2. 研究问题与动机</a>
+  <a href="#related">3. 相关工作与技术定位</a>
+  <a href="#method">4. 数据、表示与训练方法</a>
+  <a href="#experiments">5. 实验设计与结果</a>
+  <a href="#repro">6. 复现路线与工程风险</a>
+  <a href="#discussion">7. 分析、局限与边界</a>
+  <a href="#qa">8. 组会问答准备</a>
+</nav>
+<section id="overview">
+<h2>1. 论文速览与证据链</h2>
+
+<h3>1.1 这篇论文到底证明了什么</h3>
+<p>EgoScale 研究的不是“能否从少量人类视频模仿一个动作”，而是一个更基础的规模化问题：当机器人灵巧手数据昂贵、遥操作吞吐量低时，大量普通人类第一视角视频能否形成可预测、可迁移的运动先验，并最终改善真实机器人控制。作者把问题拆成三个连续环节：大规模人类视频负责学习广泛的视觉—动作规律；少量人机对齐数据负责把人类动作表示锚定到机器人传感和执行接口；最后的任务后训练负责把通用先验压到具体的灵巧操作任务上。</p>
+<p>论文最重要的结论并非单个任务上的最高成功率，而是三条相互咬合的证据。第一，相对完全不做人类预训练的策略，人类预训练将五个任务的平均 task completion 从 0.24 提升到 0.71，联合 mid-training 后达到 0.83；第二，把人类视频从 1k 小时扩展到 20k 小时，真实机器人平均完成度从 0.30 单调升至 0.71；第三，人类验证集动作预测损失与数据规模呈近似对数线性关系，拟合达到 <code>R²=0.9983</code>，而损失下降又与真实机器人性能同步改善。也就是说，作者尝试把“多收集人类数据有用”推进为一个可测量的 scaling 命题。</p>
+
+<h3>1.2 阅读路线：先看哪几张图</h3>
+<table>
+<thead><tr><th>证据</th><th>回答的问题</th><th>关键结论</th><th>仍未证明的部分</th></tr></thead>
+<tbody>
+<tr><td>Fig. 1 三阶段框架</td><td>人类视频如何进入机器人策略</td><td>规模化预训练、具身对齐、任务专门化是三个不同环节</td><td>框架图本身不证明每一阶段必要</td></tr>
+<tr><td>Fig. 3 主结果</td><td>pretrain 与 midtrain 各自贡献什么</td><td>人类预训练是主要增益来源，mid-training 在多数任务继续增益</td><td>仅覆盖五个桌面任务与特定机器人</td></tr>
+<tr><td>Fig. 4 scaling</td><td>收益是否随人类数据规模持续增长</td><td>1k–20k 小时范围内验证损失和机器人完成度均持续改善</td><td>不能外推到更大规模或其他数据分布</td></tr>
+<tr><td>Fig. 5 one-shot</td><td>人类先验能否降低机器人示范需求</td><td>一条机器人示范配合对齐人类数据即可学会新任务</td><td>并非零机器人数据，也依赖同对象的人类示范</td></tr>
+<tr><td>Fig. 6 G1 迁移</td><td>先验是否绑定 22-DoF Sharpa 手</td><td>迁移到 7-DoF 三指手仍获得明显增益</td><td>只验证两个任务和一个新具身</td></tr>
+</tbody>
+</table>
+
+<figure>
+  <img src="figures/source/fig01_pull_figure.png" alt="图 1 · EgoScale 的三阶段学习链路。">
+  <figcaption><strong>图 1 · EgoScale 的三阶段学习链路。</strong> 左侧为 20,854 小时人类第一视角视频预训练，中间为 50 小时人类 + 4 小时机器人对齐 play data，右侧为下游任务后训练与 one-shot 适配。</figcaption>
+</figure>
+<div class="note"><strong>读图与证据边界：</strong>左栏的人类视频覆盖日常、工业、维修等自然操作，并叠加了手部轨迹；它提供的是动作多样性，却没有机器人 proprioception。中栏把相似任务的人类和机器人执行放到接近的视角与任务分布中，绿色边框强调机器人观测，灰色边框对应人类执行，这一步的作用是缩小感知与动作接口差异。右上展示注射器与夹取水果等高灵巧任务，右下展示拧瓶盖和叠衣服的一次示范适配。图支持的是“规模、对齐、专门化必须分开处理”的设计逻辑；每一阶段是否必要，需要由后续四配置对比和 one-shot 消融来回答。</div>
+
+</section>
+
+<section id="motivation">
+<h2>2. 研究问题与动机</h2>
+
+<h3>2.1 真正的瓶颈不是模型容量，而是高自由度机器人监督</h3>
+<p>灵巧手策略需要同时控制腕部位姿和多个手指关节。对夹爪而言，“接近—闭合—移动”可能已经覆盖主要控制结构；对 22-DoF 手而言，揉搓卡片、稳定夹住钳子、拧松瓶盖和推注射器分别依赖不同的接触模式、手指协调与长程状态。遥操作采集不仅慢，还容易受到操作者熟练度、手部映射误差和硬件磨损影响。因此，只靠机器人示范扩充技能范围，会让数据成本随任务与对象组合快速增长。</p>
+<p>人类视频恰好拥有相反的优势：规模巨大、任务长尾丰富、自然环境多样，但缺少机器人可直接执行的动作标签。EgoScale 的核心问题于是变成：能否将人类腕部运动与手部姿态转成统一动作监督，让策略先在人类数据上学习“如何操作”，再用少量机器人数据学习“这台机器人如何执行”。</p>
+
+<h3>2.2 三个 gap：观测、动作和控制闭环</h3>
+<p><strong>观测 gap</strong> 来自人类头戴相机和机器人头部/腕部相机的视角、内参与遮挡差异；<strong>动作 gap</strong> 来自人手骨骼与机器人关节空间不一致，人类关键点不能直接作为电机命令；<strong>闭环 gap</strong> 则更隐蔽，人类轨迹即便几何上合理，也未经历机器人执行误差、延迟和接触扰动。EgoScale 没有声称单靠预训练消灭这些差异，而是用 aligned mid-training 将大规模但噪声较高的人类先验，连接到规模很小但具备真实机器人接口的数据。</p>
+
+<h3>2.3 为什么不能只做人类视频预训练或只做 mid-training</h3>
+<p>只做人类预训练，策略可以学到常见动作形态和物体交互规律，但在真实机器人上仍需要适应不同关节限制与 proprioception。只做 aligned mid-training，则数据规模只有约 50 小时人类和 4 小时机器人，覆盖不足以形成广泛的运动先验。论文的实验设计专门保留了 <em>Human Pretrain</em>、<em>Midtrain Only</em>、<em>Human Pretrain + Midtrain</em> 三种配置，目的就是把“规模带来的先验”和“对齐带来的落地能力”拆开测量。</p>
+</section>
+
+<section id="related">
+<h2>3. 相关工作与技术定位</h2>
+
+<h3>3.1 与机器人示范规模化路线的区别</h3>
+<p>传统机器人 foundation policy 依赖跨机器人、跨任务的遥操作数据汇总，这些数据动作可执行、状态完整，但每小时成本高。EgoScale 将大多数预训练预算转移到人类第一视角视频上，只在中间阶段保留小规模机器人 play data。它的技术定位不是替代机器人数据，而是让机器人数据承担“接口校准”而非“从头教会所有动作”的角色。</p>
+
+<h3>3.2 与仅做人类视频语义预训练的区别</h3>
+<p>普通视频表征学习往往优化语义、时序或视觉预测目标，未必要求输出可执行动作。EgoScale 对人类视频构造腕部相对运动与 retargeted hand actions，直接用 flow matching 训练动作预测。因此，人类视频不是只提供“看见过什么物体”，还提供“腕部如何移动、手指如何构形”的监督。论文后续用 action representation 消融说明：如果仅保留 wrist motion，或用不稳定的直接 fingertip mapping，灵巧任务表现会明显受限。</p>
+
+<h3>3.3 与跨具身动作表示工作的关系</h3>
+<p>跨具身方法需要决定哪些参数共享、哪些参数由具体机器人承担。EgoScale 共享 VLM backbone、DiT action expert 和相对腕部运动表示，并为不同 embodiment 配置轻量的 proprioception 与手部输出 adapter。这个取舍假设“任务语义、视觉条件和大部分运动规律可以共享”，而“关节状态与手部命令接口需要具身化”。G1 实验是对该假设的初步验证，而不是对任意机器人形态的全面证明。</p>
+</section>
+
+<section id="method">
+<h2>4. 数据、表示与训练方法</h2>
+
+<h3>4.1 大规模人类数据：广度与噪声同时存在</h3>
+<p>预训练集包含 20,854 小时带动作标注的第一视角人类操作视频，覆盖 9,869 个场景、6,015 类任务和 43,237 个物体。这个规模比作者所比较的既有人机迁移数据高出 20 倍以上。数据并非均匀分布：零售消费品、时尚、维修、食品饮料等类别占据较大比例，大量对象与任务形成明显长尾。长尾的价值在于让模型见到更多手—物交互组合；代价则是相机运动、遮挡、跟踪质量和任务边界都不如实验室数据稳定。</p>
+<p>为补充高精度监督，作者加入 829 小时 EgoDex 数据，其中包含 194 个桌面任务，并借助 Apple Vision Pro 获得更准确的手部跟踪。这里的角色分工很重要：大规模自然视频提供覆盖面，高精度数据改善动作标签质量。论文没有把两者混为同一种监督，也没有声称所有 20k 小时数据都具有同等动作精度。</p>
+
+<figure>
+  <img src="figures/source/fig09_human_video_stat.png" alt="图 2 · 人类第一视角预训练数据的分布与样例。">
+  <figcaption><strong>图 2 · 人类第一视角预训练数据的分布与样例。</strong> 上半部分给出对象词云、类别占比、环境与任务小时数分布，下半部分展示多个高占比类别中的真实操作片段。</figcaption>
+</figure>
+<div class="note"><strong>读图与证据边界：</strong>对象词云中 cardboard box、bowl、plastic bag、clothes 等高频词说明数据大量来自日常可操作物，而不是只覆盖实验室标准物体。右上饼图显示最大类别 Retail and Consumer Goods 约占 20.1%，随后多个类别约占 7%–12%，说明数据既有主导领域也有明显多样性。中间两张柱状图呈长尾：少数环境和任务拥有数百至上千小时，更多任务只有几十小时。下方样例进一步表明场景光照、桌面布局和手部遮挡差异很大。该图支持“数据广且自然”的主张，也提醒读者，规模增长可能同时增加标签噪声与类别偏置；它本身不证明模型已经有效利用了所有长尾类别。</div>
+
+<h3>4.2 从人手轨迹到机器人可学习动作</h3>
+<p>人类动作由相机位姿与 21 个手部关键点构成。设第 <code>t</code> 帧相机在世界坐标系中的位姿为 <code>Tᵗ₍w←c₎ ∈ SE(3)</code>，手腕关键点在相机坐标系中的位姿为 <code>Hᵗ₍c,1₎</code>，则手腕世界位姿为：</p>
+<div class="formula-block">Wᵗ<sub>w</sub> = Tᵗ<sub>w←c</sub> Hᵗ<sub>c,1</sub></div>
+<p>为了削弱绝对场景坐标差异，策略预测相对初始帧的腕部运动：</p>
+<div class="formula-block">ΔWᵗ = (W⁰<sub>w</sub>)⁻¹ Wᵗ<sub>w</sub></div>
+<p>手指部分不能简单把人类 fingertip 位置复制给机器人，因为不同手型、连杆长度和关节限制会导致不可达姿态或失去接触。作者使用优化式 retargeting，将人类手部关键点拟合到 Sharpa 22-DoF 关节空间，并显式满足机器人运动学与关节限制。这个表示保留了“手指应形成什么构形”的信息，同时把输出放到可执行关节空间中。</p>
+
+<h3>4.3 aligned mid-training 数据如何桥接 embodiment gap</h3>
+<p>mid-training 数据覆盖 344 个桌面任务，每个任务约有 30 条人类轨迹和 5 条机器人轨迹，总计约 50 小时人类数据与 4 小时机器人数据。作者让人类与机器人执行相似任务，并尽量匹配相机视角和标定内参；人类腕部使用 Vive tracker，手部使用 Manus glove 记录 25 个关节变换。它不是逐帧严格配对的动作翻译数据，而是任务和观测分布层面的对齐 play data。</p>
+<p>这种数据的关键价值在于让模型同时看到“人类如何完成相同交互”和“机器人在自己的感知、状态、关节空间中如何执行”。因此 mid-training 更像一个接口转换层：它不需要重新覆盖所有技能，但必须包含足够多的共同任务来校准人类表示到机器人控制之间的映射。</p>
+
+<h3>4.4 模型信息流与缺失 proprioception 的处理</h3>
+<p>策略采用类似 GR00T N1 的 flow-based VLA。图像与语言指令经过 VLM 得到条件表示，DiT action expert 在该条件下预测未来动作 chunk，并以 flow matching 目标训练。机器人轨迹含有 proprioceptive state，人类轨迹没有；作者为人类数据使用可学习 placeholder token，使同一架构能够接受两类输入。对于不同 embodiment，proprioception encoder 和手部 action head 使用轻量的具身条件 MLP adapter，而相对腕部动作、VLM backbone 与 DiT action expert 尽量共享。</p>
+<p>这个设计把缺失状态视为一种明确的数据模态，而不是伪造人类 proprioception。它允许模型从人类数据中吸收视觉—语言—运动关系，再在机器人数据上学习闭环状态条件。但 placeholder token 也意味着人类预训练无法直接学习机器人状态误差恢复，这一部分仍主要依赖 mid-training 和 post-training。</p>
+
+<h3>4.5 三阶段训练配方</h3>
+<table>
+<thead><tr><th>阶段</th><th>数据与目标</th><th>训练设置</th><th>主要作用</th></tr></thead>
+<tbody>
+<tr><td>Stage I Pre-training</td><td>20,854 小时人类视频，预测腕部与 retargeted hand action</td><td>100k steps，256 张 GB200，global batch 8192，LR 5e-5，全部参数解冻</td><td>学习广泛的人类操作运动先验</td></tr>
+<tr><td>Stage II Mid-training</td><td>约 50 小时人类 + 4 小时机器人 aligned play data</td><td>50k steps，batch 2048，LR 3e-5；冻结 VLM backbone，更新 vision encoder 与 DiT action expert</td><td>连接人类动作表示与机器人感知/控制接口</td></tr>
+<tr><td>Stage III Post-training</td><td>目标任务机器人示范</td><td>10k steps，batch 512，LR 3e-5</td><td>适配具体任务、对象和成功标准</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="experiments">
+<h2>5. 实验设计与结果</h2>
+
+<h3>5.1 五个任务分别考察哪一种灵巧性</h3>
+<p>实验平台为 Galaxea R1Pro 双臂机器人与 22-DoF Sharpa 灵巧手。除 Shirt Rolling 只有 20 条机器人示范外，其余任务各使用 100 条遥操作示范。评估通常对每个 checkpoint 运行 10 次，Tongs 任务则在四个瓶子上各运行 4 次，共 16 次。作者同时报告二元成功率和细粒度 task completion score，并用图像叠加方式约束初始状态，减少不同测试轮次起始位置差异。</p>
+
+<figure>
+  <img src="figures/source/fig02_dexterous_manipulation_tasks_v2.png" alt="图 3 · 五个真实机器人后训练任务及其关键阶段。">
+  <figcaption><strong>图 3 · 五个真实机器人后训练任务及其关键阶段。</strong> 每一行从左到右展示任务推进过程：卷衣服、卡片分类、用钳子转移水果、拧瓶盖、注射器液体转移。</figcaption>
+</figure>
+<div class="note"><strong>读图与证据边界：</strong>第一行 Shirt Rolling 要求双手交替折叠并卷起柔性衣物，最后放入篮中，难点是双手协同和形变物状态不可完全观测。第二行 Card Sorting 需要先用手指揉搓并分离紧贴的单张卡片，再按颜色插入，直接考察指尖精细接触。第三行 Tongs for Fruit Transfer 不是直接抓水果，而是先抓取工具、调整钳子姿态、夹住水果并移动，要求工具使用与持续握持。第四行 Bottle Cap Unscrewing 在四种瓶子尺寸上评估旋拧接触。第五行 Syringe Liquid Transfer 包含取针筒、从 A 管抽取、向 B 管注入和丢弃，流程最长。图说明五项任务覆盖不同灵巧结构，但仍集中于桌面、低速和受控初始状态。</div>
+
+<h3>5.2 主结果：规模化预训练是主要增益，mid-training 负责继续落地</h3>
+
+<figure>
+  <img src="figures/source/fig03_success_rate_task_completion_bar_plot.png" alt="图 4 · 四种训练配置在五个任务上的 task completion 与 success rate。">
+  <figcaption><strong>图 4 · 四种训练配置在五个任务上的 task completion 与 success rate。</strong> 黑色斜线为 No Pretrain，黄色为 Midtrain Only，蓝色为 Human Pretrain，红色为 Human Pretrain + Midtrain。</figcaption>
+</figure>
+<div class="note"><strong>读图与证据边界：</strong>左图的平均完成度从 No Pretrain 的 0.24、Midtrain Only 的 0.53、Human Pretrain 的 0.71，提升到联合方案的 0.83。逐任务看，人类预训练对 Card、Bottle、Syringe 的提升尤其明显：例如 Card 从 0.14 升至 0.74，Syringe 从 0.16 升至 0.53；说明广泛人类动作先验对精细接触和长程任务有价值。联合 mid-training 后五个任务完成度均进一步上升，Bottle 从 0.63 到 0.82、Syringe 从 0.53 到 0.70，体现具身对齐的额外作用。右图成功率更严格：Syringe 的 No Pretrain 与 Midtrain Only 都为 0，而 Human Pretrain 为 0.17、联合方案为 0.42。值得注意的是 Tongs 上 Human Pretrain 成功率 0.45，低于 Midtrain Only 的 0.60，说明单项指标并非处处单调；联合方案达到 0.65 才恢复最佳。该图支持的是总体稳定收益，而不是每个任务上每个阶段都独立占优。</div>
+
+<p>作者在正文中将人类预训练相对 scratch 的平均 task completion 增益概括为超过 55%。从图中也能看到，单靠 4 小时机器人参与的 mid-training 虽明显优于 scratch，却仍低于大规模人类预训练；这意味着提升不能简单归因于“多加了一点机器人数据”。反过来，联合配置在平均 completion 和 success 上都最高，说明大规模先验仍需要机器人侧对齐才能充分兑现。</p>
+
+<h3>5.3 scaling：验证损失是否能够预测真实机器人收益</h3>
+
+<figure>
+  <img src="figures/source/fig04_human_data_scaling_combined.png" alt="图 5 · 人类预训练规模从 1k 扩展到 20k 小时时的三组 scaling 证据。">
+  <figcaption><strong>图 5 · 人类预训练规模从 1k 扩展到 20k 小时时的三组 scaling 证据。</strong> 左：不同规模的验证损失训练曲线；中：最优验证损失与数据量的拟合；右：后训练后的真实机器人平均完成度。</figcaption>
+</figure>
+<div class="note"><strong>读图与证据边界：</strong>左图显示 1k 小时模型在约 25k steps 后验证损失转而上升，2k 小时也较早进入平台，呈现明显小数据过拟合；10k 与 20k 曲线则在 100k steps 内继续下降。中图将各规模最优损失拟合为 L = 0.024 - 0.003·ln(D)，五个数据点几乎落在同一直线上，论文报告 R²=0.9983。右图把同一批预训练模型后训练到机器人任务后测量平均完成度，结果从 1k 的 0.30、2k 的 0.45、4k 的 0.48、10k 的 0.57 上升到 20k 的 0.71。三幅图共同建立“规模增加—人类动作预测更好—机器人执行更好”的证据链。边界在于只有五个规模点、上限约 20k 小时，且所有下游测试仍来自同一实验体系，因此不能据此断言任意数据继续扩展都会保持相同斜率。</div>
+
+<p>验证损失的计算也值得注意：作者使用 2,000 条第一视角 episode 作为验证集，每条轨迹采样 20 个时间步，每个时间步采样 16 次 flow policy 输出并取平均，再与真实动作计算 MSE。这比只报告训练损失更有说服力，因为它衡量模型对未见人类轨迹的动作预测。然而它仍是离线动作误差，不直接包含接触恢复、控制延迟和闭环稳定性；真实机器人曲线是将这个离线指标连接到执行能力的关键补充。</p>
+
+<h3>5.4 one-shot：一条机器人示范并不等于零样本</h3>
+
+<figure>
+  <img src="figures/source/fig05_midtraining_v2.png" alt="图 6 · 对齐 mid-training 支持未见任务的一次机器人示范迁移。">
+  <figcaption><strong>图 6 · 对齐 mid-training 支持未见任务的一次机器人示范迁移。</strong> 左侧展示 mid-training 中的近邻动作，中部展示人类与机器人对齐示例，右侧比较 Fold Shirt 与 Water Bottle 的完成度和成功率。</figcaption>
+</figure>
+<div class="note"><strong>读图与证据边界：</strong>两个后训练任务在 mid-training 中均未出现。Fold Shirt 使用一条机器人示范并配合 100 条对齐人类示范；Water Bottle 覆盖三种瓶子几何，每种同样使用一条机器人示范与 100 条人类示范。右侧结果显示联合 Human Pretrain + Midtrain 在 Fold Shirt 达到 0.92 completion / 0.88 success，在 Water Bottle 达到 0.64 completion / 0.556 success；仅 Midtrain 或仅 Human Pretrain 在瓶子任务成功率均为 0。这个对比说明，广泛运动先验与具身对齐缺一不可。图同时限定了“one-shot”的含义：每个任务只有一条机器人示范，但并非没有人类任务示范，也并非对新对象完全零接触。</div>
+
+<p>失败模式进一步揭示任务差异：折衣服常失败在折叠未完成或形状不够规整；拧瓶盖则可能已经取下瓶盖，却因后续抓持不稳定而无法满足完整成功标准。这说明 completion score 与 success rate 必须同时看：前者能反映策略已经掌握多少阶段，后者才检验长程任务是否完整闭环。</p>
+
+<h3>5.5 G1：跨具身收益来自共享先验还是仅仅多了数据</h3>
+
+<figure>
+  <img src="figures/source/fig06_g1taskandsuccess_v3.png" alt="图 7 · 从 22-DoF Sharpa 手迁移到 Unitree G1 的 7-DoF 三指手。">
+  <figcaption><strong>图 7 · 从 22-DoF Sharpa 手迁移到 Unitree G1 的 7-DoF 三指手。</strong> 上方展示 Pen in Bin 与 Dish in Rack 的执行画面，下方比较 Midtrain Only、Human Pretrain 和 Human Pretrain + Midtrain。</figcaption>
+</figure>
+<div class="note"><strong>读图与证据边界：</strong>G1 手自由度更低、工作空间更短，动作接口与原平台明显不同。Pen in Bin 的 completion 从 Midtrain Only 0.45、Human Pretrain 0.68 上升到联合方案 0.83，success 从 0.30/0.30 上升到 0.67；Dish in Rack 的 completion 从 0.54/0.58 上升到 0.88，success 从 0.20/0.20 上升到 0.50。特别是单独预训练与单独 mid-training 的成功率相同，而联合配置出现 0.30–0.37 的绝对提升，说明收益不是简单增加任一类数据就能获得，而来自共享人类先验与 G1 对齐数据的组合。该实验只覆盖两个任务，证明的是初步跨具身可迁移性，不足以说明对任意手型都成立。</div>
+
+<h3>5.6 动作表示消融揭示了什么</h3>
+<p>论文的动作表示消融表明，仅预测 wrist motion 对 Tongs 与 Cards 等需要手指持续调整的任务表现较差，因为腕部轨迹无法描述揉搓、分卡和工具握持。直接将人类 fingertip 映射到机器人则可能生成不符合机器人关节约束的姿态，导致接触丢失。优化式 retargeting 的价值不只是“更精确地模仿人手”，而是把人类手势投影到一个机器人能够持续执行的关节空间。这个结论也提示，EgoScale 的 scaling 效果依赖动作标签质量；若关键点跟踪或 retargeting 系统性失真，增加视频时长未必带来同等收益。</p>
+</section>
+
+<section id="repro">
+<h2>6. 复现路线与工程风险</h2>
+
+<h3>6.1 最小可行复现不应从 20k 小时开始</h3>
+<p>完整 Stage I 使用 256 张 GB200、global batch 8192 和 100k steps，普通实验室几乎不可能等规模复现。更合理的最小实验是选取 1k、2k、4k 三个数据子集，在同一动作提取和模型设置下复现“小数据更早过拟合、验证损失随规模下降”的趋势；随后选择一个已有遥操作管线的灵巧任务，对比 scratch、human pretrain、pretrain + midtrain 三种配置。验收重点应是趋势与阶段贡献，而不是追求论文的绝对分数。</p>
+
+<h3>6.2 数据准备是最大工程量</h3>
+<p>需要稳定地恢复相机位姿、手腕运动和 21 个手部关键点，并将手部姿态 retarget 到目标机器人关节空间。大规模视频处理还必须记录跟踪置信度、遮挡、视频切段与任务标签，否则噪声会被误当作动作监督。aligned mid-training 需要匹配人类与机器人视角、任务和对象，并为人类执行配备 Vive tracker 与 Manus glove 或功能等价设备。仅下载视频而不重建这些动作标签，无法复现论文的核心训练目标。</p>
+
+<h3>6.3 复现风险清单</h3>
+<table>
+<thead><tr><th>风险</th><th>为什么重要</th><th>可检查的验收标准</th></tr></thead>
+<tbody>
+<tr><td>人类动作标签噪声</td><td>会直接污染 flow matching 监督</td><td>按遮挡/跟踪置信度分组报告验证损失</td></tr>
+<tr><td>retargeting 质量</td><td>决定手指动作是否机器人可执行</td><td>离线检查关节越界、接触丢失与姿态误差</td></tr>
+<tr><td>人机视角不匹配</td><td>削弱 mid-training 对齐作用</td><td>对齐前后分别测量同任务视觉特征与控制性能</td></tr>
+<tr><td>真实机器人评估方差</td><td>每任务试验次数有限</td><td>保留两个随机种子并报告逐次结果</td></tr>
+<tr><td>算力与 batch 差异</td><td>可能改变 scaling 曲线与优化稳定性</td><td>固定总 token/样本数并报告有效 batch</td></tr>
+</tbody>
+</table>
+
+<h3>6.4 一个可执行的分阶段复现方案</h3>
+<p>第一阶段只验证动作表示：在几十小时高质量第一视角数据上比较 wrist-only、直接 fingertip mapping 和优化式 retargeting。第二阶段验证数据规模：固定模型与训练样本配比，做至少三个规模点并保留独立人类验证集。第三阶段加入一小组 aligned human-robot tasks，检查 mid-training 是否提升未见任务的一示范适配。最后再迁移到不同自由度的手，确认共享 backbone 与具身 adapter 的职责是否符合论文假设。每一阶段都有独立可验收结果，能够避免把失败笼统归因于“数据不够大”。</p>
+</section>
+
+<section id="discussion">
+<h2>7. 分析、局限与边界</h2>
+
+<h3>7.1 最有价值的贡献是可测量的 human-data scaling</h3>
+<p>EgoScale 把人类视频从一种辅助模态提升为灵巧控制的主要预训练监督，并且没有只展示“有数据比没数据好”。论文用五个数据规模、离线验证损失和真实机器人任务完成度构成了连续证据链，使研究者可以在昂贵的机器人后训练前，先通过人类验证损失判断预训练是否仍在获益。这一思路对后续工作最有启发：数据选择、动作标签质量和 scaling 曲线可以成为机器人数据效率研究的共同评价对象。</p>
+
+<h3>7.2 证据最强与最弱的地方</h3>
+<p>最强证据是四种训练配置在五项真实任务上的系统对比，因为它把大规模预训练和少量对齐数据的作用拆开；scaling 图则进一步说明提升随数据规模持续发生。相对较弱的是跨具身泛化：G1 结果很有价值，但只有两个任务和一种新手型。one-shot 结果同样需要准确表述，它证明机器人示范需求可以降到一条，却仍使用每对象 100 条对齐人类示范，因此不应被解读为“看任意视频即可直接控制机器人”。</p>
+
+<h3>7.3 方法边界</h3>
+<p>论文任务以视觉可观察、低速桌面操作为主，尚未充分验证强触觉、力控制、快速动态操作或严重遮挡。人类视频动作监督依赖手部和相机跟踪，无法直接表达接触力、摩擦和机器人执行误差。mid-training 能缓解 embodiment gap，但没有消除它；当目标机器人手型与人手差异更大，或任务的最优策略不类似人类动作时，共享先验可能减弱。数据分布也偏向日常消费品和人类常见场景，对工业特种工具或非人类形态的外推需要单独验证。</p>
+
+<h3>7.4 最值得继续做的实验</h3>
+<p>一个直接后续是将 scaling 曲线拆成“数据时长、任务多样性、动作标签精度”三条轴：在相同时长下比较长尾多样性与高质量窄分布数据，判断 20k 小时收益究竟来自总帧数还是交互覆盖。另一个实验是控制 mid-training 的任务重叠程度，比较同任务对齐、同对象不同任务对齐和完全不同任务对齐，以确定对齐数据究竟学习的是视觉域转换、动作接口还是任务级对应。最后，应加入触觉或力信息，检查人类视频先验对接触丰富任务是否仍能通过少量机器人数据落地。</p>
+</section>
+
+<section id="qa">
+<h2>8. 组会问答准备</h2>
+
+<h3>Q1：这篇论文的核心创新只是把数据做大吗？</h3>
+<p>不是。规模是必要条件，但论文的完整贡献包括：把人类视频转成腕部相对运动与可执行的 retargeted hand action；用少量 aligned human-robot play data 对齐具身接口；并用离线验证损失与真实机器人完成度共同验证 scaling。若只有 20k 小时视频而没有动作监督和 mid-training，无法得到论文展示的控制结果。</p>
+
+<h3>Q2：主结果如何说明 human pretraining 比 mid-training 更重要？</h3>
+<p>平均 task completion 中，Midtrain Only 为 0.53，Human Pretrain 为 0.71，而 No Pretrain 为 0.24；在人类数据规模远大的前提下，预训练带来更大总体提升。联合方案达到 0.83，说明 mid-training 仍能把先验进一步锚定到机器人。正确结论是“预训练是主要增益来源，mid-training 是有效的具身对齐补充”，而不是二者择一。</p>
+
+<h3>Q3：为什么 scaling 图比单个最高成功率更重要？</h3>
+<p>单点结果只能说明某个配置有效，scaling 图则检验收益能否随数据投入持续增长。1k 到 20k 小时之间，验证损失近似按对数规律下降，真实机器人完成度从 0.30 升到 0.71，并且在测量范围内没有饱和。这使数据规模成为可研究、可预测的变量。不过五个规模点仍不足以保证更大规模继续遵循相同规律。</p>
+
+<h3>Q4：one-shot 结果最容易被误读成什么？</h3>
+<p>最容易被误读成“只给一条示范就能从零学会”。实际上，一条指的是机器人示范；每个任务还配有 100 条对齐人类示范，模型此前也经历了 20,854 小时预训练和 aligned mid-training。结果证明的是机器人侧示范效率，而不是完全零样本或零人类任务数据。</p>
+
+<h3>Q5：G1 实验为什么能支持跨具身，但还不够充分？</h3>
+<p>G1 使用 7-DoF 三指手，与原 22-DoF Sharpa 手在自由度和动作接口上差异明显；联合配置在两个任务的成功率上分别达到 0.67 和 0.50，显著高于 0.30 和 0.20 的单阶段配置，说明共享先验可迁移。但只有一个新具身和两个任务，尚不能判断迁移是否适用于夹爪、软体手或更非人形的执行器。</p>
+
+<h3>Q6：如果资源有限，最应该复现哪一个结论？</h3>
+<p>优先复现“小规模人类动作预训练 + 少量 aligned mid-training 是否优于等量机器人训练”，而不是追求 20k 小时。这个实验能够同时检查动作标签、retargeting、共享 backbone 和具身 adapter 是否真正工作，也最接近论文的核心因果问题。</p>
+
+<div class="tldr"><strong>阅读结论：</strong>EgoScale 最值得记住的不是某个任务分数，而是一套可检验的路线：用大规模人类动作监督学习广泛先验，用少量对齐数据把先验落到机器人接口，再用真实任务和 scaling 曲线共同判断收益。它把“人类视频对机器人有帮助”推进到了“帮助能否随规模可预测增长”的层面。</div>
+</section>
+
+</main>
+</body>
+</html>
