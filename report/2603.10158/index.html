@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>XL-VLA / DexLatent 深度精读</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -533,130 +534,85 @@
 
 <nav class="toc"><a href="#overview">1. 论文速览与证据链</a><a href="#motivation">2. 研究问题与动机</a><a href="#related">3. 相关工作与技术定位</a><a href="#method">4. 方法、表示与训练流程</a><a href="#experiments">5. 实验设计、结果与消融</a><a href="#repro">6. 复现路线与工程风险</a><a href="#discussion">7. 分析、局限与边界</a><a href="#qa">8. 组会问答与阅读结论</a></nav>
 <section id="overview"><h2>1. 论文速览与证据链</h2><h3>1.0 一句话贡献与关键词</h3><p>用跨手 latent action space 统一不同灵巧手的动作表示，让单个 VLA 能在多手数据上训练并迁移到新手型。这一定义把 XL-VLA / DexLatent 的任务对象、核心机制和预期收益放在同一句话中。关键词包括：XL-VLA; DexLatent; latent action; cross-hand; VLA; embodiment-invariant control。这些概念共同界定了该工作位于灵巧操作、动作表示、感知融合或跨具身学习中的具体技术位置。</p><h3>1.1 技术定位与核心贡献</h3><p>XL-VLA 聚焦一个明确瓶颈：不同灵巧手的动作维度和关节语义不同，使多手型数据无法直接共同训练。它通过 DexLatent 学习跨手型共享的 latent action，再让 VLA 预测 latent，由各手型 decoder 还原具体动作。它适合作为动作表示创新方向，而不是完整机器人系统模板。XL-VLA / DexLatent 把跨灵巧手泛化的核心瓶颈放在 action representation：不同手型先把关节动作编码到共享 latent，VLA 只预测该 latent，再由目标手型 decoder 恢复具体动作。</p></section><section id="motivation"><h2>2. 研究问题与动机</h2><h3>2.1 论文面对的真实瓶颈</h3><p>现有 VLA 通常将动作 token 或连续动作绑定到特定机器人 embodiment。对于灵巧手，这个问题更严重：手指数、关节数、耦合方式和控制范围差异巨大。作者希望利用多个手型的数据共同训练，并让模型迁移到未参与训练或数据较少的新手型，因此需要一个既共享任务语义、又能保留各手精细控制能力的动作潜空间。不同手的自由度、关节语义与运动范围不兼容，直接 padding 或拼接会把大量手型特有维度暴露给策略。DexLatent 试图让共享空间表达操作功能，而把具体拓扑和约束留给每只手的 decoder。</p></section><section id="related"><h2>3. 相关工作与技术定位</h2><h3>3.1 直接技术前作</h3><p>论文与通用 VLA 的 action tokenization、跨机器人策略和 representation learning 相连。传统做法可能为每种机器人设置独立 action head，难以共享低层技能；统一关节向量又无法处理拓扑不同的手。DexLatent 选择学习 embodiment-aware encoder/decoder 和共享 latent，使高层 VLA 在统一空间中建模动作。视觉语言部分可以沿用 π0 等通用 VLA，但动作接口必须重新设计。相较每种手独立 action head，DexLatent 追求跨手型数据共享；相较统一关节向量，它通过可微正运动学与 retargeting loss 对齐动作语义。</p></section><section id="method"><h2>4. 方法、表示与训练流程</h2><h3>4.1 总体方法链路</h3><p>DexLatent 首先将不同手型的动作序列编码为共享 latent，并通过各 embodiment decoder 重建原动作；训练目标既要求动作重建，也要求 latent 保留跨手型可对应的操作语义。XL-VLA 将视觉语言观测映射到这个 latent action，而不是直接预测具体关节命令。部署时，根据目标手型选择对应 decoder，得到可执行动作。方法成败取决于 latent 是否保留指尖接触细节。预训练阶段为每种手配置 encoder/decoder，通过重建损失保持自身动作可恢复，并通过 differentiable forward kinematics 与 retargeting loss 对齐跨手型功能。VLA 训练时冻结这些编解码器，只微调在共享 latent 上工作的 action expert。</p>
-<h3>图解 1：fig:method</h3>
+<h3>XL-VLA：在共享 latent action space 中预测动作</h3>
 <figure>
-  <img src="figures/source/fig01_method.png" alt="fig:method">
-  <figcaption><strong>论文原图：</strong>Model Pipeline. builds on _0 pi0 with vision and language encoders paired with an action expert that operates in a shared latent action space for cross-embodiment control. During VLA training, the action expert is finetuned while the pretrained latent encoders and decoders remain frozen. -10pt</figcaption>
+<img alt="fig:method" src="figures/source/fig01_method.png"/>
+<figcaption><strong>XL-VLA：在共享 latent action space 中预测动作。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:method”这一环；当前证据切片来自 fig01_method。原图明确展示：Model Pipeline. builds on _0 pi0 with vision and language encoders paired with an action expert that operates in a shared latent action space for cross-embodiment control. During VLA training, the action expert is finetuned while the pretrained latent encoders and decoders remain frozen. -10pt 图里呈现的不是单纯网络结构，而是一条从数据到部署的计算链。XL-VLA / DexLatent 的关键假设被编码在模块连接方式中：可共享的部分被放入主干，具身或任务专属部分被留在适配接口。该图支撑设计逻辑，但不单独支撑泛化结论。</div>
-
-<h3>图解 2：fig:latent_ill</h3>
+<div class="note"><strong>逐图分析：</strong>视觉、语言与历史 latent token 进入 π0 风格 backbone，action expert 预测下一段 latent，再由目标手 decoder 恢复 64 帧、20 Hz 的关节命令。手型身份只用于选择 encoder/decoder，不作为 VLA token，迫使主干学习跨手共享的操作结构。</div>
+<h3>DexLatent 的三类训练约束</h3>
 <figure>
-  <img src="figures/source/fig02_dexlatent.png" alt="fig:latent_ill">
-  <figcaption><strong>论文原图：</strong>Latent space pretraining pipeline. For each hand type, joint positions q_h are mapped through an encoder MLP into a shared latent space and reconstructed by a decoder MLP. The diagram also indicates the placement of the reconstruction loss L_1, retargeting loss L_2 via differentiable forward kinematics, and latent regularization loss L_3. -15pt</figcaption>
+<img alt="fig:latent_ill" src="figures/source/fig02_dexlatent.png"/>
+<figcaption><strong>DexLatent 的三类训练约束。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:latent_ill”这一环；当前证据切片来自 fig02_dexlatent。原图明确展示：Latent space pretraining pipeline. For each hand type, joint positions q_h are mapped through an encoder MLP into a shared latent space and reconstructed by a decoder MLP. The diagram also indicates the placement of the reconstruction loss L_1, retargeting loss L_2 via differentiable forward kinematics, and latent regularization loss L_3. -15pt 沿着图中的阶段与箭头可以看到，XL-VLA / DexLatent 并未把全部难题塞进一个端到端黑盒，而是明确规定了条件、核心表示和输出之间的接口。该图可用于定位论文创新究竟改变了信息流的哪一段；它尚不能回答改动带来了多少性能收益，因果证据仍来自对应消融。</div>
-
-<h3>图解 3：fig:cam_view</h3>
+<div class="note"><strong>逐图分析：</strong>每只手拥有轻量 encoder/decoder，共享 latent 通过 L1 保证自身动作可重建，L2 用可微 FK 对齐拇指—各指的距离与方向，L3 用 KL 保持空间平滑。L2 是跨手语义来源；没有它，latent 可能只是多个独立 autoencoder 的混合。</div>
+<h3>xArm 策略实际看到的单目输入</h3>
 <figure>
-  <img src="figures/source/fig09_rs_view.png" alt="fig:cam_view">
-  <figcaption><strong>论文原图：</strong>xArm Camera View. This is what our camera sees and also the input for and all the baseline methods.</figcaption>
+<img alt="fig:cam_view" src="figures/source/fig09_rs_view.png"/>
+<figcaption><strong>xArm 策略实际看到的单目输入。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:cam_view”这一环；当前证据切片来自 fig09_rs_view。原图明确展示：xArm Camera View. This is what our camera sees and also the input for and all the baseline methods. 图里呈现的不是单纯网络结构，而是一条从数据到部署的计算链。XL-VLA / DexLatent 的关键假设被编码在模块连接方式中：可共享的部分被放入主干，具身或任务专属部分被留在适配接口。该图支撑设计逻辑，但不单独支撑泛化结论。</div>
+<div class="note"><strong>逐图分析：</strong>所有方法都使用同一 L515 前视 RGB，画面中双臂、双手与对象存在明显互相遮挡。统一输入保证基线公平，也说明 XL-VLA 的提升主要来自动作表示而非额外视觉传感器。</div>
 </section><section id="experiments"><h2>5. 实验设计、结果与消融</h2><h3>5.1 任务、数据与评估协议</h3><p>实验的关键不是单一手型性能，而是多手联合训练是否优于各自独立训练、数据丰富手型是否能帮助低数据手型，以及模型能否 transfer 到未见任务或新 embodiment。应重点查看 DexLatent 消融、跨手型结果和 G1 等目标平台实验。若跨手型收益只出现在相似手型，通用性结论需要收缩。关键证据包括未见任务零样本泛化、G1 跨机器人联合训练、不同手型真实任务，以及 latent trajectory 可视化。离线重建误差只能证明压缩可逆，跨手型任务收益才证明 latent 含有可迁移操作语义。</p>
-<h3>图解 1：fig:unseen_task</h3>
+<h3>未见 hand-task 组合的零样本泛化</h3>
 <figure>
-  <img src="figures/source/fig03_unseen_tasks_1x4.png" alt="fig:unseen_task">
-  <figcaption><strong>论文原图：</strong>Zero-shot Unseen Tasks Generalization. For each hand, we randomly select some tasks as unseen tasks, whose data are held out from the training dataset. Then we test the unseen tasks with model trained on other data. Results show that by training with an aligned latent action space, gets the ability to generalize to novel hand-task combination in a zero-shot manner. PSR stands for ``Partial Success Rate&quot;, where policy is rewarded with half success if only one arm finishes its task. -12pt</figcaption>
+<img alt="fig:unseen_task" src="figures/source/fig03_unseen_tasks_1x4.png"/>
+<figcaption><strong>未见 hand-task 组合的零样本泛化。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:unseen_task”这一环；当前证据切片来自 fig03_unseen_tasks_1x4。原图明确展示：Zero-shot Unseen Tasks Generalization. For each hand, we randomly select some tasks as unseen tasks, whose data are held out from the training dataset. Then we test the unseen tasks with model trained on other data. Results show that by training with an aligned latent action space, gets the ability to generalize to novel hand-task combination in a zero-shot manner. PSR stands for ``Partial Success Rate&quot;, where policy is rewarded with half success if only one arm finishes its task. -12pt 读取重点不是寻找最高数字，而是检查对照是否隔离了变量。图中各方法在同一指标上的差距用于判断 XL-VLA / DexLatent 的新增设计是否有效，任务间波动则揭示方法更擅长或更薄弱的交互类型。未展示的随机种子、对象变化或长程失败仍是证据边界。</div>
-
-<h3>图解 2：fig:g1-bar</h3>
+<div class="note"><strong>逐图分析：</strong>每只手留出部分任务，仅用其他手/任务数据训练后测试该组合；PSR 在双臂任务中只完成一侧时计 0.5。该协议直接检验共享 latent 是否能把其他手学到的技能迁移过来，但目标手本身仍参与其他任务训练。</div>
+<h3>Unitree G1 上的跨机器人联合训练结果</h3>
 <figure>
-  <img src="figures/source/fig04_g1_results.png" alt="fig:g1-bar">
-  <figcaption><strong>论文原图：</strong>G1 Cross-Robot Performance. Co-training with latent xArm and humanoid data outperforms using raw actions.</figcaption>
+<img alt="fig:g1-bar" src="figures/source/fig04_g1_results.png"/>
+<figcaption><strong>Unitree G1 上的跨机器人联合训练结果。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:g1-bar”这一环；当前证据切片来自 fig04_g1_results。原图明确展示：G1 Cross-Robot Performance. Co-training with latent xArm and humanoid data outperforms using raw actions. 图中的横纵轴、任务分组和对比方法共同规定了结论强度。应关注优势是否跨任务稳定、提升发生在成功率还是阶段完成度，以及联合配置是否优于单一组件。它能支持 XL-VLA / DexLatent 在这些基线与协议下的相对优势，却不能覆盖未参与比较的硬件或任务分布。</div>
-
-<h3>图解 3：fig:demo_xhand</h3>
+<div class="note"><strong>逐图分析：</strong>G1 的四项任务中 XL-VLA 分别达到 0.7、0.9、0.9、0.8，均高于 π0 的 0.4、0.6、0.5、0.6。提升说明 latent xArm 与 humanoid 数据可共同训练；G1 仅使用 Inspire 手，尚未证明 humanoid 上多手型迁移。</div>
+<h3>同一 latent 在不同灵巧手上的姿态解码</h3>
 <figure>
-  <img src="figures/source/fig05_demo_transparent_1.png" alt="fig:demo_xhand">
-  <figcaption><strong>论文原图：</strong>X-Hand</figcaption>
+<img alt="fig:demo_xhand" src="figures/source/fig05_demo_transparent_1.png"/>
+<figcaption><strong>同一 latent 在不同灵巧手上的姿态解码。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:demo_xhand”这一环；当前证据切片来自 fig05_demo_transparent_1。原图明确展示：X-Hand 该子图展示的是 X-Hand 在真实执行序列中的一个证据切片，作用是确认共享 DexLatent 经 X-Hand decoder 后仍能形成连续、可执行的关节动作。它与其他手型的并列 rollout 共同支持跨手动作语义可复用，但单个 X-Hand 成功片段无法说明 latent 在所有接触模式中都保持了相同精度。</div>
-
-<h3>图解 4：fig:demo_xhand</h3>
+<div class="note"><strong>逐图分析：</strong>半透明叠加展示同一 latent 经不同 decoder 后，尽管手指长度、关节数和尺度不同，指尖仍围绕相近蓝色目标点形成对应姿态。它是几何对齐的直观证据；单个姿态不能证明整段轨迹平滑或真实接触成功。</div><figure><img alt="跨手 latent trajectory" src="figures/source/fig16_latent_traj.png"/><figcaption><strong>同一抓取 latent trajectory 的跨手解码。</strong> 原论文附录轨迹图。</figcaption></figure><div class="note"><strong>逐图分析：</strong>连续轨迹把静态姿态证据推进到运动层：各手沿时间产生功能相似的接近和闭合，而不是只在终点重合。该图支持 latent continuity 与跨手时序一致性；真实执行仍受各手控制精度限制。</div>
+<h3>xArm 单相机布置</h3>
 <figure>
-  <img src="figures/source/fig05_demo_transparent_2.png" alt="fig:demo_xhand">
-  <figcaption><strong>论文原图：</strong>X-Hand</figcaption>
+<img alt="fig:cam_setup" src="figures/source/fig07_camera_setup.jpeg"/>
+<figcaption><strong>xArm 单相机布置。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:demo_xhand”这一环；当前证据切片来自 fig05_demo_transparent_2。原图明确展示：X-Hand 该子图展示的是 X-Hand 在真实执行序列中的一个证据切片，作用是确认共享 DexLatent 经 X-Hand decoder 后仍能形成连续、可执行的关节动作。它与其他手型的并列 rollout 共同支持跨手动作语义可复用，但单个 X-Hand 成功片段无法说明 latent 在所有接触模式中都保持了相同精度。</div>
-
-<h3>图解 5：fig:demo_xhand</h3>
+<div class="note"><strong>逐图分析：</strong>训练与评估使用前方 L515，旁边 D435 不进入策略。固定单视角减少感知变量，也使遮挡成为真实挑战；跨到不同相机位置时仍可能需要适配。</div>
+<h3>四种训练灵巧手的形态差异</h3>
 <figure>
-  <img src="figures/source/fig06_demo_transparent_1.png" alt="fig:demo_xhand">
-  <figcaption><strong>论文原图：</strong>X-Hand</figcaption>
+<img alt="fig:dex_hands" src="figures/source/fig08_DexHands.jpg"/>
+<figcaption><strong>四种训练灵巧手的形态差异。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:demo_xhand”这一环；当前证据切片来自 fig06_demo_transparent_1。原图明确展示：X-Hand 该子图展示的是 X-Hand 在真实执行序列中的一个证据切片，作用是确认共享 DexLatent 经 X-Hand decoder 后仍能形成连续、可执行的关节动作。它与其他手型的并列 rollout 共同支持跨手动作语义可复用，但单个 X-Hand 成功片段无法说明 latent 在所有接触模式中都保持了相同精度。</div>
-
-<h3>图解 6：fig:demo_xhand</h3>
+<div class="note"><strong>逐图分析：</strong>Ability、Inspire、X-Hand 与 Paxini 在尺度、自由度、驱动关节和缺失手指方面明显不同。Paxini 缺少小指，L2 会删除相关配对，说明对齐并非强行一一对应；更极端拓扑仍可能超出共享 latent。</div>
+<h3>G1 humanoid 的真实工作场景</h3>
 <figure>
-  <img src="figures/source/fig06_demo_transparent_2.png" alt="fig:demo_xhand">
-  <figcaption><strong>论文原图：</strong>X-Hand</figcaption>
+<img alt="fig:g1-scene" src="figures/source/fig10_g1_scene.jpeg"/>
+<figcaption><strong>G1 humanoid 的真实工作场景。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:demo_xhand”这一环；当前证据切片来自 fig06_demo_transparent_2。原图明确展示：X-Hand 该子图展示的是 X-Hand 在真实执行序列中的一个证据切片，作用是确认共享 DexLatent 经 X-Hand decoder 后仍能形成连续、可执行的关节动作。它与其他手型的并列 rollout 共同支持跨手动作语义可复用，但单个 X-Hand 成功片段无法说明 latent 在所有接触模式中都保持了相同精度。</div>
-
-<h3>图解 7：fig:demo_xhand</h3>
+<div class="note"><strong>逐图分析：</strong>L515 安装在颈部附近，视角高度与 xArm 前视相机不同，机械臂运动学也完全变化。该图说明 G1 实验同时包含视觉和机器人平台域差异；任务桌面结构仍与训练设置相近。</div>
+<h3>G1 第一视角输入</h3>
 <figure>
-  <img src="figures/source/fig06_demo_transparent_3.png" alt="fig:demo_xhand">
-  <figcaption><strong>论文原图：</strong>X-Hand</figcaption>
+<img alt="fig:g1-cam-view" src="figures/source/fig11_g1_camera_view.png"/>
+<figcaption><strong>G1 第一视角输入。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:demo_xhand”这一环；当前证据切片来自 fig06_demo_transparent_3。原图明确展示：X-Hand 该子图展示的是 X-Hand 在真实执行序列中的一个证据切片，作用是确认共享 DexLatent 经 X-Hand decoder 后仍能形成连续、可执行的关节动作。它与其他手型的并列 rollout 共同支持跨手动作语义可复用，但单个 X-Hand 成功片段无法说明 latent 在所有接触模式中都保持了相同精度。</div>
-
-<h3>图解 8：fig:demo_xhand</h3>
+<div class="note"><strong>逐图分析：</strong>G1 视野中手臂遮挡、透视和对象尺度不同于 xArm。与 G1 定量结果联合阅读，可证明 latent 联合训练在新观察接口下仍有效；单帧本身不能说明策略成功。</div>
+<h3>十项任务使用的对象集合</h3>
 <figure>
-  <img src="figures/source/fig06_demo_transparent_4.png" alt="fig:demo_xhand">
-  <figcaption><strong>论文原图：</strong>X-Hand</figcaption>
+<img alt="fig:obj" src="figures/source/fig12_objects.jpg"/>
+<figcaption><strong>十项任务使用的对象集合。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:demo_xhand”这一环；当前证据切片来自 fig06_demo_transparent_4。原图明确展示：X-Hand 该子图展示的是 X-Hand 在真实执行序列中的一个证据切片，作用是确认共享 DexLatent 经 X-Hand decoder 后仍能形成连续、可执行的关节动作。它与其他手型的并列 rollout 共同支持跨手动作语义可复用，但单个 X-Hand 成功片段无法说明 latent 在所有接触模式中都保持了相同精度。</div>
-
-<h3>图解 9：fig:cam_setup</h3>
-<figure>
-  <img src="figures/source/fig07_camera_setup.jpeg" alt="fig:cam_setup">
-  <figcaption><strong>论文原图：</strong>xArm Camera Setup. We use a single RealSense L515 camera with the front view. Note that the D435 camera here is not used for .</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:cam_setup”这一环；当前证据切片来自 fig07_camera_setup。原图明确展示：xArm Camera Setup. We use a single RealSense L515 camera with the front view. Note that the D435 camera here is not used for . 图中对象、任务、场景和分布不是背景信息，它们决定了 XL-VLA / DexLatent 学到的先验以及测试结论能外推到哪里。训练覆盖与评估变化必须逐项对应：只有被明确留出的对象、位置或任务才构成泛化证据，其他样例主要说明数据多样性。</div>
-
-<h3>图解 10：fig:dex_hands</h3>
-<figure>
-  <img src="figures/source/fig08_DexHands.jpg" alt="fig:dex_hands">
-  <figcaption><strong>论文原图：</strong>Dexterous Hands. We use 4 kinds of hands, with various shapes, scales, degrees of freedom, and actuated joints.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:dex_hands”这一环；当前证据切片来自 fig08_DexHands。原图明确展示：Dexterous Hands. We use 4 kinds of hands, with various shapes, scales, degrees of freedom, and actuated joints. 连续帧与并列样例显示了动作推进、接触变化或场景保持的具体过程，补充了最终成功率无法表达的中间行为。它能确认 XL-VLA / DexLatent 在这些案例中完成了哪些阶段，也应与失败样例和全量统计一起判断，避免只由精选结果得出结论。</div>
-
-<h3>图解 11：fig:g1-scene</h3>
-<figure>
-  <img src="figures/source/fig10_g1_scene.jpeg" alt="fig:g1-scene">
-  <figcaption><strong>论文原图：</strong>G1 Scene. We mount an L515 camera near the neck of G1 to have an egocentric view.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:g1-scene”这一环；当前证据切片来自 fig10_g1_scene。原图明确展示：G1 Scene. We mount an L515 camera near the neck of G1 to have an egocentric view. 这组可视化让读者看到模型输出如何随时间作用于物体，而不是只看到一个终态。对 XL-VLA / DexLatent 来说，关键是动作是否连贯、对象响应是否符合条件、不同样例是否保持同一机制；图外的失败频率仍需量化结果回答。</div>
-
-<h3>图解 12：fig:g1-cam-view</h3>
-<figure>
-  <img src="figures/source/fig11_g1_camera_view.png" alt="fig:g1-cam-view">
-  <figcaption><strong>论文原图：</strong>G1 Egocentric Camera View.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:g1-cam-view”这一环；当前证据切片来自 fig11_g1_camera_view。原图明确展示：G1 Egocentric Camera View. 该图单独展示 Unitree G1 的第一视角输入分布，使读者能够看到跨具身实验中相机高度、视野、遮挡和工作空间与训练手型的差异。它证明 XL-VLA 的 G1 测试面对了新的观测接口，但摄像头视角本身不是迁移成功证据；真正的跨具身收益仍需与 G1 任务结果和基线联合判断。</div>
-
-<h3>图解 13：fig:obj</h3>
-<figure>
-  <img src="figures/source/fig12_objects.jpg" alt="fig:obj">
-  <figcaption><strong>论文原图：</strong>Objects. We use various everyday objects from existing datasets. They vary in scale, shape, texture, weight, etc., thus requiring the manipulation policy to be robust.</figcaption>
-</figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:obj”这一环；当前证据切片来自 fig12_objects。原图明确展示：Objects. We use various everyday objects from existing datasets. They vary in scale, shape, texture, weight, etc., thus requiring the manipulation policy to be robust. 图中对象、任务、场景和分布不是背景信息，它们决定了 XL-VLA / DexLatent 学到的先验以及测试结论能外推到哪里。训练覆盖与评估变化必须逐项对应：只有被明确留出的对象、位置或任务才构成泛化证据，其他样例主要说明数据多样性。</div>
+<div class="note"><strong>逐图分析：</strong>对象覆盖瓶罐、盒子和日用品，要求抓取、交接、重排等不同技能。多样对象为多任务训练提供基础，但未见任务泛化主要改变 hand-task 组合，不等同于完全未见对象类别。</div>
 </section><section id="repro"><h2>6. 复现路线与工程风险</h2><h3>6.1 最小可行复现路径</h3><p>先独立复现 DexLatent，而不是直接训练完整 XL-VLA。需要至少两种动作空间明显不同的手型数据、对应机器人模型与动作归一化规则。检查 latent 插值、重建误差和实际执行轨迹，确认 latent 没有只编码手型身份。之后再将其接入 VLA。难点是多数据集时间尺度、关节范围和任务分布对齐。复现应先独立训练 DexLatent，检查重建、插值、跨手型解码和正运动学轨迹，再接完整 VLA。至少需要两种拓扑差异明显的手型，并统一时间尺度、关节归一化和任务语义。</p></section><section id="discussion"><h2>7. 分析、局限与边界</h2><h3>7.1 最有价值的贡献</h3><p>共享 latent 为跨手型迁移提供了优雅接口，但压缩也可能丢失指尖力控和细粒度接触信息。不同手型若能力差异过大，同一 latent 未必具有一致语义。论文的迁移结果需要结合训练手型数量、任务相似度与 decoder 是否见过目标数据判断。共享 latent 可能压掉高频接触细节，也可能只学会手型身份。对于依赖精细力控或特殊关节结构的任务，目标手 decoder 未必能从抽象 latent 恢复足够准确的动作。</p>
-<h3>图解 1：fig:avp</h3>
+<h3>xArm 的 Vision Pro 遥操作采集</h3>
 <figure>
-  <img src="figures/source/fig13_avp.jpeg" alt="fig:avp">
-  <figcaption><strong>论文原图：</strong>Apple Vision Por for Data Collection. Apple Vision Pro is used to track the human teleoperator&#x27;s hands and wrists. Then the tracked data is processed with retargeting and Inverse Kinematics to control the real-world robots.</figcaption>
+<img alt="fig:avp" src="figures/source/fig13_avp.jpeg"/>
+<figcaption><strong>xArm 的 Vision Pro 遥操作采集。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:avp”这一环；当前证据切片来自 fig13_avp。原图明确展示：Apple Vision Por for Data Collection. Apple Vision Pro is used to track the human teleoperator&#x27;s hands and wrists. Then the tracked data is processed with retargeting and Inverse Kinematics to control the real-world robots. 从相机、机械臂、灵巧手或遥操作布局可以判断 XL-VLA / DexLatent 的结果依赖哪些真实接口。该图证明算法已进入物理执行链，但相机标定、控制频率、动作归一化与安全限制仍可能决定复现成败，换平台时不能视为无关细节。</div>
-
-<h3>图解 2：fig:g1-teleop</h3>
+<div class="note"><strong>逐图分析：</strong>Vision Pro 跟踪人手和腕部，随后经 retargeting 与 IK 控制不同灵巧手。统一采集接口有利于构造跨手任务数据，也会把同一人类动作先验带入所有手型。</div>
+<h3>G1 上半身与 MANUS 手套遥操作</h3>
 <figure>
-  <img src="figures/source/fig14_g1_teleop.jpeg" alt="fig:g1-teleop">
-  <figcaption><strong>论文原图：</strong>G1 Teleoperation System. We build the G1 upper-body teleoperation system from HOMIE ben2025homie. We use a pair of MANUS Mocap glove to track the human hand pose.</figcaption>
+<img alt="fig:g1-teleop" src="figures/source/fig14_g1_teleop.jpeg"/>
+<figcaption><strong>G1 上半身与 MANUS 手套遥操作。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 XL-VLA / DexLatent 的证据链中承担的是“fig:g1-teleop”这一环；当前证据切片来自 fig14_g1_teleop。原图明确展示：G1 Teleoperation System. We build the G1 upper-body teleoperation system from HOMIE ben2025homie. We use a pair of MANUS Mocap glove to track the human hand pose. 真实系统图把论文中的表示和动作输出连接到具体硬件。它让读者能够区分算法贡献与平台能力，也说明哪些传感器和控制通道是结果成立的必要条件。图中未覆盖的新手型、视角或工作空间仍需要重新适配。</div>
-</section><section id="qa"><h2>8. 组会问答与阅读结论</h2><h3>Q1：为什么不能直接 padding 不同关节向量？</h3><p>维度对齐不代表关节语义和物理能力对齐。</p><h3>Q2：DexLatent 如何避免只记住手型？</h3><p>需要共享任务监督、跨手型训练和重建/迁移消融共同证明。</p><h3>Q3：最强实验应是什么？</h3><p>低资源或未见手型从多手训练中显著受益。</p><h3>Q4：latent 最大风险？</h3><p>丢失精细接触与力信息。</p><h3>Q5：可做的创新？</h3><p>加入触觉/接触约束的跨手型 latent。</p><h3>阅读结论与研究启发</h3><p>这是最适合发展创新点的一篇。建议将 DexLatent 作为独立模块复现，并尝试触觉条件、物理约束或 world-model latent 对齐；不必首先复刻完整 VLA。</p></section>
+<div class="note"><strong>逐图分析：</strong>G1 使用 HOMIE 上半身系统和 MANUS 手套，而非 xArm 的 Vision Pro 流程。不同采集管线仍能通过 DexLatent 联合训练，增强了跨平台证据；同步与重定向质量可能成为混杂因素。</div>
+</section><section id="evidence-deep-dive"><h2>证据深挖：机制、实验与复现判断</h2><h3>DexLatent 为什么不需要配对跨手轨迹</h3><p>训练时从每只手关节限制内随机采样配置，自编码保证自身可恢复；同一 latent 经其他手 decoder 后，通过可微 FK 比较拇指—手指的距离和方向，从而建立功能几何对应。这个过程只需要各手运动学模型，不需要让四只手执行完全相同的遥操作轨迹。优势是数据便宜，限制是对齐目标主要是静态指尖几何。</p><h3>三个损失分别防止什么失败</h3><p>没有 L1，decoder 可能为了跨手对齐而丢失某只手自身可执行姿态；没有 L2，同一 latent 在不同手上可能产生完全不同的 pinch 关系；没有 KL 型 L3，latent 可能碎裂，插值和 VLA 预测的小误差会造成大幅动作跳变。消融中移除 L2 后跨具身方向/距离误差显著恶化，正是共享动作语义依赖该约束的直接证据。</p><h3>主结果为何比离线重建更重要</h3><p>离线 autoencoder 指标只能说明动作压缩可逆。论文中跨手多任务训练把平均成功率从 π0 的 0.55 提升到 0.90，XHand 从 0.29 提升到 0.70；latent replay 在两组手对上达到 0.82/0.81，高于 LAD 的 0.60/0.61。这些真实执行结果才说明 latent 对策略学习和跨手动作具有功能价值。</p><h3>零样本泛化的准确边界</h3><p>未见任务实验留出的是特定 hand-task 组合，而不是完全未见手型：目标手仍在其他任务中参与训练，其 encoder/decoder 也已预训练。因此它证明技能能通过共享 latent 从其他手迁移到该手，而不是新硬件无需建模即可接入。真正的新手型仍需要运动学模型、encoder/decoder 和 latent 对齐过程。</p></section><section id="qa"><h2>8. 组会问答与阅读结论</h2><div class="audit-card"><h3>XL-VLA / DexLatent 的关键取舍</h3><p>DexLatent 不依赖配对跨手轨迹，而从随机关节配置和可微 FK 中学习共享几何；VLA 随后只预测 latent。跨手平均成功率、未见 hand-task 组合、G1 结果和 latent replay 共同支持表示可迁移。边界是对齐集中在指尖几何，不能保证力、触觉和不可等价手型能力一致。</p></div><h3>Q1：为什么不能直接 padding 不同关节向量？</h3><p>维度对齐不代表关节语义和物理能力对齐。</p><h3>Q2：DexLatent 如何避免只记住手型？</h3><p>需要共享任务监督、跨手型训练和重建/迁移消融共同证明。</p><h3>Q3：最强实验应是什么？</h3><p>低资源或未见手型从多手训练中显著受益。</p><h3>Q4：latent 最大风险？</h3><p>丢失精细接触与力信息。</p><h3>Q5：可做的创新？</h3><p>加入触觉/接触约束的跨手型 latent。</p><h3>阅读结论与研究启发</h3><p>这是最适合发展创新点的一篇。建议将 DexLatent 作为独立模块复现，并尝试触觉条件、物理约束或 world-model latent 对齐；不必首先复刻完整 VLA。</p></section>
 </main></body></html>

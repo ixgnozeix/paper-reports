@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>ViTacFormer 深度精读</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -533,109 +534,97 @@
 
 <nav class="toc"><a href="#overview">1. 论文速览与证据链</a><a href="#motivation">2. 研究问题与动机</a><a href="#related">3. 相关工作与技术定位</a><a href="#method">4. 方法、表示与训练流程</a><a href="#experiments">5. 实验设计、结果与消融</a><a href="#repro">6. 复现路线与工程风险</a><a href="#discussion">7. 分析、局限与边界</a><a href="#qa">8. 组会问答与阅读结论</a></nav>
 <section id="overview"><h2>1. 论文速览与证据链</h2><h3>1.0 一句话贡献与关键词</h3><p>提出 ViTacFormer：用 cross-attention 融合视觉、关节和高分辨率触觉，并通过未来触觉预测与课程学习提升灵巧手精细操作和长程任务稳定性。这一定义把 ViTacFormer 的任务对象、核心机制和预期收益放在同一句话中。关键词包括：visuo-tactile; cross-attention; future tactile prediction; curriculum; bimanual dexterous hands; long-horizon manipulation。这些概念共同界定了该工作位于灵巧操作、动作表示、感知融合或跨具身学习中的具体技术位置。</p><h3>1.1 技术定位与核心贡献</h3><p>ViTacFormer 的核心贡献是把触觉从“额外观测”提升为可预测、可融合、可驱动控制的中间表征。论文不是简单把 tactile image 拼到 policy 输入里，而是设计 cross-attention 融合视觉和触觉，再让模型自回归预测未来触觉状态，使共享 latent 必须编码接触变化。这个表示随后用于多指手模仿学习，支撑精细、遮挡和长程任务。它位于 visuo-tactile representation learning、dexterous imitation learning 和 long-horizon manipulation 的交叉处。</p><h3>1.2 端到端信息流</h3><p>与只用视觉的行为克隆相比，它补上了接触阶段外部相机看不见的信息；与浅层触觉融合相比，它把未来触觉预测当作表示学习目标，从训练信号上逼迫 latent 理解接触演化。论文证据链由四部分组成：硬件和遥操作系统采集真实双手数据；ViTacFormer 学习视觉-触觉融合表示；短程任务验证 peg insertion、cap twist、vase wipe、book flip 等精细操作；长程任务展示最多 11 个连续阶段和约 2.5 分钟持续操作。约 50% 成功率提升说明触觉预测和课程学习不只是结构美观，而是能转化成真实机器人收益。这篇对“灵巧手为什么需要触觉”给了很直接的答案：视觉在遮挡、反光、接触瞬间经常失效，而多指操作的成败恰好取决于这些瞬间。ViTacFormer 把触觉建模成未来 contact signal，不只是检测有没有接触，而是为动作策略提供下一步接触趋势。</p></section><section id="motivation"><h2>2. 研究问题与动机</h2><h3>2.1 论文面对的真实瓶颈</h3><p>现有灵巧操作方法很多依赖视觉和关节状态，面对遮挡、接触变化、物体微小位姿误差时容易失败。触觉传感器能提供细粒度接触信息，但如果只作为一张额外图片输入，模型很难学会何时信任触觉、如何把触觉与视觉对齐，以及如何用当前触觉预测未来接触。论文的真实硬件包含双 Realman 机械臂和 SharpaWave 灵巧手，每只手 5 指 17 DoF，并配有腕部鱼眼相机、顶部 ZED Mini 和 320×240 指尖触觉传感器。这意味着观测维度高、动作空间高、接触反馈密集，普通 BC 容易把任务学成外观匹配，而不是接触状态调节。纯视觉在精细插入、旋盖、擦拭和翻书时会遇到手指遮挡和局部接触不可见；</p><h3>2.2 既有路线为何不足</h3><p>浅层触觉融合虽然能看到触觉图像，却不一定学到触觉随动作如何变化。ViTacFormer 选择预测未来触觉，是因为未来接触信号比当前触觉更接近控制决策：它告诉策略当前动作会让接触变好还是变坏。论文假设触觉和视觉之间存在可学习的跨模态 latent，并且这个 latent 对模仿学习有直接帮助。若触觉噪声过强、传感器布置不一致或任务不依赖接触细节，这个假设会变弱；但对于灵巧手精细任务，触觉恰恰是视觉缺失信息的主要来源。</p></section><section id="related"><h2>3. 相关工作与技术定位</h2><h3>3.1 直接技术前作</h3><p>Diffusion Policy 和 3D Diffusion Policy 证明了行为克隆可以处理多模态动作分布，但在多指手接触任务中，只靠视觉和 proprioception 仍不稳定。ViTacFormer 沿用模仿学习主线，但把触觉表示学习作为核心变量。已有触觉研究常做自监督表征、接触分类或触觉-视觉对齐，但很多工作停留在感知任务。ViTacFormer 的不同之处是把触觉表示直接接到真实灵巧手控制，并用任务成功率检验表示是否有用。长程任务通常放大单步控制误差：接触略偏、旋转不稳或抓握滑动都会在后续阶段累积。论文用最多 11 个阶段和 2.5 分钟持续操作证明，触觉预测带来的不是单帧感知收益，而是连续控制稳定性。</p><h3>3.2 与替代路线的差异</h3><p>它不是 VLA，也不是 world model，而是触觉-视觉 policy representation。对后续做灵巧手 VLA 的人来说，它可以作为低层接触表示模块，与语言规划或目标生成模块结合。</p></section><section id="method"><h2>4. 方法、表示与训练流程</h2><h3>4.1 总体方法链路</h3><p>ViTacFormer 是 conditional VAE 风格架构：encoder 接收 action sequence 和机器人 proprioception，产生 action style variable z；decoder 结合图像、关节和触觉特征输出动作序列。这个设计把动作多样性放进 latent，而不是要求 deterministic policy 直接拟合所有演示模式。视觉和触觉不是简单 concat，而是通过 cross-attention 互相查询。这样模型可以在视觉可靠时利用场景几何，在接触遮挡时转向触觉模式。对于多指手，每个指尖触觉都有不同接触语义，cross-attention 可以让视觉区域、手指状态和触觉 patch 建立更细关系。</p><h3>4.2 核心输入、输出与表示</h3><p>论文认为预测未来 tactile signal 比只编码当前 tactile observation 更有监督价值。未来触觉预测迫使 latent 理解“当前动作会导致什么接触后果”，这与控制目标一致。这个头相当于给策略加入一个轻量接触 dynamics 约束。课程学习先用较容易条件稳定表示，再逐步转向预测触觉，最后让策略在更接近真实部署的条件下训练。摘要和正文都强调最后阶段会过渡到 predicted tactile signals，以提升鲁棒 cross-modal reasoning。真实系统中，视觉提供全局目标和局部视角，触觉提供接触几何和力状态，proprioception 提供手部姿态。策略输出动作序列后，硬件执行会不断改变触觉反馈，因此这不是离线识别问题，而是闭环接触控制问题。</p>
-<h3>图解 1：fig:task-setup-overview</h3>
+<h3>短程任务对象与网格化工作区</h3>
 <figure>
-  <img src="figures/source/fig02_objects.png" alt="fig:task-setup-overview">
-  <figcaption><strong>论文原图：</strong>Short-horizon task setup. (a) All four short-horizon tasks share a common set of objects. (b) The tabletop workspace marked with a grid.</figcaption>
+<img alt="fig:task-setup-overview" src="figures/source/fig02_objects.png"/>
+<figcaption><strong>短程任务对象与网格化工作区。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:task-setup-overview”这一环；当前证据切片来自 fig02_objects。原图明确展示：Short-horizon task setup. (a) All four short-horizon tasks share a common set of objects. (b) The tabletop workspace marked with a grid. 沿着图中的阶段与箭头可以看到，ViTacFormer 并未把全部难题塞进一个端到端黑盒，而是明确规定了条件、核心表示和输出之间的接口。该图可用于定位论文创新究竟改变了信息流的哪一段；它尚不能回答改动带来了多少性能收益，因果证据仍来自对应消融。</div>
-
-<h3>图解 2：fig:hardware</h3>
+<div class="note"><strong>逐图分析：</strong>四项任务共享对象集合并在网格工作区随机初始化，使策略必须处理位置变化而非复现固定轨迹。对象规模和网格范围也界定了空间泛化边界；离开桌面或更大遮挡不在测试协议中。</div>
+<h3>视触觉双手平台与遥操作采集</h3>
 <figure>
-  <img src="figures/source/fig06_new_hardware.png" alt="fig:hardware">
-  <figcaption><strong>论文原图：</strong>An overview of our system hardware and teleoperation setup. (a) Our hardware system setup. (b) Teleoperator with exoskeleton gloves and VR headset. (c) VR interface with binocular and wrist views, and tactile feedback overlay.</figcaption>
+<img alt="fig:hardware" src="figures/source/fig06_new_hardware.png"/>
+<figcaption><strong>视触觉双手平台与遥操作采集。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:hardware”这一环；当前证据切片来自 fig06_new_hardware。原图明确展示：An overview of our system hardware and teleoperation setup. (a) Our hardware system setup. (b) Teleoperator with exoskeleton gloves and VR headset. (c) VR interface with binocular and wrist views, and tactile feedback overlay. 图里呈现的不是单纯网络结构，而是一条从数据到部署的计算链。ViTacFormer 的关键假设被编码在模块连接方式中：可共享的部分被放入主干，具身或任务专属部分被留在适配接口。该图支撑设计逻辑，但不单独支撑泛化结论。</div>
-
-<h3>图解 3：fig:arch</h3>
+<div class="note"><strong>逐图分析：</strong>系统同时包含双目视觉、双手触觉和 proprioception，操作者通过外骨骼手套与 VR 采集示范。图中传感器布局说明触觉信息来自实际接触位置，而非抽象力标签；硬件标定与触觉同步将直接影响复现。</div>
+<h3>ViTacFormer 的条件 VAE 动作建模</h3>
 <figure>
-  <img src="figures/source/fig07_vitac_method.png" alt="fig:arch">
-  <figcaption><strong>论文原图：</strong>The neural network architecture for ViTacFormer is a conditional variational auto-encoder. Left: a transformer-based encoder maps action sequence and robot proprioception to action style variable z. Right: a transformer-based encoder-decoder uses style variable z, robot proprioception (joints), and visuo-tactile observations to auto-regressively predict future tactile signals and generate actions.</figcaption>
+<img alt="fig:arch" src="figures/source/fig07_vitac_method.png"/>
+<figcaption><strong>ViTacFormer 的条件 VAE 动作建模。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:arch”这一环；当前证据切片来自 fig07_vitac_method。原图明确展示：The neural network architecture for ViTacFormer is a conditional variational auto-encoder. Left: a transformer-based encoder maps action sequence and robot proprioception to action style variable z. Right: a transformer-based encoder-decoder uses style variable z, robot proprioception (joints), and visuo-tactile observations to auto-regressively predict future tactile signals and generate actions. 沿着图中的阶段与箭头可以看到，ViTacFormer 并未把全部难题塞进一个端到端黑盒，而是明确规定了条件、核心表示和输出之间的接口。该图可用于定位论文创新究竟改变了信息流的哪一段；它尚不能回答改动带来了多少性能收益，因果证据仍来自对应消融。</div>
-
-<h3>图解 4：fig:cross_atten</h3>
+<div class="note"><strong>逐图分析：</strong>encoder 在训练期读取动作序列与 proprioception 得到 latent，decoder 以视觉、触觉和状态为条件预测 action chunk。CVAE 用 latent 表达多峰动作，而不是把触觉仅作为附加通道；推理时没有真实未来动作，因而 latent prior 与条件融合质量决定稳定性。</div>
+<h3>视觉—触觉 cross-attention 融合</h3>
 <figure>
-  <img src="figures/source/fig08_attention.png" alt="fig:cross_atten">
-  <figcaption><strong>论文原图：</strong>Cross-attention-based multimodal integration between visual and tactile observations.</figcaption>
+<img alt="fig:cross_atten" src="figures/source/fig08_attention.png"/>
+<figcaption><strong>视觉—触觉 cross-attention 融合。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:cross_atten”这一环；当前证据切片来自 fig08_attention。原图明确展示：Cross-attention-based multimodal integration between visual and tactile observations. 该图把抽象表示落到可观察结构上，使读者可以检查空间关系、功能关节或模态注意力是否按预期对齐。若图示结构与任务收益一致，它支持 ViTacFormer 的机制解释；若只在可视化上整齐，则仍不能替代量化消融。</div>
+<div class="note"><strong>逐图分析：</strong>视觉 token 查询触觉 token，使接触区域能够改变视觉表示和动作预测。该结构适合插销、拧盖等视觉被手遮挡的阶段；attention 结构本身不证明触觉有效，需与去触觉消融和失败类型联合判断。</div>
 </section><section id="experiments"><h2>5. 实验设计、结果与消融</h2><h3>5.1 任务、数据与评估协议</h3><p>论文设置 peg insertion、cap twist、vase wipe、book flip 四个短程任务，覆盖插入、旋转、擦拭和翻动等不同接触模式。这些任务共同检验触觉是否能帮助策略处理细粒度对齐、摩擦和手物相对运动。长程任务使用多个组件和预定义区域，要求机器人在随机初始化下持续操作。论文报告最多 11 个连续阶段和约 2.5 分钟持续操作，这类结果比单步成功率更能说明 tactile prediction 对误差累积有帮助。摘要报告 ViTacFormer 在真实 benchmark 上相对 prior SOTA 约 50% 成功率提升。这个数字需要结合任务难度理解：提升来自多模态表示、未来触觉预测和课程学习共同作用，而不是单一大模型规模。</p><h3>5.2 主结果如何支持论文主张</h3><p>论文也展示失败案例，说明系统仍会在任务特定接触、对象姿态或控制误差上失败。失败图的价值在于告诉复现者：触觉并不能完全消除硬件和策略误差，它只是让策略更早感知接触偏差。消融应重点关注去掉 future tactile prediction、cross-attention 或课程学习后的差异。若只保留触觉输入但没有未来预测，模型可能退化成被动感知；若去掉 cross-attention，视觉和触觉之间的对齐关系会变弱。</p>
-<h3>图解 1：fig:visual-input</h3>
+<h3>四类相机视角的互补信息</h3>
 <figure>
-  <img src="figures/source/fig01_input_view.png" alt="fig:visual-input">
-  <figcaption><strong>论文原图：</strong>Four types of camera views</figcaption>
+<img alt="fig:visual-input" src="figures/source/fig01_input_view.png"/>
+<figcaption><strong>四类相机视角的互补信息。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:visual-input”这一环；当前证据切片来自 fig01_input_view。原图明确展示：Four types of camera views 连续帧与并列样例显示了动作推进、接触变化或场景保持的具体过程，补充了最终成功率无法表达的中间行为。它能确认 ViTacFormer 在这些案例中完成了哪些阶段，也应与失败样例和全量统计一起判断，避免只由精选结果得出结论。</div>
-
-<h3>图解 2：fig:short-task-execution</h3>
+<div class="note"><strong>逐图分析：</strong>不同视角分别覆盖全局任务状态、双手相对关系和局部接触。多视角降低单一遮挡风险，却增加同步、标定和算力成本；图中没有触觉时不可见的接触力，说明视觉与触觉仍承担不同职责。</div>
+<h3>四项短程视触觉任务的完整执行</h3>
 <figure>
-  <img src="figures/source/fig03_execution.png" alt="fig:short-task-execution">
-  <figcaption><strong>论文原图：</strong>Execution examples for short-horizon tasks. Representative keyframes from four tasks: peg insertion, cap twist, vase wipe, and book flip. Each task demonstrates a full execution sequence from perception to manipulation.</figcaption>
+<img alt="fig:short-task-execution" src="figures/source/fig03_execution.png"/>
+<figcaption><strong>四项短程视触觉任务的完整执行。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:short-task-execution”这一环；当前证据切片来自 fig03_execution。原图明确展示：Execution examples for short-horizon tasks. Representative keyframes from four tasks: peg insertion, cap twist, vase wipe, and book flip. Each task demonstrates a full execution sequence from perception to manipulation. 图中对象、任务、场景和分布不是背景信息，它们决定了 ViTacFormer 学到的先验以及测试结论能外推到哪里。训练覆盖与评估变化必须逐项对应：只有被明确留出的对象、位置或任务才构成泛化证据，其他样例主要说明数据多样性。</div>
-
-<h3>图解 3：fig:failure-cases</h3>
+<div class="note"><strong>逐图分析：</strong>插销依赖末端对准，拧盖依赖持续旋转和接触，擦花瓶要求稳定法向力，翻书需要薄页分离。四行关键帧证明 benchmark 的接触模式不同，不能把成功统一解释为视觉定位；每行仍是成功示例。</div>
+<h3>按任务拆分的失败案例</h3>
 <figure>
-  <img src="figures/source/fig04_failure_case.png" alt="fig:failure-cases">
-  <figcaption><strong>论文原图：</strong>Representative failure cases across all tasks. Each row corresponds to one task, with two failure case sequences shown side by side.</figcaption>
+<img alt="fig:failure-cases" src="figures/source/fig04_failure_case.png"/>
+<figcaption><strong>按任务拆分的失败案例。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:failure-cases”这一环；当前证据切片来自 fig04_failure_case。原图明确展示：Representative failure cases across all tasks. Each row corresponds to one task, with two failure case sequences shown side by side. 这里的反例比成功样例更能暴露系统假设。图中错误表明某类观测或表示不足以唯一确定正确动作，使 ViTacFormer 在特定接触或几何条件下产生系统性偏差；这也是后续加入空间锚定、触觉或闭环纠错最直接的依据。</div>
-
-<h3>图解 4：fig:long-setup</h3>
+<div class="note"><strong>逐图分析：</strong>插销偏位、瓶盖滑脱、擦拭接触不足与翻页失败分别暴露几何误差、接触保持和薄物体感知问题。失败图比成功图更直接揭示触觉仍未解决的边界，也说明长程误差可能从一个局部接触失败开始。</div>
+<h3>汉堡任务的对象布局与随机区域</h3>
 <figure>
-  <img src="figures/source/fig05_long_horizon.jpg" alt="fig:long-setup">
-  <figcaption><strong>论文原图：</strong>Long-horizon task setup. Seven components are placed in predefined zones—circular (ingredients) or rectangular (tools). Objects are randomly initialized within these areas to test spatial generalization.</figcaption>
+<img alt="fig:long-setup" src="figures/source/fig05_long_horizon.jpg"/>
+<figcaption><strong>汉堡任务的对象布局与随机区域。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:long-setup”这一环；当前证据切片来自 fig05_long_horizon。原图明确展示：Long-horizon task setup. Seven components are placed in predefined zones—circular (ingredients) or rectangular (tools). Objects are randomly initialized within these areas to test spatial generalization. 这幅图给出了论文能力声明的样本基础。可见的长尾、任务组合或场景变化说明模型需要处理哪些分布差异，同时也暴露高频类别可能主导训练。ViTacFormer 的泛化结论应限制在图中数据生成流程与测试划分能够支持的范围。</div>
-
-<h3>图解 5：fig:benchmark</h3>
+<div class="note"><strong>逐图分析：</strong>七个组件被初始化在圆形或矩形区域，任务要求机器人按顺序使用食材与工具。随机区域避免固定位置回放，但对象集合和步骤结构仍预先定义；它检验长程组合而非开放世界规划。</div>
+<h3>短程 benchmark 的四种接触模式</h3>
 <figure>
-  <img src="figures/source/fig09_experiments_simple.png" alt="fig:benchmark">
-  <figcaption><strong>论文原图：</strong>Four short-horizon visuo-tactile manipulation tasks: Peg Insertion, Cap Twist, Vase Wipe, and Book Flip.</figcaption>
+<img alt="fig:benchmark" src="figures/source/fig09_experiments_simple.png"/>
+<figcaption><strong>短程 benchmark 的四种接触模式。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:benchmark”这一环；当前证据切片来自 fig09_experiments_simple。原图明确展示：Four short-horizon visuo-tactile manipulation tasks: Peg Insertion, Cap Twist, Vase Wipe, and Book Flip. 读取重点不是寻找最高数字，而是检查对照是否隔离了变量。图中各方法在同一指标上的差距用于判断 ViTacFormer 的新增设计是否有效，任务间波动则揭示方法更擅长或更薄弱的交互类型。未展示的随机种子、对象变化或长程失败仍是证据边界。</div>
-
-<h3>图解 6：fig:long_task</h3>
+<div class="note"><strong>逐图分析：</strong>该图将插入、扭转、表面擦拭和薄页翻动并列，解释为什么单一成功率不足：每项任务对触觉的需求发生在不同阶段。跨任务提升才支持统一视触觉表示，而非某一种接触技巧。</div>
+<h3>汉堡任务的 11 阶段成功 rollout</h3>
 <figure>
-  <img src="figures/source/fig10_long.png" alt="fig:long_task">
-  <figcaption><strong>论文原图：</strong>Successful model rollout on long-horizon task, i.e., making hamburger. We show the successful model rollout with keyframes in 11 stages. The first row represents the robot hand turning the brand to &quot;open&quot;. The second row represents the robot hand shoveling meat to bread. The third row represents the robot hand assembling the hamburger. The fourth row represents the robot hand handing over the hamburger to the plate. The fifth row represents the robot hand turning the brand to &quot;close&quot;.</figcaption>
+<img alt="fig:long_task" src="figures/source/fig10_long.png"/>
+<figcaption><strong>汉堡任务的 11 阶段成功 rollout。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:long_task”这一环；当前证据切片来自 fig10_long。原图明确展示：Successful model rollout on long-horizon task, i.e., making hamburger. We show the successful model rollout with keyframes in 11 stages. The first row represents the robot hand turning the brand to &quot;open&quot;. The second row represents the robot hand shoveling meat to bread. The third row represents the robot hand assembling the hamburger. The fourth row represents the robot hand handing over the hamburger to the plate. The fifth row represents the robot hand turning the brand to &quot;close&quot;. 读取重点不是寻找最高数字，而是检查对照是否隔离了变量。图中各方法在同一指标上的差距用于判断 ViTacFormer 的新增设计是否有效，任务间波动则揭示方法更擅长或更薄弱的交互类型。未展示的随机种子、对象变化或长程失败仍是证据边界。</div>
-
-<h3>图解 7：fig:ablation</h3>
+<div class="note"><strong>逐图分析：</strong>序列从拾取食材、堆叠到使用工具，展示局部动作策略如何连续完成 11 个阶段。任一早期放置偏差都会改变后续状态，因此该图支持长程闭环能力；单次成功序列无法给出阶段失败分布。</div>
+<h3>组件消融的任务成功率</h3>
 <figure>
-  <img src="figures/source/fig11_SuccRate3.png" alt="fig:ablation">
-  <figcaption><strong>论文原图：</strong>Ablation study. Performance comparison by removing different components from the full ViTacFormer (Ours).</figcaption>
+<img alt="fig:ablation" src="figures/source/fig11_SuccRate3.png"/>
+<figcaption><strong>组件消融的任务成功率。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:ablation”这一环；当前证据切片来自 fig11_SuccRate3。原图明确展示：Ablation study. Performance comparison by removing different components from the full ViTacFormer (Ours). 图中的横纵轴、任务分组和对比方法共同规定了结论强度。应关注优势是否跨任务稳定、提升发生在成功率还是阶段完成度，以及联合配置是否优于单一组件。它能支持 ViTacFormer 在这些基线与协议下的相对优势，却不能覆盖未参与比较的硬件或任务分布。</div>
-
-<h3>图解 8：fig:ablation</h3>
+<div class="note"><strong>逐图分析：</strong>完整模型与去除视觉、触觉或融合组件的比较显示各模态对任务的作用并不均匀。插入与拧盖对触觉更敏感，某些任务仍主要依赖视觉；因此结论应是视触觉互补，而不是触觉在所有阶段同等重要。</div>
+<h3>人工质量评分的组件消融</h3>
 <figure>
-  <img src="figures/source/fig11_HumanScore3.png" alt="fig:ablation">
-  <figcaption><strong>论文原图：</strong>Ablation study. Performance comparison by removing different components from the full ViTacFormer (Ours).</figcaption>
+<img alt="fig:ablation" src="figures/source/fig11_HumanScore3.png"/>
+<figcaption><strong>人工质量评分的组件消融。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:ablation”这一环；当前证据切片来自 fig11_HumanScore3。原图明确展示：Ablation study. Performance comparison by removing different components from the full ViTacFormer (Ours). 这张结果图把论文主张变成了可比较证据：相同测试条件下，各柱形、曲线或表格单元之间的差异对应具体模块或训练数据的贡献。若提升只集中于少数任务，结论应收缩到对应能力；若多数任务同时改善，才更接近 ViTacFormer 所声称的通用收益。</div>
-
-<h3>图解 9：fig:failure</h3>
+<div class="note"><strong>逐图分析：</strong>人工评分补充二元成功率无法表达的动作平滑、接触自然度和完成质量。若某变体成功率接近但人工分下降，说明它可能以碰撞或不稳定方式完成；主观评分也需要考虑评审一致性。</div>
+<h3>插销任务的失败模式</h3>
 <figure>
-  <img src="figures/source/fig12_Failure_Insertion.png" alt="fig:failure">
-  <figcaption><strong>论文原图：</strong>Failure Study. The first row is peg insertion failure, the second row is cap twist failure, and the third row is book flip failure.</figcaption>
+<img alt="fig:failure" src="figures/source/fig12_Failure_Insertion.png"/>
+<figcaption><strong>插销任务的失败模式。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:failure”这一环；当前证据切片来自 fig12_Failure_Insertion。原图明确展示：Failure Study. The first row is peg insertion failure, the second row is cap twist failure, and the third row is book flip failure. 图中被标出的错误方向、姿态或执行阶段将平均分数拆成了可诊断的失败机制。对 ViTacFormer 而言，这说明瓶颈发生在空间定位、接触保持或阶段转换中的哪一环，也提示复现时应记录中间状态，而不是只统计最终成功。</div>
+<div class="note"><strong>逐图分析：</strong>连续帧显示插销接近孔位但最终因横向或角度误差无法进入。触觉能提示发生接触，却未必提供足够几何方向用于纠偏；这指向需要更精细的局部姿态估计或搜索策略。</div>
 </section><section id="repro"><h2>6. 复现路线与工程风险</h2><h3>6.1 最小可行复现路径</h3><p>建议先复现单手或单任务的触觉-视觉 BC，再扩展到双手长程任务。最小版本需要多视角 RGB、关节状态、指尖触觉和专家动作序列；如果没有同款 SharpaWave，可先在现有 tactile hand 上验证 future tactile prediction 是否改善接触任务。遥操作系统是复现成本核心。需要同步视觉、触觉、关节和动作，保证 tactile image 与具体手指、关节姿态和任务阶段对齐。任何时间戳漂移都会让未来触觉预测目标变脏。训练需要同时处理 action sequence、style latent、cross-attention 融合和 tactile prediction。</p><h3>6.2 数据与标定准备</h3><p>验收指标不应只看训练 loss，还要看触觉预测可视化、短程任务成功率和长程阶段完成数。最大风险是硬件差异和触觉传感器域差异。不同 tactile sensor 的成像、分辨率和接触材质差异会影响 learned representation，因此复现时需要重新校准或微调触觉 encoder。</p></section><section id="discussion"><h2>7. 分析、局限与边界</h2><h3>7.1 最有价值的贡献</h3><p>最有价值的是把未来触觉预测作为控制相关表示学习目标。它把触觉从“当前接触照片”变成“动作后果预测”，更接近灵巧操作需要的闭环控制信号。硬件、短程任务、长程任务和失败案例共同支撑论文主张：触觉表示确实能帮助真实多指操作。尤其是长程任务结果说明提升不是单个 benchmark 上偶然拟合。论文仍高度依赖特定硬件、触觉传感器和遥操作数据。它没有解决低成本跨手型迁移，也没有把语言目标或高层规划纳入同一框架。可以把 ViTacFormer 作为低层触觉专家，与 VLA planner 或 WAM planner 结合；也可以研究跨传感器 tactile representation，让不同触觉硬件共享未来接触预测目标。</p>
-<h3>图解 1：fig:failure</h3>
+<h3>拧盖任务的失败模式</h3>
 <figure>
-  <img src="figures/source/fig12_Failure_Cap.png" alt="fig:failure">
-  <figcaption><strong>论文原图：</strong>Failure Study. The first row is peg insertion failure, the second row is cap twist failure, and the third row is book flip failure.</figcaption>
+<img alt="fig:failure" src="figures/source/fig12_Failure_Cap.png"/>
+<figcaption><strong>拧盖任务的失败模式。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:failure”这一环；当前证据切片来自 fig12_Failure_Cap。原图明确展示：Failure Study. The first row is peg insertion failure, the second row is cap twist failure, and the third row is book flip failure. 失败序列显示策略不是简单“没完成”，而是在一个可辨认的局部决策上偏离正确轨迹。该图因此界定了 ViTacFormer 仍缺少的恢复能力：一旦出现图示误差，系统能否重新感知、重规划并恢复接触，主结果并未充分回答。</div>
-
-<h3>图解 2：fig:failure</h3>
+<div class="note"><strong>逐图分析：</strong>失败通常发生在初始抓持不稳、旋转时滑移或未保持轴向压力。它揭示模型虽有触觉输入，仍缺少显式力控和长期接触状态估计。</div>
+<h3>翻书任务的失败模式</h3>
 <figure>
-  <img src="figures/source/fig12_Failure_Book.png" alt="fig:failure">
-  <figcaption><strong>论文原图：</strong>Failure Study. The first row is peg insertion failure, the second row is cap twist failure, and the third row is book flip failure.</figcaption>
+<img alt="fig:failure" src="figures/source/fig12_Failure_Book.png"/>
+<figcaption><strong>翻书任务的失败模式。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 ViTacFormer 的证据链中承担的是“fig:failure”这一环；当前证据切片来自 fig12_Failure_Book。原图明确展示：Failure Study. The first row is peg insertion failure, the second row is cap twist failure, and the third row is book flip failure. 这里的反例比成功样例更能暴露系统假设。图中错误表明某类观测或表示不足以唯一确定正确动作，使 ViTacFormer 在特定接触或几何条件下产生系统性偏差；这也是后续加入空间锚定、触觉或闭环纠错最直接的依据。</div>
-</section><section id="qa"><h2>8. 组会问答与阅读结论</h2><h3>Q1：为什么未来触觉预测比当前触觉编码重要？</h3><p>因为控制决策关心当前动作会如何改变接触，而不仅是现在接触长什么样。未来预测让 latent 学到接触 dynamics。</p><h3>Q2：ViTacFormer 与普通 Diffusion Policy 的差别？</h3><p>普通 DP 主要依赖观测到动作的拟合；ViTacFormer 额外学习视觉-触觉跨模态表示和未来 tactile signal，从训练目标上强化接触理解。</p><h3>Q3：50% 提升能说明什么？</h3><p>说明触觉融合在这些真实任务上带来显著收益，但具体贡献还要看去掉 future prediction、cross-attention 和 curriculum 的消融。</p><h3>Q4：最难复现什么？</h3><p>不是模型结构，而是高质量同步触觉-视觉-动作数据和稳定的多指硬件执行。</p><h3>Q5：如何用于我们的研究？</h3><p>可以把它作为灵巧手低层 contact-aware controller，再接语言目标或 world model 做更长程任务。</p><h3>阅读结论与研究启发</h3><p>ViTacFormer 适合放在灵巧手触觉/泛化专题的前排阅读。建议围绕“表示如何服务真实接触控制”设计复现：先复现中间表示，再接策略，再评估真实任务边界。</p></section>
+<div class="note"><strong>逐图分析：</strong>薄页分离要求感知极小几何差异并控制摩擦，失败帧显示手指可能抓到多页或未能建立有效接触。该任务将视觉分辨率、触觉灵敏度和动作精度同时推到平台边界。</div>
+</section><section id="evidence-deep-dive"><h2>证据深挖：机制、实验与复现判断</h2><h3>触觉在哪些阶段真正提供增量</h3><p>插销接近孔位和翻页寻找纸边时，视觉能给出全局几何，但手部遮挡后很难判断是否已经建立正确接触；拧盖和擦拭则需要在持续运动中保持压力和摩擦。触觉的价值因此不是替代视觉定位，而是在视觉不确定的最后接触阶段提供闭环信号。消融若只在这些阶段显著下降，恰好说明两种模态存在合理分工。</p><h3>CVAE 与 cross-attention 的分工</h3><p>条件 VAE 用 latent 表达同一视觉—触觉状态下可能存在的多种可行动作，例如从不同方向重新对准；cross-attention 则决定视觉 token 在预测时读取哪些触觉位置。前者解决动作分布多峰，后者解决模态关联。将两者混为一个‘多模态 transformer’会失去可解释性，复现时应分别检查 latent 使用情况与 attention 对接触区域的响应。</p><h3>汉堡任务为什么比短程成功率更严格</h3><p>11 个阶段将抓取、放置、工具使用和双手状态连续串联，早期轻微偏差会改变后续对象位置，模型不能每一步都从标准初始状态开始。长程成功因此检验状态分布漂移和恢复能力，而不只是单技能平均水平。更完整的报告还应提供每阶段到达率与失败转移矩阵，说明整条任务失败究竟由哪个接触步骤主导。</p><h3>失败案例给出的研究方向</h3><p>插销失败指向局部姿态和搜索策略不足，拧盖失败指向持续力与滑移估计不足，翻书失败则暴露薄物体和摩擦感知边界。这些问题不太可能只靠增加示范彻底解决。更有价值的下一步是把触觉用于显式接触状态、滑移预测和局部动作重规划，并让策略在检测到失败后执行可解释的恢复动作。</p></section><section id="qa"><h2>8. 组会问答与阅读结论</h2><div class="audit-card"><h3>ViTacFormer 的关键取舍</h3><p>ViTacFormer 的价值在于把触觉放入动作生成闭环，并用插入、扭转、擦拭、翻页和 11 阶段汉堡任务检验不同接触模式。失败案例表明触觉并未自动解决力控和精细几何；最值得继续研究的是让触觉不仅作为观察 token，还能驱动显式接触状态估计与局部纠偏。</p></div><h3>Q1：为什么未来触觉预测比当前触觉编码重要？</h3><p>因为控制决策关心当前动作会如何改变接触，而不仅是现在接触长什么样。未来预测让 latent 学到接触 dynamics。</p><h3>Q2：ViTacFormer 与普通 Diffusion Policy 的差别？</h3><p>普通 DP 主要依赖观测到动作的拟合；ViTacFormer 额外学习视觉-触觉跨模态表示和未来 tactile signal，从训练目标上强化接触理解。</p><h3>Q3：50% 提升能说明什么？</h3><p>说明触觉融合在这些真实任务上带来显著收益，但具体贡献还要看去掉 future prediction、cross-attention 和 curriculum 的消融。</p><h3>Q4：最难复现什么？</h3><p>不是模型结构，而是高质量同步触觉-视觉-动作数据和稳定的多指硬件执行。</p><h3>Q5：如何用于我们的研究？</h3><p>可以把它作为灵巧手低层 contact-aware controller，再接语言目标或 world model 做更长程任务。</p><h3>阅读结论与研究启发</h3><p>ViTacFormer 适合放在灵巧手触觉/泛化专题的前排阅读。建议围绕“表示如何服务真实接触控制”设计复现：先复现中间表示，再接策略，再评估真实任务边界。</p></section>
 </main></body></html>

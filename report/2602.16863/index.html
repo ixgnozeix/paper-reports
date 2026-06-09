@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>SimToolReal 深度精读</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -533,130 +534,115 @@
 
 <nav class="toc"><a href="#overview">1. 论文速览与证据链</a><a href="#motivation">2. 研究问题与动机</a><a href="#related">3. 相关工作与技术定位</a><a href="#method">4. 方法、表示与训练流程</a><a href="#experiments">5. 实验设计、结果与消融</a><a href="#repro">6. 复现路线与工程风险</a><a href="#discussion">7. 分析、局限与边界</a><a href="#qa">8. 组会问答与阅读结论</a></nav>
 <section id="overview"><h2>1. 论文速览与证据链</h2><h3>1.0 一句话贡献与关键词</h3><p>提出 SimToolReal：在仿真中程序化生成大量工具状物体，训练一个物体中心 goal-conditioned RL policy，使真实机器人能根据人类视频提取的目标位姿序列零样本完成多类工具操作。这一定义把 SimToolReal 的任务对象、核心机制和预期收益放在同一句话中。关键词包括：tool manipulation; object-centric policy; sim-to-real RL; procedural tools; goal pose trajectory; zero-shot。这些概念共同界定了该工作位于灵巧操作、动作表示、感知融合或跨具身学习中的具体技术位置。</p><h3>1.1 技术定位与核心贡献</h3><p>SimToolReal 把工具使用抽象为“让工具物体跟随一串目标位姿”。训练时不针对某个锤子、刷子或任务，而是在仿真中生成多样 tool-like primitives，训练单一 goal-reaching policy；部署时从一段 RGB-D 人类视频中提取目标位姿轨迹，再驱动同一个 policy 零样本执行。它属于 sim-to-real RL、object-centric manipulation 和 dexterous tool use。相比 imitation retargeting，它不直接模仿人手接触；相比 task-specific RL，它不为每个工具和任务重新设计 reward；</p><h3>1.2 端到端信息流</h3><p>相比固定抓握，它允许手内重抓和姿态调整。摘要报告 SimToolReal 相比 retargeting 和 fixed-grasp 方法提升 37%，并接近 task-specific specialist RL；真实评估覆盖 120 rollouts、24 个任务、12 个物体实例和 6 类工具。这个规模支撑其“general tool policy”主张。</p></section><section id="motivation"><h2>2. 研究问题与动机</h2><h3>2.1 论文面对的真实瓶颈</h3><p>工具操作要求抓薄物体、手内旋转、保持功能姿态并进行有力交互。传统 teleoperation 数据难采，专用 RL 又需要为每个物体和任务建模、调 reward。论文试图训练一个不依赖具体工具和任务的通用物体中心策略。工具使用的功能目标通常是物体轨迹，而不是人手关节轨迹。刷桌、敲钉或使用铲子，关键是工具头或工具整体到达某些位姿。SimToolReal 因此让策略追踪 object goal poses，把手的接触策略留给 RL 自己发现。训练中的程序化工具 primitives 覆盖 handle/head 几何、质量分布和随机目标位姿；测试时真实工具虽然没见过，但都能被表达为带局部 keypoints 的物体目标。</p><h3>2.2 既有路线为何不足</h3><p>这个共享 object-centric 表示是 zero-shot 的基础。论文假设很多工具任务可以被分解为物体位姿序列，并且从人类 RGB-D 视频中能可靠恢复目标物体网格、抓取区域和位姿轨迹。若任务依赖不可见接触力或柔性工具形变，这个假设会受限。</p></section><section id="related"><h2>3. 相关工作与技术定位</h2><h3>3.1 直接技术前作</h3><p>功能性 retargeting 能从人类演示得到工具运动，但常需要为每个演示训练或调整策略。SimToolReal 用同一个 policy 直接追踪目标位姿序列，不为每个任务重新训练。专用 sim-to-real RL 在单技能上很强，但扩展到多工具多任务时会被环境建模和 reward tuning 卡住。SimToolReal 的通用 reward 和程序化工具生成降低了每个任务的工程成本。论文的核心路线是用物体当前位姿和目标位姿定义状态与目标，而不是用任务标签或人手动作。这样工具类别变化时，策略仍面对同一类 goal-reaching 问题。</p></section><section id="method"><h2>4. 方法、表示与训练流程</h2><h3>4.1 总体方法链路</h3><p>仿真中每个 episode 随机选择工具状 primitive、初始位姿和机器人初始状态。目标是先从桌面抓起工具，再让物体依次到达随机采样的 goal poses。若物体掉落则 reset。主要目标项 r_goal 使用当前物体位姿与目标位姿的距离 d(o_t,g)，并加入 sparse success bonus。距离由局部 4 个 keypoints 的最大误差定义，成功阈值 ε 在实验中用于判断 goal pose 是否达成。工具 primitive 由 handle 和 head 组合，几何形状包括圆柱和长方体，并随机化尺寸与密度。这个设计覆盖刷子、锅铲、马克笔、锤子等日常工具的结构共性。</p><h3>4.2 核心输入、输出与表示</h3><p>部署时先采集 RGB-D 人类视频，用 SAM 3D 等视觉基础模型生成 metric-scale object mesh，并提取 3D grasp/contact 区域和目标位姿轨迹。策略按当前 goal pose 执行，达到阈值后切换到下一个 goal。固定抓握方法能追踪工具末端轨迹，但一旦需要手内重定向、薄物体抓取或从不同初始姿态恢复，就容易失败。SimToolReal 让 RL 学会动态接触策略，因此比固定抓握更适合真实工具。</p>
-<h3>图解 1：fig:pipeline</h3>
+<h3>SimToolReal 的训练与真实推理闭环</h3>
 <figure>
-  <img src="figures/source/fig01_Train_vs_Inference_v19.png" alt="fig:pipeline">
-  <figcaption><strong>论文原图：</strong>Overview of . (Top) Training in Simulation: We train a goal-conditioned RL policy in simulation that manipulates a wide variety of procedurally-generated objects to randomly sampled goal poses. (Bottom) Inference in Real: We deploy this policy zero-shot on real-world tools from DexToolBench, following tool trajectories from human videos.</figcaption>
+<img alt="fig:pipeline" src="figures/source/fig01_Train_vs_Inference_v19.png"/>
+<figcaption><strong>SimToolReal 的训练与真实推理闭环。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:pipeline”这一环；当前证据切片来自 fig01_Train_vs_Inference_v19。原图明确展示：Overview of . (Top) Training in Simulation: We train a goal-conditioned RL policy in simulation that manipulates a wide variety of procedurally-generated objects to randomly sampled goal poses. (Bottom) Inference in Real: We deploy this policy zero-shot on real-world tools from DexToolBench, following tool trajectories from human videos. 沿着图中的阶段与箭头可以看到，SimToolReal 并未把全部难题塞进一个端到端黑盒，而是明确规定了条件、核心表示和输出之间的接口。该图可用于定位论文创新究竟改变了信息流的哪一段；它尚不能回答改动带来了多少性能收益，因果证据仍来自对应消融。</div>
-
-<h3>图解 2：fig:inference</h3>
+<div class="note"><strong>逐图分析：</strong>训练阶段在仿真中学习工具使用并构建 specialist，推理阶段将真实观测映射到相同表示再执行。图中分离的两条路径强调方法依赖表示和任务接口对齐，而非像素级 sim-to-real；任何分割、姿态或重定向误差都会在真实闭环中放大。</div>
+<h3>统一输入输出与工具条件策略</h3>
 <figure>
-  <img src="figures/source/fig02_Merged_Input_Output_v20.png" alt="fig:inference">
-  <figcaption><strong>论文原图：</strong>Real-World Deployment. (Left) Human Video Processing: We collect an RGB-D human video and process it using vision foundation models. We use SAM 3D chen2025sam to generate a metric-scale object mesh and segment a 3D grasp bounding box. Then, we use FoundationPose wen2024foundationpose to extract a sequence of 6D goal poses. (Right) Inference-Time Pipeline: Our LSTM policy takes in proprioception, object pose, grasp bounding box, and goal pose, and it outputs joint position targets for the 29-DoF dexterous robot (arm + hand).</figcaption>
+<img alt="fig:inference" src="figures/source/fig02_Merged_Input_Output_v20.png"/>
+<figcaption><strong>统一输入输出与工具条件策略。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:inference”这一环；当前证据切片来自 fig02_Merged_Input_Output_v20。原图明确展示：Real-World Deployment. (Left) Human Video Processing: We collect an RGB-D human video and process it using vision foundation models. We use SAM 3D chen2025sam to generate a metric-scale object mesh and segment a 3D grasp bounding box. Then, we use FoundationPose wen2024foundationpose to extract a sequence of 6D goal poses. (Right) Inference-Time Pipeline: Our LSTM policy takes in proprioception, object pose, grasp bounding box, and goal pose, and it outputs joint position targets for the 29-DoF dexterous robot (arm + hand). 沿着图中的阶段与箭头可以看到，SimToolReal 并未把全部难题塞进一个端到端黑盒，而是明确规定了条件、核心表示和输出之间的接口。该图可用于定位论文创新究竟改变了信息流的哪一段；它尚不能回答改动带来了多少性能收益，因果证据仍来自对应消融。</div>
-
-<h3>图解 3：fig:keypoints</h3>
+<div class="note"><strong>逐图分析：</strong>模型把对象、工具、手部关键点和任务条件合并为策略输入，再输出可执行动作。统一接口允许多个工具共享训练结构，同时 specialist 处理特定接触模式；共享程度过高可能抹平工具差异。</div>
+<h3>工具与手部关键点表示</h3>
 <figure>
-  <img src="figures/source/fig09_Keypoints.png" alt="fig:keypoints">
-  <figcaption><strong>论文原图：</strong>Object Keypoints. (Left) Visualization of 4 pose keypoints in the local object frame. (Right) Visualization of the keypoint distances used to compute the distance d(o_t, g).</figcaption>
+<img alt="fig:keypoints" src="figures/source/fig09_Keypoints.png"/>
+<figcaption><strong>工具与手部关键点表示。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:keypoints”这一环；当前证据切片来自 fig09_Keypoints。原图明确展示：Object Keypoints. (Left) Visualization of 4 pose keypoints in the local object frame. (Right) Visualization of the keypoint distances used to compute the distance d(o_t, g). 该图把抽象表示落到可观察结构上，使读者可以检查空间关系、功能关节或模态注意力是否按预期对齐。若图示结构与任务收益一致，它支持 SimToolReal 的机制解释；若只在可视化上整齐，则仍不能替代量化消融。</div>
-
-<h3>图解 4：fig:kinematic_retargeting_visualization</h3>
+<div class="note"><strong>逐图分析：</strong>关键点把外观差异压缩为功能几何，例如锤头、刷毛端或螺丝刀尖的位置与方向。它有利于跨实例迁移，但关键点检测错误会直接变成控制误差，且不能表达材质、摩擦和柔性。</div>
+<h3>从人类/仿真动作到机器人执行的运动学重定向</h3>
 <figure>
-  <img src="figures/source/fig10_Kinematic_Retargeting_v5_compressed.png" alt="fig:kinematic_retargeting_visualization">
-  <figcaption><strong>论文原图：</strong>Kinematic Retargeting Pipeline. From the RGB-D human video, we use SAM 2 ravi2024sam2 for hand masks and HaMeR pavlakos2024reconstructing for hand pose prediction. Next, we use ICP registration to align the hand pose prediction with the segmented hand point cloud to obtain accurate 3D hand poses. Lastly, we perform IK-based retargeting of the arm and hand to match the human wrist pose and fingertip positions.</figcaption>
+<img alt="fig:kinematic_retargeting_visualization" src="figures/source/fig10_Kinematic_Retargeting_v5_compressed.png"/>
+<figcaption><strong>从人类/仿真动作到机器人执行的运动学重定向。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:kinematic_retargeting_visualization”这一环；当前证据切片来自 fig10_Kinematic_Retargeting_v5_compressed。原图明确展示：Kinematic Retargeting Pipeline. From the RGB-D human video, we use SAM 2 ravi2024sam2 for hand masks and HaMeR pavlakos2024reconstructing for hand pose prediction. Next, we use ICP registration to align the hand pose prediction with the segmented hand point cloud to obtain accurate 3D hand poses. Lastly, we perform IK-based retargeting of the arm and hand to match the human wrist pose and fingertip positions. 图里呈现的不是单纯网络结构，而是一条从数据到部署的计算链。SimToolReal 的关键假设被编码在模块连接方式中：可共享的部分被放入主干，具身或任务专属部分被留在适配接口。该图支撑设计逻辑，但不单独支撑泛化结论。</div>
-
-<h3>图解 5：fig:sam_pipeline</h3>
+<div class="note"><strong>逐图分析：</strong>图中对应关系说明参考动作必须经过关节限制和可达空间映射后才能执行。重定向保留工具功能轨迹而非逐关节复制；若目标机器人能力不足，几何相似也无法保证接触效果。</div>
+<h3>SAM 驱动的真实场景对象分割</h3>
 <figure>
-  <img src="figures/source/fig13_SAM_Pipeline_v3.png" alt="fig:sam_pipeline">
-  <figcaption><strong>论文原图：</strong>Metric-Scale Mesh and Grasp Bounding Box Acquisition. We present a semi-automated pipeline to extract a metric-scale mesh and grasp bounding box from a single RGB-D video scan. (1) We first segment the target object in the initial frame and reconstruct a 3D mesh using SAM 3D chen2025sam, injecting the captured depth map to ensure metric accuracy. (2) To establish a canonical coordinate frame, we virtually render the mesh from multiple views and use SAM 2 ravi2024sam2 to segment the geometry into ``handle&#x27;&#x27; and ``head&#x27;&#x27; regions based on user prompts. (3) The final grasp bounding box is derived from the handle&#x27;s geometry: it is centered on the handle, with the positive x-axis oriented toward the head, ensuring consistent alignment with policy training.</figcaption>
+<img alt="fig:sam_pipeline" src="figures/source/fig13_SAM_Pipeline_v3.png"/>
+<figcaption><strong>SAM 驱动的真实场景对象分割。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:sam_pipeline”这一环；当前证据切片来自 fig13_SAM_Pipeline_v3。原图明确展示：Metric-Scale Mesh and Grasp Bounding Box Acquisition. We present a semi-automated pipeline to extract a metric-scale mesh and grasp bounding box from a single RGB-D video scan. (1) We first segment the target object in the initial frame and reconstruct a 3D mesh using SAM 3D chen2025sam, injecting the captured depth map to ensure metric accuracy. (2) To establish a canonical coordinate frame, we virtually render the mesh from multiple views and use SAM 2 ravi2024sam2 to segment the geometry into ``handle&#x27;&#x27; and ``head&#x27;&#x27; regions based on user prompts. (3) The final grasp bounding box is derived from the handle&#x27;s geometry: it is centered on the handle, with the positive x-axis oriented toward the head, ensuring consistent alignment with policy training. 沿着图中的阶段与箭头可以看到，SimToolReal 并未把全部难题塞进一个端到端黑盒，而是明确规定了条件、核心表示和输出之间的接口。该图可用于定位论文创新究竟改变了信息流的哪一段；它尚不能回答改动带来了多少性能收益，因果证据仍来自对应消融。</div>
+<div class="note"><strong>逐图分析：</strong>真实推理先借助 SAM 从背景中提取工具和目标，再构建策略所需表示。该步骤降低视觉域差异，却使系统依赖提示和 mask 稳定性；遮挡或同类干扰会污染后续关键点与动作。</div>
 </section><section id="experiments"><h2>5. 实验设计、结果与消融</h2><h3>5.1 任务、数据与评估协议</h3><p>真实评估覆盖 DexToolBench 中 24 个 task trajectories、12 个 object instances 和 6 类工具，共 120 rollouts。指标是 Task Progress，即成功跟踪 demonstrated goal poses 的比例。摘要报告 SimToolReal 相比 prior retargeting 和 fixed-grasp 方法提升 37%，同时接近在特定目标物体和任务上训练的 specialist RL。这个结果说明通用 policy 没有为泛化牺牲太多专用性能。specialist policy 只针对一个 object 和 trajectory 训练，理论上应有优势。</p><h3>5.2 主结果如何支持论文主张</h3><p>SimToolReal 能接近其表现，说明程序化工具和 object-centric reward 学到的是可迁移工具操作技能，而不是某个物体的记忆。论文消融 SAPG、PPO、asymmetric critic 和 reward 设计。训练 reward 曲线说明 RL 细节会显著影响最终能力，通用工具策略不是简单换个输入表示就能自动学成。仿真中 episode reward 和 unseen DexToolBench Task Progress 的相关性用于说明训练目标确实驱动真实泛化。若仿真 reward 高但真实 Task Progress 不涨，则 sim-to-real 目标就不可靠。</p>
-<h3>图解 1：fig:dexFuncComparison</h3>
+<h3>跨任务与跨实例的主要真实结果</h3>
 <figure>
-  <img src="figures/source/fig03_Fig5_KEYNOTE_GOOD.png" alt="fig:dexFuncComparison">
-  <figcaption><strong>论文原图：</strong>Comparison against Baselines in the Real World. We compare ; against baselines on two variations of sweeping a table with a brush: with and without requiring tool rotation based on the initial states shown on the left. Average Task Progress is indicated in parentheses. ; succeeds on both variations, performing dexterous in-hand tool rotations in the harder variation. Fixed Grasp succeeds on the simpler variation of this task without tool rotation. However, when rotation is required, enforcing a fixed grasp causes the arm to collide with the table while tracking the target trajectory. Kinematic Retargeting fails to reason about contact forces, and is unable to grasp the brush in both variations.</figcaption>
+<img alt="fig:dexFuncComparison" src="figures/source/fig03_Fig5_KEYNOTE_GOOD.png"/>
+<figcaption><strong>跨任务与跨实例的主要真实结果。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:dexFuncComparison”这一环；当前证据切片来自 fig03_Fig5_KEYNOTE_GOOD。原图明确展示：Comparison against Baselines in the Real World. We compare ; against baselines on two variations of sweeping a table with a brush: with and without requiring tool rotation based on the initial states shown on the left. Average Task Progress is indicated in parentheses. ; succeeds on both variations, performing dexterous in-hand tool rotations in the harder variation. Fixed Grasp succeeds on the simpler variation of this task without tool rotation. However, when rotation is required, enforcing a fixed grasp causes the arm to collide with the table while tracking the target trajectory. Kinematic Retargeting fails to reason about contact forces, and is unable to grasp the brush in both variations. 读取重点不是寻找最高数字，而是检查对照是否隔离了变量。图中各方法在同一指标上的差距用于判断 SimToolReal 的新增设计是否有效，任务间波动则揭示方法更擅长或更薄弱的交互类型。未展示的随机种子、对象变化或长程失败仍是证据边界。</div>
-
-<h3>图解 2：fig:generalizationResults</h3>
+<div class="note"><strong>逐图分析：</strong>汇总结果用于比较 SimToolReal 在不同工具任务和对象实例上的迁移。应分别看仿真训练技能是否进入真实环境，以及新实例是否保持功能几何；均值提升不能掩盖某类工具始终失败。</div>
+<h3>动作动词与工具实例的组合泛化</h3>
 <figure>
-  <img src="figures/source/fig04_verbs_generalization_instance_colors_v2.png" alt="fig:generalizationResults">
-  <figcaption><strong>论文原图：</strong>to Unseen DexToolBench Tools and Tasks in the Real World. We evaluate our policy in the real world on unseen tool-use tasks in DexToolBench. Our evaluations span 24 unique task trajectories across 6 different object categories and 12 object instances. Each bar corresponds to 1 task trajectory on 1 object instance. We report the average Task Progress across 5 rollouts. Despite not being trained on these objects or trajectories, our policy demonstrates strong generalization to diverse tools of varying masses and geometries.</figcaption>
+<img alt="fig:generalizationResults" src="figures/source/fig04_verbs_generalization_instance_colors_v2.png"/>
+<figcaption><strong>动作动词与工具实例的组合泛化。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:generalizationResults”这一环；当前证据切片来自 fig04_verbs_generalization_instance_colors_v2。原图明确展示：to Unseen DexToolBench Tools and Tasks in the Real World. We evaluate our policy in the real world on unseen tool-use tasks in DexToolBench. Our evaluations span 24 unique task trajectories across 6 different object categories and 12 object instances. Each bar corresponds to 1 task trajectory on 1 object instance. We report the average Task Progress across 5 rollouts. Despite not being trained on these objects or trajectories, our policy demonstrates strong generalization to diverse tools of varying masses and geometries. 图中的横纵轴、任务分组和对比方法共同规定了结论强度。应关注优势是否跨任务稳定、提升发生在成功率还是阶段完成度，以及联合配置是否优于单一组件。它能支持 SimToolReal 在这些基线与协议下的相对优势，却不能覆盖未参与比较的硬件或任务分布。</div>
-
-<h3>图解 3：fig:ablations</h3>
+<div class="note"><strong>逐图分析：</strong>颜色区分工具实例，动词维度区分功能动作，图中交叉组合检验策略是否把‘怎么用’与‘用哪个实例’解耦。若只在已见组合上成功，模型仍可能记忆；未见动词—实例组合才是更强证据。</div>
+<h3>仿真训练奖励与样本效率</h3>
 <figure>
-  <img src="figures/source/fig05_training_reward_vs_env_steps.png" alt="fig:ablations">
-  <figcaption><strong>论文原图：</strong>Ablation of RL Training Components. We compare the training reward across environment steps of ; against ablations averaged across 5 seeds. Replacing SAPG sapg2024 with PPO PPO or not using Asymmetric Critic asymmetric_actor_critic results in a significant performance drop, highlighting their importance.</figcaption>
+<img alt="fig:ablations" src="figures/source/fig05_training_reward_vs_env_steps.png"/>
+<figcaption><strong>仿真训练奖励与样本效率。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:ablations”这一环；当前证据切片来自 fig05_training_reward_vs_env_steps。原图明确展示：Ablation of RL Training Components. We compare the training reward across environment steps of ; against ablations averaged across 5 seeds. Replacing SAPG sapg2024 with PPO PPO or not using Asymmetric Critic asymmetric_actor_critic results in a significant performance drop, highlighting their importance. 图中的横纵轴、任务分组和对比方法共同规定了结论强度。应关注优势是否跨任务稳定、提升发生在成功率还是阶段完成度，以及联合配置是否优于单一组件。它能支持 SimToolReal 在这些基线与协议下的相对优势，却不能覆盖未参与比较的硬件或任务分布。</div>
-
-<h3>图解 4：fig:trainTestCorrelation</h3>
+<div class="note"><strong>逐图分析：</strong>曲线显示不同设置随环境步数获得的回报，揭示表示或课程是否让工具技能更快收敛。训练奖励只反映仿真目标，不等价于真实成功；过早平台化还可能意味着策略利用仿真捷径。</div>
+<h3>仿真任务进度与奖励的联合变化</h3>
 <figure>
-  <img src="figures/source/fig06_sim_tp_and_reward_vs_env_steps.png" alt="fig:trainTestCorrelation">
-  <figcaption><strong>论文原图：</strong>Training Objective Drives Generalization. In simulation, we evaluate (Left) the episode reward on procedurally-generated objects and (Right) the zero-shot Task Progress on unseen DexToolBench tools on different policy checkpoints throughout training. The strong correlation between the two curves validates our core hypothesis: improving random goal-pose reaching performance on diverse object primitives drives corresponding gains in generalization to unseen tool-use tasks.</figcaption>
+<img alt="fig:trainTestCorrelation" src="figures/source/fig06_sim_tp_and_reward_vs_env_steps.png"/>
+<figcaption><strong>仿真任务进度与奖励的联合变化。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:trainTestCorrelation”这一环；当前证据切片来自 fig06_sim_tp_and_reward_vs_env_steps。原图明确展示：Training Objective Drives Generalization. In simulation, we evaluate (Left) the episode reward on procedurally-generated objects and (Right) the zero-shot Task Progress on unseen DexToolBench tools on different policy checkpoints throughout training. The strong correlation between the two curves validates our core hypothesis: improving random goal-pose reaching performance on diverse object primitives drives corresponding gains in generalization to unseen tool-use tasks. 这张结果图把论文主张变成了可比较证据：相同测试条件下，各柱形、曲线或表格单元之间的差异对应具体模块或训练数据的贡献。若提升只集中于少数任务，结论应收缩到对应能力；若多数任务同时改善，才更接近 SimToolReal 所声称的通用收益。</div>
-
-<h3>图解 5：fig:specialistComparison</h3>
+<div class="note"><strong>逐图分析：</strong>同时观察 task progress 和 reward 可以区分‘获得局部奖励’与‘真正推进任务阶段’。两条曲线一致上升时更能说明策略学到完整技能；若分离，则奖励设计可能没有准确代表工具使用。</div>
+<h3>共享策略与工具 specialist 的三种配置</h3>
 <figure>
-  <img src="figures/source/fig07_new_specialist_comparison_3settings_revised.png" alt="fig:specialistComparison">
-  <figcaption><strong>论文原图：</strong>Comparison against Specialists. We compare ; in simulation against specialist policies trained on a single object (Obj A) and trajectory (Traj A). We train one specialist policy for each of the 6 object categories in DexToolBench and report the average Task Progress across these categories. While the specialists succeed on their training setup (Obj A / Traj A), performance degrades under deviation in the trajectory (Obj A / Traj B) or the object (Obj B / Traj A). ; has high zero-shot performance across all variants, despite not being trained on these objects or trajectories.</figcaption>
+<img alt="fig:specialistComparison" src="figures/source/fig07_new_specialist_comparison_3settings_revised.png"/>
+<figcaption><strong>共享策略与工具 specialist 的三种配置。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:specialistComparison”这一环；当前证据切片来自 fig07_new_specialist_comparison_3settings_revised。原图明确展示：Comparison against Specialists. We compare ; in simulation against specialist policies trained on a single object (Obj A) and trajectory (Traj A). We train one specialist policy for each of the 6 object categories in DexToolBench and report the average Task Progress across these categories. While the specialists succeed on their training setup (Obj A / Traj A), performance degrades under deviation in the trajectory (Obj A / Traj B) or the object (Obj B / Traj A). ; has high zero-shot performance across all variants, despite not being trained on these objects or trajectories. 读取重点不是寻找最高数字，而是检查对照是否隔离了变量。图中各方法在同一指标上的差距用于判断 SimToolReal 的新增设计是否有效，任务间波动则揭示方法更擅长或更薄弱的交互类型。未展示的随机种子、对象变化或长程失败仍是证据边界。</div>
-
-<h3>图解 6：fig:fixed_grasp_visualization</h3>
+<div class="note"><strong>逐图分析：</strong>图中比较 specialist 设计在不同设置下的收益，检验工具特有接触动力学是否需要专门容量。若 specialist 只提升少数工具，应将结论限制到这些接触模式，而非认为所有任务都应拆分专家。</div>
+<h3>固定握持对工具使用的作用</h3>
 <figure>
-  <img src="figures/source/fig08_Fixed_Grasp_v4.png" alt="fig:fixed_grasp_visualization">
-  <figcaption><strong>论文原图：</strong>Fixed Grasp Baselines. We first use our SimToolReal policy to grasp and lift the object. We then attempt to follow the trajectory using a fixed grasp. Option 1 (Damped Least Squares): Tracks the target poses but causes severe collisions with the table. Option 2 (Collision-Free Trajectory Optimization): Avoids collisions but fails to reach the target poses.</figcaption>
+<img alt="fig:fixed_grasp_visualization" src="figures/source/fig08_Fixed_Grasp_v4.png"/>
+<figcaption><strong>固定握持对工具使用的作用。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:fixed_grasp_visualization”这一环；当前证据切片来自 fig08_Fixed_Grasp_v4。原图明确展示：Fixed Grasp Baselines. We first use our SimToolReal policy to grasp and lift the object. We then attempt to follow the trajectory using a fixed grasp. Option 1 (Damped Least Squares): Tracks the target poses but causes severe collisions with the table. Option 2 (Collision-Free Trajectory Optimization): Avoids collisions but fails to reach the target poses. 连续帧与并列样例显示了动作推进、接触变化或场景保持的具体过程，补充了最终成功率无法表达的中间行为。它能确认 SimToolReal 在这些案例中完成了哪些阶段，也应与失败样例和全量统计一起判断，避免只由精选结果得出结论。</div>
-
-<h3>图解 7：fig:real_sim_objects</h3>
+<div class="note"><strong>逐图分析：</strong>固定 grasp 将手—工具关系锁定，使实验更集中检验工具端轨迹与 sim-to-real 转移。它降低了问题难度，也界定了方法边界：论文结果不能直接推出模型能自主选择和建立任意功能性握持。</div>
+<h3>仿真与真实工具实例对应</h3>
 <figure>
-  <img src="figures/source/fig11_Real_vs_Sim_Objects.png" alt="fig:real_sim_objects">
-  <figcaption><strong>论文原图：</strong>Objects. (Left): Real-world objects. (Right): SAM 3D chen2025sam generated meshes of these objects.</figcaption>
+<img alt="fig:real_sim_objects" src="figures/source/fig11_Real_vs_Sim_Objects.png"/>
+<figcaption><strong>仿真与真实工具实例对应。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:real_sim_objects”这一环；当前证据切片来自 fig11_Real_vs_Sim_Objects。原图明确展示：Objects. (Left): Real-world objects. (Right): SAM 3D chen2025sam generated meshes of these objects. 图中对象、任务、场景和分布不是背景信息，它们决定了 SimToolReal 学到的先验以及测试结论能外推到哪里。训练覆盖与评估变化必须逐项对应：只有被明确留出的对象、位置或任务才构成泛化证据，其他样例主要说明数据多样性。</div>
-
-<h3>图解 8：fig:real_world_task_frames</h3>
+<div class="note"><strong>逐图分析：</strong>并列对象揭示几何、颜色和材质差异，说明迁移不是完全相同模型的复刻。功能部件仍保持对应，因此结果主要支持类别内功能几何迁移；严重形变或完全新工具结构未被覆盖。</div>
+<h3>多类工具任务的功能阶段</h3>
 <figure>
-  <img src="figures/source/fig12_Visualize_Tasks_v5.png" alt="fig:real_world_task_frames">
-  <figcaption><strong>论文原图：</strong>Examples of DexToolBench Tasks. Visual breakdown of representative tasks in DexToolBench across the 6 tool categories, highlighting the diversity of objects and manipulation tasks.</figcaption>
+<img alt="fig:real_world_task_frames" src="figures/source/fig12_Visualize_Tasks_v5.png"/>
+<figcaption><strong>多类工具任务的功能阶段。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:real_world_task_frames”这一环；当前证据切片来自 fig12_Visualize_Tasks_v5。原图明确展示：Examples of DexToolBench Tasks. Visual breakdown of representative tasks in DexToolBench across the 6 tool categories, highlighting the diversity of objects and manipulation tasks. 这幅图给出了论文能力声明的样本基础。可见的长尾、任务组合或场景变化说明模型需要处理哪些分布差异，同时也暴露高频类别可能主导训练。SimToolReal 的泛化结论应限制在图中数据生成流程与测试划分能够支持的范围。</div>
-
-<h3>图解 9：fig:specialist_all_reuslts</h3>
+<div class="note"><strong>逐图分析：</strong>图中任务要求敲击、擦除、刷动、标记和旋拧等不同末端轨迹与接触。它解释了统一表示必须保留工具功能部件和动作方向，也说明单一抓取成功率无法代表工具使用。</div>
+<h3>刷子任务的仿真—真实对比</h3>
 <figure>
-  <img src="figures/source/fig14_brush_comparison.png" alt="fig:specialist_all_reuslts">
-  <figcaption><strong>论文原图：</strong>Detailed Comparison against Specialists. We provide a breakdown of the results in Fig. fig:specialistComparison. Each plot compares SimToolReal to a specialist policy trained on a single object and trajectory (Obj A / Traj A) for a single object category.</figcaption>
+<img alt="fig:specialist_all_reuslts" src="figures/source/fig14_brush_comparison.png"/>
+<figcaption><strong>刷子任务的仿真—真实对比。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:specialist_all_reuslts”这一环；当前证据切片来自 fig14_brush_comparison。原图明确展示：Detailed Comparison against Specialists. We provide a breakdown of the results in Fig. fig:specialistComparison. Each plot compares SimToolReal to a specialist policy trained on a single object and trajectory (Obj A / Traj A) for a single object category. 这张结果图把论文主张变成了可比较证据：相同测试条件下，各柱形、曲线或表格单元之间的差异对应具体模块或训练数据的贡献。若提升只集中于少数任务，结论应收缩到对应能力；若多数任务同时改善，才更接近 SimToolReal 所声称的通用收益。</div>
-
-<h3>图解 10：fig:specialist_all_reuslts</h3>
+<div class="note"><strong>逐图分析：</strong>刷动依赖持续表面接触与方向一致性，真实刷毛柔性和摩擦与仿真差异明显。成功说明功能轨迹可迁移，但接触质量仍难由关键点完全表达。</div>
+<h3>橡皮任务的仿真—真实对比</h3>
 <figure>
-  <img src="figures/source/fig14_eraser_comparison.png" alt="fig:specialist_all_reuslts">
-  <figcaption><strong>论文原图：</strong>Detailed Comparison against Specialists. We provide a breakdown of the results in Fig. fig:specialistComparison. Each plot compares SimToolReal to a specialist policy trained on a single object and trajectory (Obj A / Traj A) for a single object category.</figcaption>
+<img alt="fig:specialist_all_reuslts" src="figures/source/fig14_eraser_comparison.png"/>
+<figcaption><strong>橡皮任务的仿真—真实对比。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:specialist_all_reuslts”这一环；当前证据切片来自 fig14_eraser_comparison。原图明确展示：Detailed Comparison against Specialists. We provide a breakdown of the results in Fig. fig:specialistComparison. Each plot compares SimToolReal to a specialist policy trained on a single object and trajectory (Obj A / Traj A) for a single object category. 读取重点不是寻找最高数字，而是检查对照是否隔离了变量。图中各方法在同一指标上的差距用于判断 SimToolReal 的新增设计是否有效，任务间波动则揭示方法更擅长或更薄弱的交互类型。未展示的随机种子、对象变化或长程失败仍是证据边界。</div>
-
-<h3>图解 11：fig:specialist_all_reuslts</h3>
+<div class="note"><strong>逐图分析：</strong>擦除要求维持法向压力并覆盖目标区域，真实材料摩擦会改变动作效果。该对比检验的不只是到达位置，还包括连续接触；固定握持和预定义任务区域限制了结论。</div>
+<h3>锤子任务的仿真—真实对比</h3>
 <figure>
-  <img src="figures/source/fig14_hammer_comparison.png" alt="fig:specialist_all_reuslts">
-  <figcaption><strong>论文原图：</strong>Detailed Comparison against Specialists. We provide a breakdown of the results in Fig. fig:specialistComparison. Each plot compares SimToolReal to a specialist policy trained on a single object and trajectory (Obj A / Traj A) for a single object category.</figcaption>
+<img alt="fig:specialist_all_reuslts" src="figures/source/fig14_hammer_comparison.png"/>
+<figcaption><strong>锤子任务的仿真—真实对比。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:specialist_all_reuslts”这一环；当前证据切片来自 fig14_hammer_comparison。原图明确展示：Detailed Comparison against Specialists. We provide a breakdown of the results in Fig. fig:specialistComparison. Each plot compares SimToolReal to a specialist policy trained on a single object and trajectory (Obj A / Traj A) for a single object category. 图中的横纵轴、任务分组和对比方法共同规定了结论强度。应关注优势是否跨任务稳定、提升发生在成功率还是阶段完成度，以及联合配置是否优于单一组件。它能支持 SimToolReal 在这些基线与协议下的相对优势，却不能覆盖未参与比较的硬件或任务分布。</div>
+<div class="note"><strong>逐图分析：</strong>锤击对末端速度、方向和瞬时接触敏感，是对动力学差距更强的测试。关键点能规定锤头轨迹，却不能精确控制冲击力，因此成功范围应与安全速度和对象刚度共同理解。</div>
 </section><section id="repro"><h2>6. 复现路线与工程风险</h2><h3>6.1 最小可行复现路径</h3><p>先在仿真中复现 object-centric goal-reaching policy 和程序化工具生成，再做少量真实工具 zero-shot rollout。不要一开始就复现完整 24 任务；先验证目标位姿追踪和 grasp/lift/reorient 基本能力。真实部署依赖 RGB-D 人类视频、物体分割、mesh/pose 估计和 goal trajectory extraction。视觉链路错了，policy 会追踪错误目标，因此需要单独可视化每个 goal pose。需要灵巧手、真实工具对象、物体 pose tracking 和安全控制。工具操作涉及有力接触，sim-to-real 的摩擦、质量和碰撞参数会明显影响成功率。离线看仿真 reward、goal pose reach rate；真实看 Task Progress、掉落率、重新抓握次数和任务类别分布。只报告单个工具成功不够。</p></section><section id="discussion"><h2>7. 分析、局限与边界</h2><h3>7.1 最有价值的贡献</h3><p>SimToolReal 最有价值的是 object-centric abstraction：把人类演示、仿真训练和真实执行统一到工具物体目标位姿序列上。这个抽象比手部动作 retargeting 更适合跨工具泛化。程序化训练、真实 120 rollouts、6 类工具和与 specialist/retargeting/fixed-grasp 的对比，共同支撑其 zero-shot tool-use 主张。方法依赖可恢复的工具 pose 和可表达为 rigid object goal poses 的任务。柔性工具、不可见接触力、复杂环境约束或需要功能语义判断的任务仍可能失败。可以加入触觉反馈处理工具滑动和力控，也可以把 object-centric policy 接到 VLA planner，让语言指令自动生成目标位姿序列。</p>
-<h3>图解 1：fig:specialist_all_reuslts</h3>
+<h3>记号笔任务的仿真—真实对比</h3>
 <figure>
-  <img src="figures/source/fig14_marker_comparison.png" alt="fig:specialist_all_reuslts">
-  <figcaption><strong>论文原图：</strong>Detailed Comparison against Specialists. We provide a breakdown of the results in Fig. fig:specialistComparison. Each plot compares SimToolReal to a specialist policy trained on a single object and trajectory (Obj A / Traj A) for a single object category.</figcaption>
+<img alt="fig:specialist_all_reuslts" src="figures/source/fig14_marker_comparison.png"/>
+<figcaption><strong>记号笔任务的仿真—真实对比。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:specialist_all_reuslts”这一环；当前证据切片来自 fig14_marker_comparison。原图明确展示：Detailed Comparison against Specialists. We provide a breakdown of the results in Fig. fig:specialistComparison. Each plot compares SimToolReal to a specialist policy trained on a single object and trajectory (Obj A / Traj A) for a single object category. 读取重点不是寻找最高数字，而是检查对照是否隔离了变量。图中各方法在同一指标上的差距用于判断 SimToolReal 的新增设计是否有效，任务间波动则揭示方法更擅长或更薄弱的交互类型。未展示的随机种子、对象变化或长程失败仍是证据边界。</div>
-
-<h3>图解 2：fig:specialist_all_reuslts</h3>
+<div class="note"><strong>逐图分析：</strong>标记需要笔尖姿态、接触压力和连续路径同时正确。图中真实轨迹若能留下标记，说明策略不仅到达表面，还维持了功能接触；笔尖检测和材料差异仍是主要风险。</div>
+<h3>螺丝刀任务的仿真—真实对比</h3>
 <figure>
-  <img src="figures/source/fig14_screwdriver_comparison.png" alt="fig:specialist_all_reuslts">
-  <figcaption><strong>论文原图：</strong>Detailed Comparison against Specialists. We provide a breakdown of the results in Fig. fig:specialistComparison. Each plot compares SimToolReal to a specialist policy trained on a single object and trajectory (Obj A / Traj A) for a single object category.</figcaption>
+<img alt="fig:specialist_all_reuslts" src="figures/source/fig14_screwdriver_comparison.png"/>
+<figcaption><strong>螺丝刀任务的仿真—真实对比。</strong> 原论文图像；以下解读聚焦该图能够独立支持的机制、实验结论与证据边界。</figcaption>
 </figure>
-<div class="note"><strong>逐图分析：</strong>这张图在 SimToolReal 的证据链中承担的是“fig:specialist_all_reuslts”这一环；当前证据切片来自 fig14_screwdriver_comparison。原图明确展示：Detailed Comparison against Specialists. We provide a breakdown of the results in Fig. fig:specialistComparison. Each plot compares SimToolReal to a specialist policy trained on a single object and trajectory (Obj A / Traj A) for a single object category. 图中的横纵轴、任务分组和对比方法共同规定了结论强度。应关注优势是否跨任务稳定、提升发生在成功率还是阶段完成度，以及联合配置是否优于单一组件。它能支持 SimToolReal 在这些基线与协议下的相对优势，却不能覆盖未参与比较的硬件或任务分布。</div>
-</section><section id="qa"><h2>8. 组会问答与阅读结论</h2><h3>Q1：为什么工具操作适合 object-centric？</h3><p>因为工具任务的功能目标通常是工具本体轨迹，而不是人手关节轨迹。</p><h3>Q2：SimToolReal 如何零样本？</h3><p>仿真训练覆盖大量程序化工具和目标位姿，真实部署只需把新工具表示为 mesh 和 goal poses。</p><h3>Q3：37% 提升相比谁？</h3><p>摘要指相对 retargeting 和 fixed-grasp 方法，同时接近 task-specific specialist RL。</p><h3>Q4：最大复现风险？</h3><p>真实物体 pose/mesh 估计和 sim-to-real 接触参数。视觉链路错，policy 目标就错。</p><h3>Q5：和触觉论文如何结合？</h3><p>工具滑动和有力交互非常需要触觉，可把 SaTA/ViTacFormer 触觉表示加入 policy 观测。</p><h3>阅读结论与研究启发</h3><p>SimToolReal 适合放在灵巧手触觉/泛化专题的前排阅读。建议围绕“表示如何服务真实接触控制”设计复现：先复现中间表示，再接策略，再评估真实任务边界。</p></section>
+<div class="note"><strong>逐图分析：</strong>旋拧要求尖端对准、轴向压力和持续旋转，是最容易因小姿态误差失败的工具任务之一。它检验几何表示与 specialist 是否能维持轴线；结果不能外推到未知螺纹和高扭矩情形。</div>
+</section><section id="evidence-deep-dive"><h2>证据深挖：机制、实验与复现判断</h2><h3>为什么固定握持既重要又限制结论</h3><p>固定手—工具 grasp 显著降低了高自由度问题：策略无需先选择抓持位置，只需控制工具功能端沿正确轨迹运动。这样可以更清晰地研究 sim-to-real 工具动力学和功能泛化，也是论文覆盖多工具的工程基础。但它排除了真实工具使用中最困难的功能性抓取建立与重抓，因此不能把结果解释为完整自主工具操作。</p><h3>动词—实例组合泛化的含义</h3><p>将动作动词和工具实例交叉留出，比只换颜色或背景更接近功能泛化。模型必须把‘刷、擦、敲、标记、旋拧’的运动模式与具体工具几何重新组合。若某个新实例保持相同关键功能部件，关键点表示能够支持迁移；如果工具结构改变到没有对应部件，现有表示和 specialist 就可能失效。</p><h3>specialist 与共享策略的关系</h3><p>共享策略学习跨工具的场景、目标和动作先验，specialist 则为接触动力学差异较大的工具提供专门容量。比较三种配置的意义不是证明专家越多越好，而是定位共享表示在哪些任务上不足。过度拆分会减少跨任务数据共享，也增加部署时选择正确专家的责任，因此应结合任务数量和相似度设计。</p><h3>真实部署的误差传播链</h3><p>真实图像先经 SAM 分割，再估计关键点，构建功能表示并由策略输出动作，最后通过重定向和低层控制执行。任何上游偏差都会在接触过程中累积：mask 漂移会移动工具轴，关键点误差会改变功能端轨迹，重定向误差会破坏姿态。复现时应为每个模块保存可视化和数值误差，避免只用最终成功率诊断黑盒。</p></section><section id="qa"><h2>8. 组会问答与阅读结论</h2><div class="audit-card"><h3>SimToolReal 的关键取舍</h3><p>SimToolReal 通过功能关键点、固定握持、重定向和工具 specialist 降低 sim-to-real 难度，因而能够覆盖刷、擦、敲、写和旋拧。最强证据是动词—实例组合与逐工具真实对比；最大边界同样来自这些工程约束：自主建立功能握持、触觉力控和未知工具拓扑仍未解决。</p></div><h3>Q1：为什么工具操作适合 object-centric？</h3><p>因为工具任务的功能目标通常是工具本体轨迹，而不是人手关节轨迹。</p><h3>Q2：SimToolReal 如何零样本？</h3><p>仿真训练覆盖大量程序化工具和目标位姿，真实部署只需把新工具表示为 mesh 和 goal poses。</p><h3>Q3：37% 提升相比谁？</h3><p>摘要指相对 retargeting 和 fixed-grasp 方法，同时接近 task-specific specialist RL。</p><h3>Q4：最大复现风险？</h3><p>真实物体 pose/mesh 估计和 sim-to-real 接触参数。视觉链路错，policy 目标就错。</p><h3>Q5：和触觉论文如何结合？</h3><p>工具滑动和有力交互非常需要触觉，可把 SaTA/ViTacFormer 触觉表示加入 policy 观测。</p><h3>阅读结论与研究启发</h3><p>SimToolReal 适合放在灵巧手触觉/泛化专题的前排阅读。建议围绕“表示如何服务真实接触控制”设计复现：先复现中间表示，再接策略，再评估真实任务边界。</p></section>
 </main></body></html>
