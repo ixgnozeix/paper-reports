@@ -1,0 +1,37 @@
+{
+  "arxiv": "2512.16760",
+  "title": "Vision-Language-Action Models for Autonomous Driving: Past, Present, and Future",
+  "source": "https://arxiv.org/abs/2512.16760",
+  "project": "https://worldbench.github.io/vla4ad",
+  "repository": "https://github.com/worldbench/awesome-vla-for-ad",
+  "figures": [
+    {
+      "file": "teaser.png",
+      "role": "survey outline"
+    },
+    {
+      "file": "timeline.png",
+      "role": "VA/VLA chronology"
+    },
+    {
+      "file": "fig3.png",
+      "role": "end-to-end VA taxonomy"
+    },
+    {
+      "file": "fig4.png",
+      "role": "world-model taxonomy"
+    },
+    {
+      "file": "fig5.png",
+      "role": "end-to-end VLA taxonomy"
+    },
+    {
+      "file": "fig6.png",
+      "role": "dual-system VLA taxonomy"
+    },
+    {
+      "file": "waymo_plot.png",
+      "role": "AutoVLA qualitative evidence"
+    }
+  ]
+}
