@@ -20,5 +20,7 @@
     "broken_images": 0
   },
   "feishu_synced": false,
-  "published": false
+  "published": true,
+  "published_commit": "7906b5e",
+  "public_pages_verified": 10
 }
