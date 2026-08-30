@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>DynVLA: Learning World Dynamics for Action Reasoning in Autonomous Driving｜论文精读</title><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style></head><body><main>
+<header><div class='eyebrow'>WORLD LATENT FOR VLA · PAPER READING</div><h1>DynVLA: Learning World Dynamics for Action Reasoning in Autonomous Driving</h1>
+<p class='meta'>arXiv 2603.11041 · 负责人：谢宗羲 · 类型：Dynamics chain-of-thought for driving</p>
+<div class='tldr'><strong>一句话贡献：</strong>DynVLA 用 Dynamics Tokenizer 将未来演化压缩为 ego-centric 与 environment-centric tokens，VLA 在轨迹前先生成 Dynamics CoT，以 0.37 秒延迟改善 NAVSIM、Bench2Drive 和内部数据规划。</div>
+<p><a href='https://arxiv.org/abs/2603.11041'>arXiv</a> · <a href='https://yaoyao-jpg.github.io/dynvla/'>项目/官方页面</a> · <a href='./2603.11041.pdf'>PDF</a></p></header>
+
+<nav class="toc"><a href='#overview'>1. 论文速览与证据链</a><a href='#motivation'>2. 问题与动机</a><a href='#related'>3. 相关工作与技术位置</a><a href='#method'>4. 方法、表示与训练</a><a href='#experiments'>5. 实验、结果与消融</a><a href='#repro'>6. 复现路径与工程风险</a><a href='#discussion'>7. 分析、局限与边界</a><a href='#qa'>8. 组会问答与阅读结论</a></nav>
+<section id='overview'><h2>1. 论文速览与证据链</h2>
+<h3>一句话贡献</h3><p>DynVLA 用 Dynamics Tokenizer 将未来演化压缩为 ego-centric 与 environment-centric tokens，VLA 在轨迹前先生成 Dynamics CoT，以 0.37 秒延迟改善 NAVSIM、Bench2Drive 和内部数据规划。</p>
+<h3>元数据与阅读定位</h3><table><tbody><tr><th>技术类型</th><td>Dynamics chain-of-thought for driving</td></tr><tr><th>关键词</th><td>DynVLA、Dynamics CoT、Dynamics Tokenizer、ego/environment decoupling、SFT、RFT、NAVSIM、Bench2Drive</td></tr><tr><th>开源情况</th><td>项目页公开；代码、权重和 70 万帧内部数据不可得部分需区分</td></tr><tr><th>适合程度</th><td>很高：以紧凑 dynamics token 替代文本/未来图像 CoT</td></tr></tbody></table>
+<h3>从哪里开始读</h3><p>Dynamics Tokenizer 从未来序列抽取并量化 dynamics tokens，分为 ego-centric 与 environment-centric；VLA 在 action tokens 前自回归生成 Dynamics CoT。Stage 1 学 tokenizer/reconstruction，Stage 2 SFT 学 dynamics→action 序列，Stage 3 RFT 直接优化规划。 阅读时先确认中间表示是否在部署端运行，再用主结果和消融判断它究竟改善了感知、动态预测还是动作生成。</p>
+<h3>图表证据链</h3><table><thead><tr><th>#</th><th>原始图</th><th>支持的主张与边界</th></tr></thead><tbody><tr><td>1</td><td>三类 CoT 的效率与信息密度</td><td>teaser 对比文本、未来图像和 dynamics token，直观展示冗余与延迟差别。</td></tr><tr><td>2</td><td>DynVLA 总体架构</td><td>Dynamics Tokenizer、ego/environment 分支和轨迹生成按训练与推理路径连接，是方法的核心信息流。</td></tr><tr><td>3</td><td>分阶段训练</td><td>tokenizer、Dynamics CoT SFT 与 RFT 顺序展开，说明动态表示和动作策略不是一次端到端得到。</td></tr><tr><td>4</td><td>未来动态重建</td><td>重建对照用于检查紧凑 token 是否保留交通体和 ego 演化；背景细节并非目标。</td></tr><tr><td>5</td><td>不同 CoT 的轨迹定性比较</td><td>同场景下文本、视觉和 dynamics 路线的轨迹差异显示未来状态建模对交互决策的作用。</td></tr><tr><td>6</td><td>失败案例</td><td>遮挡或复杂交互中的错误 dynamics 会传递到轨迹，揭示 tokenizer uncertainty 仍未解决。</td></tr></tbody></table></section>
+<section id='motivation'><h2>2. 问题与动机</h2><h3>问题定义</h3><p>文本 CoT 缺少细粒度时空信息且解码慢，视觉 CoT 预测稠密未来图像又包含大量背景冗余。驾驶需要一种紧凑、可解释且与动作决策直接相关的未来动态中间变量。</p><h3>现有路线为何不足</h3><p>无 CoT VLA 直接输出轨迹；AutoVLA 等文本路线用 scene description/meta action；Visual CoT 用 future image/flow。DynVLA 借鉴 latent action tokenizer，但针对 ego-viewpoint 变化和多交通体交互专门解耦动态。</p><h3>作者的解题假设</h3><p>DynVLA 用 Dynamics Tokenizer 将未来演化压缩为 ego-centric 与 environment-centric tokens，VLA 在轨迹前先生成 Dynamics CoT，以 0.37 秒延迟改善 NAVSIM、Bench2Drive 和内部数据规划。 该假设只有在统一骨干、数据和评测下仍带来增益时才成立。</p></section>
+<section id='related'><h2>3. 相关工作与技术位置</h2><h3>直接前序工作</h3><p>从技术谱系看，无 CoT VLA 直接输出轨迹；AutoVLA 等文本路线用 scene description/meta action；Visual CoT 用 future image/flow。DynVLA 借鉴 latent action tokenizer，但针对 ego-viewpoint 变化和多交通体交互专门解耦动态。</p><h3>与替代路线的差异</h3><p>在替代路线对照中，ego dynamics 表示自车运动导致的视角和道路变化，environment dynamics 表示其他交通体的独立演化；解耦损失减少两者互相污染。少量离散 token 比 future image 更紧凑，又比文本更接近连续世界状态。</p><h3>技术位置表</h3><table><thead><tr><th>维度</th><th>本文选择</th></tr></thead><tbody><tr><td>世界信息</td><td>ego dynamics 表示自车运动导致的视角和道路变化，environment dynamics 表示其他交通体的独立演化；解耦损失减少两者互相污染。少量离散 token 比 future image 更紧凑，又比文本更接近连续世界状态。</td></tr><tr><td>动作接口</td><td>当前多相机观测先生成短 Dynamics CoT，再生成轨迹；无需像素级 future rollout。单 H800 上 dynamics latency 0.37s，接近 meta-action 0.43s，远低于 scene description 3.04s 和 future image/flow 2.29s。</td></tr><tr><td>证据范围</td><td>NAVSIM 以 NC、DAC、TTC、comfort、ego progress 与 PDMS 测开环规划；Bench2Drive 测长时域闭环 driving score/route completion；内部集报告 ADE 和 collision rate。三类评测补足单一 benchmark 的盲区。</td></tr></tbody></table></section>
+<section id='method'><h2>4. 方法、表示与训练</h2><h3>端到端信息流</h3><p>Dynamics Tokenizer 从未来序列抽取并量化 dynamics tokens，分为 ego-centric 与 environment-centric；VLA 在 action tokens 前自回归生成 Dynamics CoT。Stage 1 学 tokenizer/reconstruction，Stage 2 SFT 学 dynamics→action 序列，Stage 3 RFT 直接优化规划。</p><h3>核心表示</h3><p>ego dynamics 表示自车运动导致的视角和道路变化，environment dynamics 表示其他交通体的独立演化；解耦损失减少两者互相污染。少量离散 token 比 future image 更紧凑，又比文本更接近连续世界状态。</p><h3>训练阶段与目标</h3><p>公开评测使用 NAVSIM 与 Bench2Drive，另有 70 万帧内部数据。tokenizer 通过 future reconstruction 和 codebook 学习，VLA 依次经历 SFT、RFT；论文还分析 codebook activation、token 数和强制 dynamics 条件。</p><h3>推理与部署路径</h3><p>当前多相机观测先生成短 Dynamics CoT，再生成轨迹；无需像素级 future rollout。单 H800 上 dynamics latency 0.37s，接近 meta-action 0.43s，远低于 scene description 3.04s 和 future image/flow 2.29s。</p><h3>三类 CoT 的效率与信息密度</h3><figure><img src='figures/source/fig01_teaser.png' alt='三类 CoT 的效率与信息密度'><figcaption><strong>论文原图。</strong> teaser 对比文本、未来图像和 dynamics token，直观展示冗余与延迟差别。</figcaption></figure><h3>DynVLA 总体架构</h3><figure><img src='figures/source/fig02_method.png' alt='DynVLA 总体架构'><figcaption><strong>论文原图。</strong> Dynamics Tokenizer、ego/environment 分支和轨迹生成按训练与推理路径连接，是方法的核心信息流。</figcaption></figure><h3>分阶段训练</h3><figure><img src='figures/source/fig03_4stage.png' alt='分阶段训练'><figcaption><strong>论文原图。</strong> tokenizer、Dynamics CoT SFT 与 RFT 顺序展开，说明动态表示和动作策略不是一次端到端得到。</figcaption></figure></section>
+<section id='experiments'><h2>5. 实验、结果与消融</h2><h3>数据集、任务与协议</h3><p>NAVSIM 以 NC、DAC、TTC、comfort、ego progress 与 PDMS 测开环规划；Bench2Drive 测长时域闭环 driving score/route completion；内部集报告 ADE 和 collision rate。三类评测补足单一 benchmark 的盲区。</p><h3>主要定量结果</h3><p>NAVSIM Dynamics CoT PDMS 87.2，对 no-CoT 85.6、future image 86.3、optical flow 86.4；Bench2Drive 多项指标最佳。内部数据 ADE 1.215m、collision 4.04‱，优于 DriveVLA-W0(ViT) 的 1.344m/5.13‱。</p><h3>消融与因果解释</h3><p>CoT 内容对照同时给出延迟与 PDMS，证明紧凑 dynamics 在效果/效率之间占优；训练阶段消融区分 tokenizer、SFT 与 RFT。强制 dynamics 和 codebook 图揭示 token 有一定结构，但不能保证每个 code 都具人类可读语义。</p><h3>证据没有覆盖什么</h3><p>从当前评测覆盖看，tokenizer 依赖未来监督，罕见交互若不在训练分布会产生错误 dynamics；0.37s 对高频控制仍偏高。内部数据不可访问，codebook 语义和闭环 safety calibration 尚不充分。</p><h3>未来动态重建</h3><figure><img src='figures/source/fig04_recon.png' alt='未来动态重建'><figcaption><strong>论文原图。</strong> 重建对照用于检查紧凑 token 是否保留交通体和 ego 演化；背景细节并非目标。</figcaption></figure><h3>不同 CoT 的轨迹定性比较</h3><figure><img src='figures/source/fig05_qualitative_comparison.png' alt='不同 CoT 的轨迹定性比较'><figcaption><strong>论文原图。</strong> 同场景下文本、视觉和 dynamics 路线的轨迹差异显示未来状态建模对交互决策的作用。</figcaption></figure><h3>失败案例</h3><figure><img src='figures/source/fig06_failure_case.png' alt='失败案例'><figcaption><strong>论文原图。</strong> 遮挡或复杂交互中的错误 dynamics 会传递到轨迹，揭示 tokenizer uncertainty 仍未解决。</figcaption></figure></section>
+<section id='repro'><h2>6. 复现路径与工程风险</h2><h3>最小可行复现</h3><p>公开复现可从 NAVSIM 开始：训练 future dynamics tokenizer，验证 reconstruction 与 codebook usage，再把 tokens 插到轨迹前做 SFT/RFT。Bench2Drive 闭环需 CARLA 环境；内部数据结果不可完全复现，应明确分开。</p><h3>验收标准</h3><p>NAVSIM Dynamics CoT PDMS 87.2，对 no-CoT 85.6、future image 86.3、optical flow 86.4；Bench2Drive 多项指标最佳。内部数据 ADE 1.215m、collision 4.04‱，优于 DriveVLA-W0(ViT) 的 1.344m/5.13‱。 复现时至少应恢复相同方向的增益，并报告同一随机种子、数据规模和延迟预算。</p><h3>复现风险清单</h3><table><thead><tr><th>环节</th><th>具体风险</th></tr></thead><tbody><tr><td>数据</td><td>需取得论文列出的训练数据、相同切分与时间同步；未公开数据必须单列。</td></tr><tr><td>模型</td><td>需固定视觉/VLM 骨干、tokenizer 与动作头，避免把模型规模差异误判为方法收益。</td></tr><tr><td>训练</td><td>按论文阶段顺序复现，并保留无 latent/world objective 的严格对照。</td></tr><tr><td>评测</td><td>同时复现主指标、消融和失败类型；开环结果不能替代闭环安全。</td></tr><tr><td>硬件</td><td>公开复现可从 NAVSIM 开始：训练 future dynamics tokenizer，验证 reconstruction 与 codebook usage，再把 tokens 插到轨迹前做 SFT/RFT。Bench2Drive 闭环需 CARLA 环境；内部数据结果不可完全复现，应明确分开。</td></tr></tbody></table></section>
+<section id='discussion'><h2>7. 分析、局限与边界</h2><h3>最有价值的贡献</h3><p>综合方法与实验证据，DynVLA 用 Dynamics Tokenizer 将未来演化压缩为 ego-centric 与 environment-centric tokens，VLA 在轨迹前先生成 Dynamics CoT，以 0.37 秒延迟改善 NAVSIM、Bench2Drive 和内部数据规划。</p><h3>作者结论的适用边界</h3><p>将结论外推前需要保留以下边界：tokenizer 依赖未来监督，罕见交互若不在训练分布会产生错误 dynamics；0.37s 对高频控制仍偏高。内部数据不可访问，codebook 语义和闭环 safety calibration 尚不充分。</p><h3>可信的后续实验</h3><p>可把 DynVLA 与 uncertainty-aware planner 结合：预测多个 dynamics token 假设及概率，由 safety layer 评估轨迹；也可蒸馏到轻量并行 token predictor，把 0.37s 进一步压到实时控制预算。</p></section>
+<section id='qa'><h2>8. 组会问答与阅读结论</h2><h3>Q1. Dynamics CoT 比文本 CoT 多了什么？</h3><p><strong>A：</strong>它编码未来时空演化而非语言描述，更贴近轨迹决策。</p><h3>Q2. 为何解耦 ego/environment？</h3><p><strong>A：</strong>自车视角变化与外部交通体运动来源不同，混合会让 tokenizer 难学。</p><h3>Q3. 效果和延迟？</h3><p><strong>A：</strong>NAVSIM PDMS 87.2、0.37s；scene description 为 85.3、3.04s。</p><h3>Q4. 闭环证据在哪里？</h3><p><strong>A：</strong>Bench2Drive 长时域闭环指标改善，但真实车仍未验证。</p><h3>Q5. 主要不可复现项？</h3><p><strong>A：</strong>70 万帧内部数据以及可能未发布的完整权重/训练细节。</p><h3>我的阅读笔记</h3><p>结合本批论文的比较，我的后续关注点是：可把 DynVLA 与 uncertainty-aware planner 结合：预测多个 dynamics token 假设及概率，由 safety layer 评估轨迹；也可蒸馏到轻量并行 token predictor，把 0.37s 进一步压到实时控制预算。</p></section>
+</main></body></html>

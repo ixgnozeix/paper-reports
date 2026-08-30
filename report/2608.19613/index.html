@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>What Matters for Latent Actions in Robot Learning｜论文精读</title><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style></head><body><main>
+<header><div class='eyebrow'>WORLD LATENT FOR VLA · PAPER READING</div><h1>What Matters for Latent Actions in Robot Learning</h1>
+<p class='meta'>arXiv 2608.19613 · 负责人：Survey · 类型：Latent action empirical study</p>
+<div class='tldr'><strong>一句话贡献：</strong>在统一三阶段管线中系统比较 41 种 latent action 设计，回答建模范式、正则化、动作头、代理指标、维度与数据规模究竟如何影响下游操控。</div>
+<p><a href='https://arxiv.org/abs/2608.19613'>arXiv</a> · <a href='https://carldegio.github.io/'>项目/官方页面</a> · <a href='./2608.19613.pdf'>PDF</a></p></header>
+
+<nav class="toc"><a href='#overview'>1. 论文速览与证据链</a><a href='#motivation'>2. 问题与动机</a><a href='#related'>3. 相关工作与技术位置</a><a href='#method'>4. 方法、表示与训练</a><a href='#experiments'>5. 实验、结果与消融</a><a href='#repro'>6. 复现路径与工程风险</a><a href='#discussion'>7. 分析、局限与边界</a><a href='#qa'>8. 组会问答与阅读结论</a></nav>
+<section id='overview'><h2>1. 论文速览与证据链</h2>
+<h3>一句话贡献</h3><p>在统一三阶段管线中系统比较 41 种 latent action 设计，回答建模范式、正则化、动作头、代理指标、维度与数据规模究竟如何影响下游操控。</p>
+<h3>元数据与阅读定位</h3><table><tbody><tr><th>技术类型</th><td>Latent action empirical study</td></tr><tr><th>关键词</th><td>latent action、IDM-FDM、CFD-AE、DAP/LAP/JAP、proxy metric、LIBERO-Plus、RoboTwin2.0、LA-tuning</td></tr><tr><th>开源情况</th><td>论文与项目页公开；统一实现与完整训练资产需以作者发布为准</td></tr><tr><th>适合程度</th><td>很高：适合作为 latent action 设计空间与实验结论的总入口</td></tr></tbody></table>
+<h3>从哪里开始读</h3><p>Stage I 使用 700M 时空 Transformer 从相邻帧学习 latent transition；Stage II 让 Qwen3-VL-4B/OpenVLA-OFT 骨干在无物理动作标签条件下吸收 latent action；Stage III 再用真实动作监督训练策略。DAP/LAP 仅以 latent action 调整骨干，JAP 系列则联合 latent 与 physical action。 阅读时先确认中间表示是否在部署端运行，再用主结果和消融判断它究竟改善了感知、动态预测还是动作生成。</p>
+<h3>图表证据链</h3><table><thead><tr><th>#</th><th>原始图</th><th>支持的主张与边界</th></tr></thead><tbody><tr><td>1</td><td>三阶段设计空间总览</td><td>图中把无动作视频、latent action 微调和物理动作后训练串成一条管线，并标出三类设计变量。它支撑本文的受控实验框架，但不直接给出哪一配置最优。</td></tr><tr><td>2</td><td>动作头与表示的耦合</td><td>热力图按表示/正则方法和 DAP、LAP、JAP 系列动作头展开；深色区域并未集中在单一行，说明表示排名依赖后端接口。</td></tr><tr><td>3</td><td>代理指标与下游性能相关性</td><td>Pearson 与 Spearman 面板比较四个 proxy；相关方向和强度不稳定，直接否定了用重建质量单独选型的做法。</td></tr><tr><td>4</td><td>latent 维度的非单调影响</td><td>8 到 1024 维在三个 benchmark 上分别绘制 DAP/LAP 成功率，峰值并非简单落在最大维度。</td></tr><tr><td>5</td><td>Stage II 数据规模效应</td><td>左侧给出 OXE 混合构成，右侧比较不同微调规模；该图支持数据扩大仍有收益，但只覆盖两档规模。</td></tr><tr><td>6</td><td>Franka 真实任务验证</td><td>左侧是平台和四类任务，右侧跨 6k–40k checkpoint 比较基线与 LA-Tuned；优势跨训练阶段出现，而非单点挑选。</td></tr></tbody></table></section>
+<section id='motivation'><h2>2. 问题与动机</h2><h3>问题定义</h3><p>现有 LAM 工作常在不同数据、骨干与动作头上各自验证，单篇论文的提升无法说明究竟来自 latent action 本身还是训练配置。本文把问题改写成受控变量实验：先从无动作视频学习状态转移，再用 latent action 微调 VLM，最后接物理动作数据，比较同一骨干下的 41 组设计。</p><h3>现有路线为何不足</h3><p>相关路线被归纳为隐式 IDM-FDM 与显式 CFD-AE 两类，并把 optical flow、视觉差分、VAE、VQ-VAE、稀疏性和 SIGReg 放入共同坐标系。相对只提出一个新方法，本文的贡献是拆开 representation、regularization 与 integration 三个变量，避免把动作头收益误算为表示收益。</p><h3>作者的解题假设</h3><p>在统一三阶段管线中系统比较 41 种 latent action 设计，回答建模范式、正则化、动作头、代理指标、维度与数据规模究竟如何影响下游操控。 该假设只有在统一骨干、数据和评测下仍带来增益时才成立。</p></section>
+<section id='related'><h2>3. 相关工作与技术位置</h2><h3>直接前序工作</h3><p>从技术谱系看，相关路线被归纳为隐式 IDM-FDM 与显式 CFD-AE 两类，并把 optical flow、视觉差分、VAE、VQ-VAE、稀疏性和 SIGReg 放入共同坐标系。相对只提出一个新方法，本文的贡献是拆开 representation、regularization 与 integration 三个变量，避免把动作头收益误算为表示收益。</p><h3>与替代路线的差异</h3><p>在替代路线对照中，研究同时比较 ΔRGB、ΔDINO、RAFT/SEA-RAFT、LAPO、LAOF、CoMo 以及多种自编码正则化。核心观察不是某一种编码恒胜，而是 latent action 是否把可控变化与外观噪声分开，以及它与后续 action head 的耦合方式；因此作者还检查维度、归一化和正则强度。</p><h3>技术位置表</h3><table><thead><tr><th>维度</th><th>本文选择</th></tr></thead><tbody><tr><td>世界信息</td><td>研究同时比较 ΔRGB、ΔDINO、RAFT/SEA-RAFT、LAPO、LAOF、CoMo 以及多种自编码正则化。核心观察不是某一种编码恒胜，而是 latent action 是否把可控变化与外观噪声分开，以及它与后续 action head 的耦合方式；因此作者还检查维度、归一化和正则强度。</td></tr><tr><td>动作接口</td><td>部署时不运行未来帧生成器，而是保留经 latent action 调整后的 VLM 表征与动作头。论文由此把 LAM 的价值定义为更好的策略初始化，而不是额外的在线预测模块；真实 Franka 实验只使用前视 RGB，便于隔离 latent pretraining 的贡献。</td></tr><tr><td>证据范围</td><td>评测覆盖 LIBERO、LIBERO-Plus 与 RoboTwin2.0，两种控制空间分别为 7-DoF 单臂末端增量和 14-DoF 双臂关节控制。结果按三随机种子汇总，并另在 Franka Panda 上用四任务、每任务 50 条示范和每检查点 20 次独立试验验证。</td></tr></tbody></table></section>
+<section id='method'><h2>4. 方法、表示与训练</h2><h3>端到端信息流</h3><p>Stage I 使用 700M 时空 Transformer 从相邻帧学习 latent transition；Stage II 让 Qwen3-VL-4B/OpenVLA-OFT 骨干在无物理动作标签条件下吸收 latent action；Stage III 再用真实动作监督训练策略。DAP/LAP 仅以 latent action 调整骨干，JAP 系列则联合 latent 与 physical action。</p><h3>核心表示</h3><p>研究同时比较 ΔRGB、ΔDINO、RAFT/SEA-RAFT、LAPO、LAOF、CoMo 以及多种自编码正则化。核心观察不是某一种编码恒胜，而是 latent action 是否把可控变化与外观噪声分开，以及它与后续 action head 的耦合方式；因此作者还检查维度、归一化和正则强度。</p><h3>训练阶段与目标</h3><p>Stage I 将视频以 1–5 倍随机时间间隔采样、中心裁剪到 224×224，并用 AdamW 训练；Stage II/III 采用 Qwen3-VL-4B 和 OpenVLA-OFT。大规模语料约 5900 万帧，混合 OXE、DROID、Language Table、Bridge、RoboTwin 与 LIBERO-Plus；主要实验使用 8×H200。</p><h3>推理与部署路径</h3><p>部署时不运行未来帧生成器，而是保留经 latent action 调整后的 VLM 表征与动作头。论文由此把 LAM 的价值定义为更好的策略初始化，而不是额外的在线预测模块；真实 Franka 实验只使用前视 RGB，便于隔离 latent pretraining 的贡献。</p><h3>三阶段设计空间总览</h3><figure><img src='figures/source/fig01_main.png' alt='三阶段设计空间总览'><figcaption><strong>论文原图。</strong> 图中把无动作视频、latent action 微调和物理动作后训练串成一条管线，并标出三类设计变量。它支撑本文的受控实验框架，但不直接给出哪一配置最优。</figcaption></figure><h3>动作头与表示的耦合</h3><figure><img src='figures/source/fig02_actionhead.png' alt='动作头与表示的耦合'><figcaption><strong>论文原图。</strong> 热力图按表示/正则方法和 DAP、LAP、JAP 系列动作头展开；深色区域并未集中在单一行，说明表示排名依赖后端接口。</figcaption></figure><h3>代理指标与下游性能相关性</h3><figure><img src='figures/source/fig03_metrics.png' alt='代理指标与下游性能相关性'><figcaption><strong>论文原图。</strong> Pearson 与 Spearman 面板比较四个 proxy；相关方向和强度不稳定，直接否定了用重建质量单独选型的做法。</figcaption></figure></section>
+<section id='experiments'><h2>5. 实验、结果与消融</h2><h3>数据集、任务与协议</h3><p>评测覆盖 LIBERO、LIBERO-Plus 与 RoboTwin2.0，两种控制空间分别为 7-DoF 单臂末端增量和 14-DoF 双臂关节控制。结果按三随机种子汇总，并另在 Franka Panda 上用四任务、每任务 50 条示范和每检查点 20 次独立试验验证。</p><h3>主要定量结果</h3><p>热力图表明 action head 与表示存在明显交互，不能仅用单一 latent 编码排名。真实机器人上 LA-Tuned OpenVLA-OFT 在多个训练检查点持续优于原始基线；扩大 Stage II 视频混合后，下游成功率继续提高，支持“latent action 微调 VLM 是可扩展初始化”的主张。</p><h3>消融与因果解释</h3><p>四个代理指标是 linear/MLP probe loss 与 SSIM/MSE gain，但 Pearson 与 Spearman 相关性并不稳定，说明低重建误差不能替代真实控制评测。维度实验覆盖 8–1024，正则强度也呈非单调关系；归一化在不同方法和数据集上有正负两种效果，不能作为默认操作。</p><h3>证据没有覆盖什么</h3><p>从当前评测覆盖看，结论集中在操控和指定骨干，不能直接外推到自动驾驶、语言规划或任意 VLA。大规模混合数据改变了任务分布，真实实验也只有单平台四任务；代理指标失效意味着未来方法仍需昂贵的下游验证。论文最有价值的边界结论是：latent action 的收益来自整条训练链，而非一个孤立 token。</p><h3>latent 维度的非单调影响</h3><figure><img src='figures/source/fig04_latentdims.png' alt='latent 维度的非单调影响'><figcaption><strong>论文原图。</strong> 8 到 1024 维在三个 benchmark 上分别绘制 DAP/LAP 成功率，峰值并非简单落在最大维度。</figcaption></figure><h3>Stage II 数据规模效应</h3><figure><img src='figures/source/fig05_scalelaw.png' alt='Stage II 数据规模效应'><figcaption><strong>论文原图。</strong> 左侧给出 OXE 混合构成，右侧比较不同微调规模；该图支持数据扩大仍有收益，但只覆盖两档规模。</figcaption></figure><h3>Franka 真实任务验证</h3><figure><img src='figures/source/fig06_realworld.png' alt='Franka 真实任务验证'><figcaption><strong>论文原图。</strong> 左侧是平台和四类任务，右侧跨 6k–40k checkpoint 比较基线与 LA-Tuned；优势跨训练阶段出现，而非单点挑选。</figcaption></figure></section>
+<section id='repro'><h2>6. 复现路径与工程风险</h2><h3>最小可行复现</h3><p>最小复现应固定 Qwen3-VL-4B、同一 Stage III 数据和 action head，先复刻 Design I 的表示对照，再逐步加入正则与维度变量。验收应同时报告三个 benchmark 成功率、三随机种子方差和代理指标相关性；最大成本是 5900 万帧预训练与 8×H200 计算。</p><h3>验收标准</h3><p>热力图表明 action head 与表示存在明显交互，不能仅用单一 latent 编码排名。真实机器人上 LA-Tuned OpenVLA-OFT 在多个训练检查点持续优于原始基线；扩大 Stage II 视频混合后，下游成功率继续提高，支持“latent action 微调 VLM 是可扩展初始化”的主张。 复现时至少应恢复相同方向的增益，并报告同一随机种子、数据规模和延迟预算。</p><h3>复现风险清单</h3><table><thead><tr><th>环节</th><th>具体风险</th></tr></thead><tbody><tr><td>数据</td><td>需取得论文列出的训练数据、相同切分与时间同步；未公开数据必须单列。</td></tr><tr><td>模型</td><td>需固定视觉/VLM 骨干、tokenizer 与动作头，避免把模型规模差异误判为方法收益。</td></tr><tr><td>训练</td><td>按论文阶段顺序复现，并保留无 latent/world objective 的严格对照。</td></tr><tr><td>评测</td><td>同时复现主指标、消融和失败类型；开环结果不能替代闭环安全。</td></tr><tr><td>硬件</td><td>最小复现应固定 Qwen3-VL-4B、同一 Stage III 数据和 action head，先复刻 Design I 的表示对照，再逐步加入正则与维度变量。验收应同时报告三个 benchmark 成功率、三随机种子方差和代理指标相关性；最大成本是 5900 万帧预训练与 8×H200 计算。</td></tr></tbody></table></section>
+<section id='discussion'><h2>7. 分析、局限与边界</h2><h3>最有价值的贡献</h3><p>综合方法与实验证据，在统一三阶段管线中系统比较 41 种 latent action 设计，回答建模范式、正则化、动作头、代理指标、维度与数据规模究竟如何影响下游操控。</p><h3>作者结论的适用边界</h3><p>将结论外推前需要保留以下边界：结论集中在操控和指定骨干，不能直接外推到自动驾驶、语言规划或任意 VLA。大规模混合数据改变了任务分布，真实实验也只有单平台四任务；代理指标失效意味着未来方法仍需昂贵的下游验证。论文最有价值的边界结论是：latent action 的收益来自整条训练链，而非一个孤立 token。</p><h3>可信的后续实验</h3><p>后续可把本文设计表转成自动化 benchmark：固定视频语料与策略后端，只替换 latent tokenizer，并加入跨 embodiment、长时域和 closed-loop safety 指标。对自动驾驶而言，应特别测试 ego-motion 与环境运动分解、token 容量和规划延迟，而不是照搬操控维度。</p></section>
+<section id='qa'><h2>8. 组会问答与阅读结论</h2><h3>Q1. 为什么它比再提一个 LAM 更重要？</h3><p><strong>A：</strong>因为 41 组受控实验把表示、正则、动作头和数据规模拆开，能判断已有提升来自哪里。</p><h3>Q2. 代理指标能否筛选模型？</h3><p><strong>A：</strong>不能稳定替代下游成功率；四种 proxy 与控制表现的 Pearson/Spearman 相关性随配置变化。</p><h3>Q3. latent action 最可靠的作用是什么？</h3><p><strong>A：</strong>作为 Stage II 的 VLM 初始化信号，让 Stage III 物理动作学习从更好的时序表征开始。</p><h3>Q4. 归一化是否必需？</h3><p><strong>A：</strong>不是；不同方法与 benchmark 出现相反效果，应作为待调变量。</p><h3>Q5. 迁移到驾驶最先验证什么？</h3><p><strong>A：</strong>先验证 ego/environment dynamics 解耦与闭环规划收益，再讨论 token 维度或更大模型。</p><h3>我的阅读笔记</h3><p>结合本批论文的比较，我的后续关注点是：后续可把本文设计表转成自动化 benchmark：固定视频语料与策略后端，只替换 latent tokenizer，并加入跨 embodiment、长时域和 closed-loop safety 指标。对自动驾驶而言，应特别测试 ego-motion 与环境运动分解、token 容量和规划延迟，而不是照搬操控维度。</p></section>
+</main></body></html>

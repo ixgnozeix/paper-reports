@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>VLA-JEPA: Enhancing Vision-Language-Action Model with Latent World Model｜论文精读</title><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style></head><body><main>
+<header><div class='eyebrow'>WORLD LATENT FOR VLA · PAPER READING</div><h1>VLA-JEPA: Enhancing Vision-Language-Action Model with Latent World Model</h1>
+<p class='meta'>arXiv 2602.10098 · 负责人：王子岩 · 类型：JEPA latent world-model pretraining</p>
+<div class='tldr'><strong>一句话贡献：</strong>VLA-JEPA 用冻结 target encoder 生成未来 latent 监督，学生只看当前观测，通过无信息泄漏的状态预测学习动作相关动态，再与 flow-matching 动作生成联合训练。</div>
+<p><a href='https://arxiv.org/abs/2602.10098'>arXiv</a> · <a href='https://ginwind.github.io/VLA-JEPA/'>项目/官方页面</a> · <a href='./2602.10098.pdf'>PDF</a></p></header>
+
+<nav class="toc"><a href='#overview'>1. 论文速览与证据链</a><a href='#motivation'>2. 问题与动机</a><a href='#related'>3. 相关工作与技术位置</a><a href='#method'>4. 方法、表示与训练</a><a href='#experiments'>5. 实验、结果与消融</a><a href='#repro'>6. 复现路径与工程风险</a><a href='#discussion'>7. 分析、局限与边界</a><a href='#qa'>8. 组会问答与阅读结论</a></nav>
+<section id='overview'><h2>1. 论文速览与证据链</h2>
+<h3>一句话贡献</h3><p>VLA-JEPA 用冻结 target encoder 生成未来 latent 监督，学生只看当前观测，通过无信息泄漏的状态预测学习动作相关动态，再与 flow-matching 动作生成联合训练。</p>
+<h3>元数据与阅读定位</h3><table><tbody><tr><th>技术类型</th><td>JEPA latent world-model pretraining</td></tr><tr><th>关键词</th><td>VLA-JEPA、V-JEPA2、latent world model、leakage-free prediction、Qwen3-VL、flow matching、LIBERO-Plus、SimplerEnv</td></tr><tr><th>开源情况</th><td>代码、项目页和 Hugging Face 页面由论文给出</td></tr><tr><th>适合程度</th><td>很高：提供不看未来输入、仅在 latent space 预测未来状态的替代路线</td></tr></tbody></table>
+<h3>从哪里开始读</h3><p>Qwen3-VL 是 VLM 骨干，当前帧与任务进入学生路径，future frames 只进入冻结 V-JEPA encoder 形成 target。learnable latent/action tokens 通过 time-causal attention 汇聚转移信息；机器人数据再增加 flow-matching action expert。总损失联合 latent world-model 与动作生成目标。 阅读时先确认中间表示是否在部署端运行，再用主结果和消融判断它究竟改善了感知、动态预测还是动作生成。</p>
+<h3>图表证据链</h3><table><thead><tr><th>#</th><th>原始图</th><th>支持的主张与边界</th></tr></thead><tbody><tr><td>1</td><td>无泄漏 JEPA 训练架构</td><td>future image 仅流向冻结 target encoder，current observation 流向 VLA student；两条路径在 latent prediction loss 汇合。</td></tr><tr><td>2</td><td>四类评测环境</td><td>图中并列 LIBERO、LIBERO-Plus、两种 SimplerEnv 和真实 Franka，显示结果覆盖仿真扰动与真实平台。</td></tr><tr><td>3</td><td>人类视频比例消融</td><td>不同扰动维度随人类视频占比变化，收益主要集中在分布变化而非标准任务。</td></tr><tr><td>4</td><td>latent token 注意力</td><td>注意力图显示 token 聚焦动作相关区域而非均匀背景，是表示可解释性的辅助证据，但不是因果证明。</td></tr><tr><td>5</td><td>真实机器人 rollout</td><td>序列帧展示 ID/OOD 操作过程，支撑策略可执行性；任务数和物体种类仍有限。</td></tr></tbody></table></section>
+<section id='motivation'><h2>2. 问题与动机</h2><h3>问题定义</h3><p>从视频学动作常把 future frame 直接作为输入或重建目标，容易泄漏未来信息，并追逐相机运动和纹理变化。VLA-JEPA 把目标改为预测冻结 future encoder 的 state representation，让当前观测产生的 latent action 只承担可预测状态转移。</p><h3>现有路线为何不足</h3><p>LAPA/UniVLA 等 latent-action 管线通常经历 tokenizer、VLA 预训练和动作适配多个阶段；JEPA 路线来自表征预测而非像素生成。本文把 V-JEPA2 作为 world-state target，并在同一 VLA 中兼容无动作人类视频和有动作机器人示范。</p><h3>作者的解题假设</h3><p>VLA-JEPA 用冻结 target encoder 生成未来 latent 监督，学生只看当前观测，通过无信息泄漏的状态预测学习动作相关动态，再与 flow-matching 动作生成联合训练。 该假设只有在统一骨干、数据和评测下仍带来增益时才成立。</p></section>
+<section id='related'><h2>3. 相关工作与技术位置</h2><h3>直接前序工作</h3><p>从技术谱系看，LAPA/UniVLA 等 latent-action 管线通常经历 tokenizer、VLA 预训练和动作适配多个阶段；JEPA 路线来自表征预测而非像素生成。本文把 V-JEPA2 作为 world-state target，并在同一 VLA 中兼容无动作人类视频和有动作机器人示范。</p><h3>与替代路线的差异</h3><p>在替代路线对照中，latent token 对应相邻状态转移，而不是一张 future image。target encoder 的语义空间抑制背景和像素噪声；因果 mask 确保 token 在预测时不能访问被预测的未来。这个约束是与常见 IDM-FDM 方案最关键的差别。</p><h3>技术位置表</h3><table><thead><tr><th>维度</th><th>本文选择</th></tr></thead><tbody><tr><td>世界信息</td><td>latent token 对应相邻状态转移，而不是一张 future image。target encoder 的语义空间抑制背景和像素噪声；因果 mask 确保 token 在预测时不能访问被预测的未来。这个约束是与常见 IDM-FDM 方案最关键的差别。</td></tr><tr><td>动作接口</td><td>推理只运行当前观测的 VLM 与 action expert，不需要 future target encoder。latent token 在训练中塑造 backbone，动作 expert 通过 flow matching 生成连续 action chunk，因此额外延迟主要来自 token 与动作头，而非视频 rollout。</td></tr><tr><td>证据范围</td><td>评测包含 LIBERO、七类扰动的 LIBERO-Plus、Google/WidowX SimplerEnv 和真实 Franka。LIBERO 每任务 50 episode、每 suite 500 episode；真实数据为三个任务共 100 条示范，并区分 ID/OOD。</td></tr></tbody></table></section>
+<section id='method'><h2>4. 方法、表示与训练</h2><h3>端到端信息流</h3><p>Qwen3-VL 是 VLM 骨干，当前帧与任务进入学生路径，future frames 只进入冻结 V-JEPA encoder 形成 target。learnable latent/action tokens 通过 time-causal attention 汇聚转移信息；机器人数据再增加 flow-matching action expert。总损失联合 latent world-model 与动作生成目标。</p><h3>核心表示</h3><p>latent token 对应相邻状态转移，而不是一张 future image。target encoder 的语义空间抑制背景和像素噪声；因果 mask 确保 token 在预测时不能访问被预测的未来。这个约束是与常见 IDM-FDM 方案最关键的差别。</p><h3>训练阶段与目标</h3><p>无动作预训练使用 Something-Something-v2 的 22 万人类视频；有动作预训练使用 DROID 7.6 万条示范。LIBERO 微调约 2K expert demonstrations，SimplerEnv 分别用 Fractal 与 BridgeV2；所有实验使用 8×A100。</p><h3>推理与部署路径</h3><p>推理只运行当前观测的 VLM 与 action expert，不需要 future target encoder。latent token 在训练中塑造 backbone，动作 expert 通过 flow matching 生成连续 action chunk，因此额外延迟主要来自 token 与动作头，而非视频 rollout。</p><h3>无泄漏 JEPA 训练架构</h3><figure><img src='figures/source/fig01_vla-jepa.png' alt='无泄漏 JEPA 训练架构'><figcaption><strong>论文原图。</strong> future image 仅流向冻结 target encoder，current observation 流向 VLA student；两条路径在 latent prediction loss 汇合。</figcaption></figure><h3>四类评测环境</h3><figure><img src='figures/source/fig02_experiments.png' alt='四类评测环境'><figcaption><strong>论文原图。</strong> 图中并列 LIBERO、LIBERO-Plus、两种 SimplerEnv 和真实 Franka，显示结果覆盖仿真扰动与真实平台。</figcaption></figure></section>
+<section id='experiments'><h2>5. 实验、结果与消融</h2><h3>数据集、任务与协议</h3><p>评测包含 LIBERO、七类扰动的 LIBERO-Plus、Google/WidowX SimplerEnv 和真实 Franka。LIBERO 每任务 50 episode、每 suite 500 episode；真实数据为三个任务共 100 条示范，并区分 ID/OOD。</p><h3>主要定量结果</h3><p>LIBERO 平均成功率 97.2%，高于 π0.5 的 96.9%，LIBERO-Long 达 95.8%；去掉人类视频仍有 96.1%。论文在 LIBERO-Plus 七类扰动中取得五类最优，Google Robot 平均领先，WidowX 为第二。</p><h3>消融与因果解释</h3><p>人类视频在标准 LIBERO 和 SimplerEnv 上并非决定性，甚至部分 real-to-sim 任务中高质量 robot expert 更重要；但在 LIBERO-Plus 的 language、light、background、layout 扰动上收益明显。该消融把“动作技能学习”和“视觉鲁棒性增强”区分开。</p><h3>证据没有覆盖什么</h3><p>从当前评测覆盖看，结果不能证明 JEPA latent 等价于真实可控动作；标准 LIBERO 上人类视频收益较小，说明表示质量仍依赖 robot expert。真实实验规模有限，且 Qwen3-VL/V-JEPA2 双骨干使模型较重。</p><h3>人类视频比例消融</h3><figure><img src='figures/source/fig03_human_video_proportion.png' alt='人类视频比例消融'><figcaption><strong>论文原图。</strong> 不同扰动维度随人类视频占比变化，收益主要集中在分布变化而非标准任务。</figcaption></figure><h3>latent token 注意力</h3><figure><img src='figures/source/fig04_attention_map.png' alt='latent token 注意力'><figcaption><strong>论文原图。</strong> 注意力图显示 token 聚焦动作相关区域而非均匀背景，是表示可解释性的辅助证据，但不是因果证明。</figcaption></figure><h3>真实机器人 rollout</h3><figure><img src='figures/source/fig05_real_world_frames.png' alt='真实机器人 rollout'><figcaption><strong>论文原图。</strong> 序列帧展示 ID/OOD 操作过程，支撑策略可执行性；任务数和物体种类仍有限。</figcaption></figure></section>
+<section id='repro'><h2>6. 复现路径与工程风险</h2><h3>最小可行复现</h3><p>最小复现先冻结 V-JEPA2 target encoder，在 LIBERO 上验证因果 latent prediction，再接 flow-matching action expert。必须检查 future frame 未进入 student 输入，并复刻 human-video on/off；数据下载、8×A100 和多 benchmark 评测是成本中心。</p><h3>验收标准</h3><p>LIBERO 平均成功率 97.2%，高于 π0.5 的 96.9%，LIBERO-Long 达 95.8%；去掉人类视频仍有 96.1%。论文在 LIBERO-Plus 七类扰动中取得五类最优，Google Robot 平均领先，WidowX 为第二。 复现时至少应恢复相同方向的增益，并报告同一随机种子、数据规模和延迟预算。</p><h3>复现风险清单</h3><table><thead><tr><th>环节</th><th>具体风险</th></tr></thead><tbody><tr><td>数据</td><td>需取得论文列出的训练数据、相同切分与时间同步；未公开数据必须单列。</td></tr><tr><td>模型</td><td>需固定视觉/VLM 骨干、tokenizer 与动作头，避免把模型规模差异误判为方法收益。</td></tr><tr><td>训练</td><td>按论文阶段顺序复现，并保留无 latent/world objective 的严格对照。</td></tr><tr><td>评测</td><td>同时复现主指标、消融和失败类型；开环结果不能替代闭环安全。</td></tr><tr><td>硬件</td><td>最小复现先冻结 V-JEPA2 target encoder，在 LIBERO 上验证因果 latent prediction，再接 flow-matching action expert。必须检查 future frame 未进入 student 输入，并复刻 human-video on/off；数据下载、8×A100 和多 benchmark 评测是成本中心。</td></tr></tbody></table></section>
+<section id='discussion'><h2>7. 分析、局限与边界</h2><h3>最有价值的贡献</h3><p>综合方法与实验证据，VLA-JEPA 用冻结 target encoder 生成未来 latent 监督，学生只看当前观测，通过无信息泄漏的状态预测学习动作相关动态，再与 flow-matching 动作生成联合训练。</p><h3>作者结论的适用边界</h3><p>将结论外推前需要保留以下边界：结果不能证明 JEPA latent 等价于真实可控动作；标准 LIBERO 上人类视频收益较小，说明表示质量仍依赖 robot expert。真实实验规模有限，且 Qwen3-VL/V-JEPA2 双骨干使模型较重。</p><h3>可信的后续实验</h3><p>用于自动驾驶时，可用冻结 driving foundation encoder 产生未来 BEV/scene latent target，当前多相机观测预测该 target，再由 planner 输出轨迹；关键消融应比较 pixel future、BEV future 与 semantic latent future 的闭环收益和延迟。</p></section>
+<section id='qa'><h2>8. 组会问答与阅读结论</h2><h3>Q1. 如何保证没有未来泄漏？</h3><p><strong>A：</strong>future frame 只进入冻结 target encoder，学生路径和推理路径只看当前及历史观测。</p><h3>Q2. 为何不重建像素？</h3><p><strong>A：</strong>像素目标会强调相机和纹理变化，latent target 更接近语义状态转移。</p><h3>Q3. 人类视频是否必需？</h3><p><strong>A：</strong>标准任务上不是；对 LIBERO-Plus 外观和语言扰动更有价值。</p><h3>Q4. 主要数字是什么？</h3><p><strong>A：</strong>LIBERO 平均 97.2%，去掉人类视频 96.1%，并在 LIBERO-Plus 五类扰动最优。</p><h3>Q5. 部署还需 world model 吗？</h3><p><strong>A：</strong>不需 future target encoder；训练后的 VLM 与 action expert 直接生成动作。</p><h3>我的阅读笔记</h3><p>结合本批论文的比较，我的后续关注点是：用于自动驾驶时，可用冻结 driving foundation encoder 产生未来 BEV/scene latent target，当前多相机观测预测该 target，再由 planner 输出轨迹；关键消融应比较 pixel future、BEV future 与 semantic latent future 的闭环收益和延迟。</p></section>
+</main></body></html>

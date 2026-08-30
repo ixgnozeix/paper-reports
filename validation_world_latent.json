@@ -1,0 +1,24 @@
+{
+  "input_papers": 10,
+  "unique_papers": 10,
+  "new_reports": 9,
+  "reused_reports": 1,
+  "records": 10,
+  "content_audit": {
+    "required_sections": 8,
+    "minimum_h3_per_new_report": 33,
+    "original_figure_count": 45,
+    "broken_images": 0,
+    "duplicate_paragraphs": 0
+  },
+  "visual_audit": {
+    "desktop_viewport": "1440x1000",
+    "mobile_viewport": "390x844",
+    "pages_checked": 10,
+    "http_errors": 0,
+    "horizontal_overflows": 0,
+    "broken_images": 0
+  },
+  "feishu_synced": false,
+  "published": false
+}

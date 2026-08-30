@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>LatBot: Distilling Universal Latent Actions for Vision-Language-Action Models｜论文精读</title><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f6f7f3;
+      --paper-deep: #e8ede7;
+      --surface: #fffefb;
+      --surface-raised: rgba(255, 254, 251, 0.9);
+      --surface-2: #f0f4ee;
+      --ink: #20241f;
+      --ink-soft: #3a4038;
+      --muted: #697166;
+      --muted-2: #838a7f;
+      --line: rgba(32, 29, 25, 0.12);
+      --line-strong: rgba(32, 29, 25, 0.22);
+      --state: #2f766f;
+      --state-soft: #e6f0ed;
+      --action: #a45f38;
+      --action-soft: #f3e8dd;
+      --planning: #4f6542;
+      --planning-soft: #e7eddf;
+      --warn: #9a6a21;
+      --warn-soft: #f3ead8;
+      --font-body: "Sora", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      --font-mono: "Geist Mono", "SFMono-Regular", Menlo, monospace;
+      --sidebar-w: 188px;
+      --content-max: 1080px;
+      --desktop-gutter: 2.6rem;
+    }
+    *,
+    *::before,
+    *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(32, 29, 25, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 29, 25, 0.03) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    main {
+      width: min(100%, var(--content-max));
+      margin: 0 auto;
+      padding: 2.4rem 1.15rem 5.6rem;
+      min-height: 100vh;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.75rem, 3.6vw, 3.7rem);
+      font-weight: 650;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--ink);
+      font-size: clamp(1.55rem, 3vw, 2.7rem);
+      font-weight: 650;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 1.8rem 0 0.55rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h4 {
+      margin: 1.35rem 0 0.45rem;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    p { margin: 0.65rem 0; }
+    a {
+      color: var(--state);
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.32rem;
+      background: rgba(47, 118, 111, 0.08);
+      border: 1px solid rgba(47, 118, 111, 0.12);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+    header {
+      padding: 1rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.2rem;
+    }
+    header::before {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.68);
+      color: var(--state);
+      content: "paper report";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta {
+      display: grid;
+      gap: 0.35rem;
+      max-width: 900px;
+      background: linear-gradient(180deg, var(--surface-raised), rgba(255, 254, 251, 0.72));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(55, 63, 48, 0.08);
+      padding: 1rem 1.05rem;
+      color: var(--muted);
+    }
+    .meta p {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+    .meta strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .title-wrap {
+      display: grid;
+      gap: 0.75rem;
+      max-width: 900px;
+    }
+    .subtitle,
+    .lead {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .lead {
+      padding: 1rem 1.05rem;
+      background: linear-gradient(180deg, var(--state-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(47, 118, 111, 0.2);
+      border-radius: 8px;
+      color: var(--ink-soft);
+    }
+    .title-wrap .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(32, 29, 25, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.72);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .toc {
+      background: rgba(255, 254, 251, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.95rem;
+      margin: 1.2rem 0 1.6rem;
+      backdrop-filter: blur(12px);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc ul,
+    ul.toc,
+    ol.toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.12rem 0.35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc li { min-width: 0; }
+    .toc a {
+      display: block;
+      padding: 0.42rem 0.52rem;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+    .toc a:hover {
+      background: rgba(47, 118, 111, 0.08);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .tldr {
+      background: linear-gradient(180deg, var(--action-soft), rgba(255, 254, 251, 0.74));
+      border: 1px solid rgba(164, 95, 56, 0.22);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      margin: 1rem 0 1.1rem;
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.72;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .note, .audit-card, .formula-block, .card, .danger {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.055);
+      padding: 0.95rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .card {
+      margin: 0;
+    }
+    .danger {
+      background: linear-gradient(180deg, var(--warn-soft), rgba(255, 254, 251, 0.78));
+      border-color: rgba(154, 106, 33, 0.22);
+    }
+    .kpi {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: clamp(1.35rem, 2.8vw, 2.15rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-label {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .note strong { color: var(--ink); }
+    .appendix-ref {
+      color: var(--planning);
+      background: var(--planning-soft);
+      border: 1px solid rgba(79, 101, 66, 0.18);
+      border-radius: 999px;
+      padding: 0.08rem 0.38rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .formula-block .intuition {
+      font-weight: 650;
+      color: var(--state);
+      margin-bottom: 8px;
+    }
+    .symbol-table td:first-child {
+      width: 26%;
+      color: var(--state);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 1.4rem;
+    }
+    section:last-child { border-bottom: none; }
+    section > h2 {
+      max-width: 760px;
+      margin-right: auto;
+      margin-left: auto;
+      text-align: center;
+    }
+    section > h2::before {
+      display: block;
+      margin-bottom: 0.45rem;
+      color: var(--state);
+      content: "section";
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    figure,
+    .figure {
+      margin: 1.35rem auto;
+      text-align: center;
+    }
+    figure img,
+    .figure img,
+    .pdf-frame {
+      display: block;
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      margin: 0 auto;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(55, 63, 48, 0.08);
+    }
+    .pdf-frame {
+      width: auto;
+      height: auto;
+    }
+    figcaption,
+    .caption {
+      max-width: 920px;
+      margin: 0.65rem auto 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 42px rgba(55, 63, 48, 0.045);
+      font-size: 0.88rem;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.68rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th:last-child,
+    td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    th {
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240, 244, 238, 0.45); }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    .best { font-weight: 650; color: var(--state); }
+    .warn { color: var(--warn); font-weight: 650; }
+    .pseudocode {
+      background: #20241f;
+      color: #eef2e7;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+      margin: 0.9rem 0;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 0.9rem 0;
+      padding: 1rem 1.05rem;
+      background: #20241f;
+      border: 1px solid rgba(255, 254, 251, 0.12);
+      border-radius: 8px;
+      color: #eef2e7;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+    article {
+      display: block;
+    }
+    .small {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .checklist li { margin: 5px 0; }
+    @media (min-width: 980px) {
+      main {
+        width: min(100%, calc(var(--content-max) + var(--sidebar-w) + var(--desktop-gutter)));
+        margin: 0;
+        padding: 3.2rem var(--desktop-gutter) 6rem calc(var(--sidebar-w) + var(--desktop-gutter));
+      }
+      .toc {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 50;
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        margin: 0;
+        padding: 2.25rem 1.25rem;
+        border-width: 0 1px 0 0;
+        border-radius: 0;
+        background: rgba(246, 247, 243, 0.9);
+        box-shadow: none;
+      }
+      .toc strong::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.55rem;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--paper);
+        content: "R";
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .toc ul,
+      ul.toc,
+      ol.toc {
+        grid-template-columns: 1fr;
+        margin-top: 1.35rem;
+      }
+      .toc a {
+        padding: 0.62rem 0.7rem;
+        font-size: 0.84rem;
+      }
+    }
+    @media (max-width: 760px) {
+      main { padding: 1.35rem 0.9rem 4rem; }
+      h1 { font-size: 1.85rem; }
+      section { padding: 2.2rem 0; }
+      .toc ul, ul.toc, ol.toc { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .grid.three { grid-template-columns: 1fr; }
+      table {
+        display: block;
+        overflow-x: auto;
+        font-size: 0.82rem;
+      }
+      th, td { padding: 0.55rem; }
+    }
+
+    .language-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      width: fit-content;
+      margin: 0 0 1rem;
+      padding: 0.18rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 254, 251, 0.74);
+      box-shadow: 0 10px 28px rgba(55, 63, 48, 0.08);
+    }
+    .language-switch a,
+    .language-switch span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.55rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .language-switch a:hover {
+      background: var(--state-soft);
+      color: var(--state);
+      text-decoration: none;
+    }
+    .language-switch .active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+</style></head><body><main>
+<header><div class='eyebrow'>WORLD LATENT FOR VLA · PAPER READING</div><h1>LatBot: Distilling Universal Latent Actions for Vision-Language-Action Models</h1>
+<p class='meta'>arXiv 2511.23034 · 负责人：王子岩 · 类型：Universal latent action distillation</p>
+<div class='tldr'><strong>一句话贡献：</strong>LatBot 以未来帧重建和动作序列预测联合监督 latent action，并将 motion/scene token 解耦后蒸馏到 VLA，在 SIMPLER、LIBERO 与少样本真实 Franka 任务上提升迁移。</div>
+<p><a href='https://arxiv.org/abs/2511.23034'>arXiv</a> · <a href='https://mm-robot.github.io/latbot/'>项目/官方页面</a> · <a href='./2511.23034.pdf'>PDF</a></p></header>
+
+<nav class="toc"><a href='#overview'>1. 论文速览与证据链</a><a href='#motivation'>2. 问题与动机</a><a href='#related'>3. 相关工作与技术位置</a><a href='#method'>4. 方法、表示与训练</a><a href='#experiments'>5. 实验、结果与消融</a><a href='#repro'>6. 复现路径与工程风险</a><a href='#discussion'>7. 分析、局限与边界</a><a href='#qa'>8. 组会问答与阅读结论</a></nav>
+<section id='overview'><h2>1. 论文速览与证据链</h2>
+<h3>一句话贡献</h3><p>LatBot 以未来帧重建和动作序列预测联合监督 latent action，并将 motion/scene token 解耦后蒸馏到 VLA，在 SIMPLER、LIBERO 与少样本真实 Franka 任务上提升迁移。</p>
+<h3>元数据与阅读定位</h3><table><tbody><tr><th>技术类型</th><td>Universal latent action distillation</td></tr><tr><th>关键词</th><td>LatBot、universal latent action、motion token、scene token、EgoDex、reasoning preservation、SIMPLER、LIBERO</td></tr><tr><th>开源情况</th><td>项目页公开；训练代码和权重以作者页面发布状态为准</td></tr><tr><th>适合程度</th><td>很高：展示如何把人手与机器人视频中的 latent action 蒸馏进 VLA</td></tr></tbody></table>
+<h3>从哪里开始读</h3><p>LAM 接收任务指令和多帧视频，统一 decoder 同时预测未来图像与动作序列；latent token 被拆成 motion 与 scene 两组。第二阶段把 LAM 表示蒸馏到 VLM，并加入 reasoning preservation loss；最后训练 action expert，把 latent 输出映射到末端位姿和 gripper。 阅读时先确认中间表示是否在部署端运行，再用主结果和消融判断它究竟改善了感知、动态预测还是动作生成。</p>
+<h3>图表证据链</h3><table><thead><tr><th>#</th><th>原始图</th><th>支持的主张与边界</th></tr></thead><tbody><tr><td>1</td><td>方法定位与总体比较</td><td>图中将纯重建 latent action 与加入物理先验、token 解耦的 LatBot 对照，明确改动发生在表示学习和知识蒸馏两处。</td></tr><tr><td>2</td><td>latent action 蒸馏流程</td><td>LAM 教师输出动作相关 token，学生 VLM 同时接受 alignment 与 reasoning preservation；该图解释为何蒸馏不应破坏语言能力。</td></tr><tr><td>3</td><td>DLA 与 UAD 的作用</td><td>消融可视化把 motion/scene 解耦和动作先验分开，支持两类约束互补，而非同一正则的重复。</td></tr><tr><td>4</td><td>真实 Franka 少样本任务</td><td>连续帧展示薄物体抓取与插入等任务，证明 action head 可落地；但场景和平台数量仍有限。</td></tr></tbody></table></section>
+<section id='motivation'><h2>2. 问题与动机</h2><h3>问题定义</h3><p>只用像素重建学习 latent action 容易把相机、背景和照明变化当成动作，同时不同机器人 embodiment 的物理动作空间不兼容。LatBot 寻找一种与具体关节定义无关、却保留距离、朝向和抓取意图的通用表示，使人类视频也能为机器人策略提供监督。</p><h3>现有路线为何不足</h3><p>LAPA/UniVLA 等方法证明无动作视频可用于 VLA 预训练，但 latent code 往往由重建目标隐式决定。LatBot 引入带物理标注的人手 EgoDex 与机器人数据，把动作预测作为额外约束，并通过 distillation 而非直接替换 VLM 表征来保留语言推理。</p><h3>作者的解题假设</h3><p>LatBot 以未来帧重建和动作序列预测联合监督 latent action，并将 motion/scene token 解耦后蒸馏到 VLA，在 SIMPLER、LIBERO 与少样本真实 Franka 任务上提升迁移。 该假设只有在统一骨干、数据和评测下仍带来增益时才成立。</p></section>
+<section id='related'><h2>3. 相关工作与技术位置</h2><h3>直接前序工作</h3><p>从技术谱系看，LAPA/UniVLA 等方法证明无动作视频可用于 VLA 预训练，但 latent code 往往由重建目标隐式决定。LatBot 引入带物理标注的人手 EgoDex 与机器人数据，把动作预测作为额外约束，并通过 distillation 而非直接替换 VLM 表征来保留语言推理。</p><h3>与替代路线的差异</h3><p>在替代路线对照中，UAD 使用 EgoDex 的双手 3D 位置、6D 朝向与指尖位置，把可执行几何先验注入 latent space；DLA 再显式区分主体运动和环境变化。两者组合的意义是让 token 既跨 embodiment，又不会因背景变化失去动作语义。</p><h3>技术位置表</h3><table><thead><tr><th>维度</th><th>本文选择</th></tr></thead><tbody><tr><td>世界信息</td><td>UAD 使用 EgoDex 的双手 3D 位置、6D 朝向与指尖位置，把可执行几何先验注入 latent space；DLA 再显式区分主体运动和环境变化。两者组合的意义是让 token 既跨 embodiment，又不会因背景变化失去动作语义。</td></tr><tr><td>动作接口</td><td>部署时 VLA 先产生经 distillation 对齐的动作相关特征，再由 action expert 输出执行轨迹；未来帧 decoder 主要服务预训练。该设计避免在线运行大视频生成器，但仍依赖蒸馏质量和具体 embodiment 的动作头。</td></tr><tr><td>证据范围</td><td>仿真评测包括 Google Robot/WidowX 的 SIMPLER 与四套 LIBERO；真实 Franka 任务只收集每任务 10 条轨迹，覆盖薄刷抓取、插块等精细动作。对比包含 π0/π0.5、UniVLA、MemoryVLA、SpatialVLA 等。</td></tr></tbody></table></section>
+<section id='method'><h2>4. 方法、表示与训练</h2><h3>端到端信息流</h3><p>LAM 接收任务指令和多帧视频，统一 decoder 同时预测未来图像与动作序列；latent token 被拆成 motion 与 scene 两组。第二阶段把 LAM 表示蒸馏到 VLM，并加入 reasoning preservation loss；最后训练 action expert，把 latent 输出映射到末端位姿和 gripper。</p><h3>核心表示</h3><p>UAD 使用 EgoDex 的双手 3D 位置、6D 朝向与指尖位置，把可执行几何先验注入 latent space；DLA 再显式区分主体运动和环境变化。两者组合的意义是让 token 既跨 embodiment，又不会因背景变化失去动作语义。</p><h3>训练阶段与目标</h3><p>预训练混合 OXE、AgiBoT 与 EgoDex，共约一百万视频 episode；LAM 与蒸馏分别在 16×A100 40GB 上训练 14 天和 7 天。动作损失将末端平移/旋转 MSE 与 gripper BCE 合并，reasoning loss 权重默认 0.5。</p><h3>推理与部署路径</h3><p>部署时 VLA 先产生经 distillation 对齐的动作相关特征，再由 action expert 输出执行轨迹；未来帧 decoder 主要服务预训练。该设计避免在线运行大视频生成器，但仍依赖蒸馏质量和具体 embodiment 的动作头。</p><h3>方法定位与总体比较</h3><figure><img src='figures/source/fig01_comparsion.png' alt='方法定位与总体比较'><figcaption><strong>论文原图。</strong> 图中将纯重建 latent action 与加入物理先验、token 解耦的 LatBot 对照，明确改动发生在表示学习和知识蒸馏两处。</figcaption></figure><h3>latent action 蒸馏流程</h3><figure><img src='figures/source/fig02_distill.png' alt='latent action 蒸馏流程'><figcaption><strong>论文原图。</strong> LAM 教师输出动作相关 token，学生 VLM 同时接受 alignment 与 reasoning preservation；该图解释为何蒸馏不应破坏语言能力。</figcaption></figure></section>
+<section id='experiments'><h2>5. 实验、结果与消融</h2><h3>数据集、任务与协议</h3><p>仿真评测包括 Google Robot/WidowX 的 SIMPLER 与四套 LIBERO；真实 Franka 任务只收集每任务 10 条轨迹，覆盖薄刷抓取、插块等精细动作。对比包含 π0/π0.5、UniVLA、MemoryVLA、SpatialVLA 等。</p><h3>主要定量结果</h3><p>SIMPLER Google visual matching 平均成功率 78.0%，variant aggregation 为 70.1%；WidowX 平均 87.5%。LIBERO 四套平均 98.0%，高于 π0.5 的 96.9% 与 UniVLA 的 95.2%。这些结果表明物理先验和解耦 token 对跨平台迁移有帮助。</p><h3>消融与因果解释</h3><p>论文分别移除 DLA 与 UAD：DLA 提供结构化运动因素，UAD 提供真实几何动作先验，组合在多任务上最稳定。真实少样本成功并不等于完全零样本，因为 action expert 仍需每个新机器人上的少量动作轨迹。</p><h3>证据没有覆盖什么</h3><p>从当前评测覆盖看，跨 embodiment 仍通过最终动作头完成，通用 token 是否能迁移到腿式机器人或驾驶未被验证。人手标注质量和数据分布可能贡献了大量收益；真实实验任务数较少，无法证明长时域规划或失败恢复。</p><h3>DLA 与 UAD 的作用</h3><figure><img src='figures/source/fig03_latent_action_effect.png' alt='DLA 与 UAD 的作用'><figcaption><strong>论文原图。</strong> 消融可视化把 motion/scene 解耦和动作先验分开，支持两类约束互补，而非同一正则的重复。</figcaption></figure><h3>真实 Franka 少样本任务</h3><figure><img src='figures/source/fig04_realworld.png' alt='真实 Franka 少样本任务'><figcaption><strong>论文原图。</strong> 连续帧展示薄物体抓取与插入等任务，证明 action head 可落地；但场景和平台数量仍有限。</figcaption></figure></section>
+<section id='repro'><h2>6. 复现路径与工程风险</h2><h3>最小可行复现</h3><p>复现至少需要 OXE/AgiBoT 视频、EgoDex 手部标注、LAM 统一 decoder、蒸馏阶段和 embodiment action head。可先在 LIBERO 复刻 98.0% 趋势，再做 WidowX；完整一百万 episode 与 16×A100 周级训练是主要门槛。</p><h3>验收标准</h3><p>SIMPLER Google visual matching 平均成功率 78.0%，variant aggregation 为 70.1%；WidowX 平均 87.5%。LIBERO 四套平均 98.0%，高于 π0.5 的 96.9% 与 UniVLA 的 95.2%。这些结果表明物理先验和解耦 token 对跨平台迁移有帮助。 复现时至少应恢复相同方向的增益，并报告同一随机种子、数据规模和延迟预算。</p><h3>复现风险清单</h3><table><thead><tr><th>环节</th><th>具体风险</th></tr></thead><tbody><tr><td>数据</td><td>需取得论文列出的训练数据、相同切分与时间同步；未公开数据必须单列。</td></tr><tr><td>模型</td><td>需固定视觉/VLM 骨干、tokenizer 与动作头，避免把模型规模差异误判为方法收益。</td></tr><tr><td>训练</td><td>按论文阶段顺序复现，并保留无 latent/world objective 的严格对照。</td></tr><tr><td>评测</td><td>同时复现主指标、消融和失败类型；开环结果不能替代闭环安全。</td></tr><tr><td>硬件</td><td>复现至少需要 OXE/AgiBoT 视频、EgoDex 手部标注、LAM 统一 decoder、蒸馏阶段和 embodiment action head。可先在 LIBERO 复刻 98.0% 趋势，再做 WidowX；完整一百万 episode 与 16×A100 周级训练是主要门槛。</td></tr></tbody></table></section>
+<section id='discussion'><h2>7. 分析、局限与边界</h2><h3>最有价值的贡献</h3><p>综合方法与实验证据，LatBot 以未来帧重建和动作序列预测联合监督 latent action，并将 motion/scene token 解耦后蒸馏到 VLA，在 SIMPLER、LIBERO 与少样本真实 Franka 任务上提升迁移。</p><h3>作者结论的适用边界</h3><p>将结论外推前需要保留以下边界：跨 embodiment 仍通过最终动作头完成，通用 token 是否能迁移到腿式机器人或驾驶未被验证。人手标注质量和数据分布可能贡献了大量收益；真实实验任务数较少，无法证明长时域规划或失败恢复。</p><h3>可信的后续实验</h3><p>可把 motion/scene 解耦用于驾驶：motion token 分成 ego 与 traffic-agent dynamics，scene token 表示照明和背景变化；再用轨迹、光流和地图约束替代手部几何监督，检查是否能减少 VLA 在相机扰动下的误判。</p></section>
+<section id='qa'><h2>8. 组会问答与阅读结论</h2><h3>Q1. LatBot 的 universal 指什么？</h3><p><strong>A：</strong>指 latent action 不绑定某个机器人关节空间，可从人手和多机器人视频学习，再由下游动作头落地。</p><h3>Q2. 为什么还要动作预测？</h3><p><strong>A：</strong>未来帧重建偏向外观；动作序列监督提供距离、方向和抓取状态等物理先验。</p><h3>Q3. motion/scene 解耦解决什么？</h3><p><strong>A：</strong>减少环境变化混入主体主动运动表示，提高跨场景迁移。</p><h3>Q4. 最强证据是什么？</h3><p><strong>A：</strong>LIBERO 98.0%、WidowX 87.5%，并在每任务 10 条真实轨迹下完成精细操作。</p><h3>Q5. 它是否零样本控制新机器人？</h3><p><strong>A：</strong>不是；通用 latent 可迁移，但 action expert 仍需少量目标 embodiment 数据。</p><h3>我的阅读笔记</h3><p>结合本批论文的比较，我的后续关注点是：可把 motion/scene 解耦用于驾驶：motion token 分成 ego 与 traffic-agent dynamics，scene token 表示照明和背景变化；再用轨迹、光流和地图约束替代手部几何监督，检查是否能减少 VLA 在相机扰动下的误判。</p></section>
+</main></body></html>
